@@ -12,7 +12,7 @@ setup(
     author = 'fgz73762',
     author_email = 'fgz73762@rl.ac.uk',    
     packages = ['dls_pmacanalyse'],
-#    entry_points = {'console_scripts': ['test-python-hello-world = dls_pmacanalyse.dls_pmacanalyse:main']}, # this makes a script
-#    include_package_data = True, # use this to include non python files
+    entry_points = {'console_scripts': [
+        'dls-pmac-analyse.py = dls_pmacanalyse.dls_pmacanalyse:main']},
     zip_safe = False
     )        
