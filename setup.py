@@ -14,5 +14,6 @@ setup(
     packages = ['dls_pmacanalyse'],
     entry_points = {'console_scripts': [
         'dls-pmac-analyse.py = dls_pmacanalyse.dls_pmacanalyse:main']},
+    package_data = {'': ['*.pmc']},
     zip_safe = False
     )        
