@@ -10,7 +10,7 @@ MODULEVER = 0.0
 
 # This is run when we type make
 # It can depend on other targets e.g. the .py files produced by pyuic4 
-dist: setup.py $(wildcard dls_pmacanalyse/*.py)
+dist: setup.py $(wildcard dls_pmacanalyse/*.py) $(wildcard dls_pmacanalyse/*.pmc)
 	MODULEVER=$(MODULEVER) $(PYTHON) setup.py bdist_egg
 	touch dist
 	$(MAKE) -C documentation 
