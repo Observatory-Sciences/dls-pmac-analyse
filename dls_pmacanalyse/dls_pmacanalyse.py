@@ -2050,9 +2050,10 @@ class Pmac(object):
         self.writeBackup('\n; Coordinate system definitions\n')
         self.writeBackup('undefine all\n')
         for cs in range(1,self.numCoordSystems+1):
-            for axis in range(1,self.numAxes+1):
+            for axis in range(1,32+1):  # Note range is always 32 NOT self.numAxes
                 # Ask for the motor status in the coordinate system
-                (returnStr, status) = self.sendCommand('&%s#%s->' % (cs, axis))
+                cmd = '&%s#%s->' % (cs, axis)
+                (returnStr, status) = self.sendCommand(cmd)
                 if not status or len(returnStr) <= 2:
                     raise PmacReadError(returnStr)
                 # Note the dropping of the last two characters, ^m^f
