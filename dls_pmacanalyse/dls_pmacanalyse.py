@@ -23,6 +23,7 @@ helpText = '''
         -v, --verbose             Verbose output
         -h, --help                Print the help text and exit
         --backup=<dir>            As config file 'backup' statement (see below)
+        --comments                As config file 'comments' statement (see below)
         --resultsdir=<dir>        As config file 'resultsdir' statement (see below)
         --pmac=<name>             As config file 'pmac' statement (see below)
         --ts=<ip>:<port>          As config file 'ts' statement (see below)
@@ -54,6 +55,8 @@ helpText = '''
         port = Host port number
     backup <dir>
       Write backup files in the specified directory.  Defaults to no backup written.
+    comments
+      Write comments into backup files.
     comparewith <pmcfile>
       Rather than reading the hardware, use this PMC file as
       the current PMAC state.
@@ -263,6 +266,7 @@ class GlobalConfig(object):
         '''Constructor.'''
         self.verbose = False
         self.backupDir = None
+        self.comments = False
         self.configFile = None
         self.pmacs = {}
         self.pmacFactorySettings = PmacState('pmacFactorySettings')
@@ -284,7 +288,7 @@ class GlobalConfig(object):
                 ['help', 'verbose', 'backup=', 'pmac=', 'ts=', 'tcpip=',
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
-                'nofactorydefs', 'macroics=', 'checkpositions', 'debug'])
+                'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments'])
         except getopt.GetoptError, err:
             raise ArgumentError(str(err))
         globalPmac = Pmac('global')
@@ -296,6 +300,8 @@ class GlobalConfig(object):
                 self.verbose = True
             elif o == '--backup':
                 self.backupDir = a
+            elif o == '--comments':
+                self.comments = True
             elif o == '--pmac':
                 curPmac = self.createOrGetPmac(a)
                 curPmac.copyNoComparesFrom(globalPmac)
@@ -415,6 +421,8 @@ class GlobalConfig(object):
                     self.includePaths = words[1]
                 elif words[0].lower() == 'backup' and len(words) == 2:
                     self.backupDir = words[1]
+                elif words[0].lower() == 'comments' and len(words) == 1:
+                    self.comments = True
                 elif words[0].lower() == 'nocompare' and len(words) == 2:
                     parser = PmacParser([words[1]], None)
                     (type, nodeList, start, count, increment) = parser.parseVarSpec()
@@ -502,7 +510,7 @@ class GlobalConfig(object):
                     styleSheet='analysis.css')
                 # Read the hardware (or compare with file)
                 if pmac.compareWith is None:
-                    pmac.readHardware(self.backupDir, self.checkPositions, self.debug)
+                    pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -887,6 +895,7 @@ class WebPage(object):
         return result
 
 class PmacVariable(object):
+    spaces = '                        '
     def __init__(self, prefix, n, v):
         self.typeStr = '%s%s' % (prefix, n)
         self.n = n
@@ -924,14 +933,20 @@ class PmacIVariable(PmacVariable):
     def __init__(self, n, v=0, ro=False):
         PmacVariable.__init__(self, 'i', n, v)
         self.ro = ro
-    def dump(self, typ=0):
+    def dump(self, typ=0, comment=""):
         result = ''
         if typ == 1:
             result = '%s' % self.valStr()
         else:
             if self.ro:
                 result += ';'
-            result += 'i%s=%s\n' % (self.n, self.valStr())
+            result += 'i%s=%s' % (self.n, self.valStr())
+            if len(comment) == 0:
+                result += '\n'
+            else:
+                if len(result) < len(spaces):
+                    result += self.spaces[len(result):]
+                result += ';%s\n' % comment
         return result
     def copyFrom(self):
         result = PmacIVariable(self.n)
@@ -1834,11 +1849,12 @@ class Pmac(object):
             self.noCompare.removeVar(var)
     def copyNoComparesFrom(self, otherPmac):
         self.noCompare.copyFrom(otherPmac.noCompare)
-    def readHardware(self, backupDir, checkPositions, debug):
+    def readHardware(self, backupDir, checkPositions, debug, comments):
         '''Loads the current state of the PMAC.  If a backupDir is provided, the
            state is written as it is read.'''
         self.checkPositions = checkPositions
         self.debug = debug
+        self.comments = comments
         try:
             # Open the backup file if required
             if backupDir is not None:
@@ -1989,7 +2005,15 @@ class Pmac(object):
                 ro = i+o in roVars
                 var = PmacIVariable(i+o, self.toNumber(x), ro=ro)
                 self.hardwareState.addVar(var)
-                self.writeBackup(var.dump())
+                motor = (i+o) / 100
+                index = (i+o) % 100
+                text = ""
+                if self.comments:
+                   if motor == 0 and index in PmacState.globalIVariableDescriptions:
+                       text = PmacState.globalIVariableDescriptions[index]
+                   if motor >= 1 and motor <= 32 and index in PmacState.motorIVariableDescriptions:
+                       text = PmacState.motorIVariableDescriptions[index]
+                self.writeBackup(var.dump(comment=text))
             i += varsPerBlock
     def readPvars(self):
         '''Reads the P variables.'''
