@@ -944,7 +944,7 @@ class PmacIVariable(PmacVariable):
             if len(comment) == 0:
                 result += '\n'
             else:
-                if len(result) < len(spaces):
+                if len(result) < len(self.paces):
                     result += self.spaces[len(result):]
                 result += ';%s\n' % comment
         return result
