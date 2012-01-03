@@ -2589,19 +2589,76 @@ class PmacParser(object):
         else:
             self.lexer.putToken(n)
             # Quit program (do nothing)
+    #def parseExpression(self):
+    #    '''Returns the result of the expression.'''
+    #    # Currently only supports a constant prefixed by an optional minus sign
+    #    negative = False
+    #    t = self.lexer.getToken()
+    #    if t == '-':
+    #        negative = True
+    #        t = self.lexer.getToken()
+    #    if not tokenIsFloat(t):
+    #        raise ParserError('Unsupported', t)
+    #    result = tokenToFloat(t)
+    #    if negative:
+    #        result = -result
+    #    return result
     def parseExpression(self):
         '''Returns the result of the expression.'''
-        # Currently only supports a constant prefixed by an optional minus sign
-        negative = False
-        t = self.lexer.getToken()
-        if t == '-':
-            negative = True
+        # Currently supports syntax of the form:
+        #    <expression> ::= <e1> { <sumop> <e1> }
+        #    <e1> ::= <e2> { <multop> <e2> }
+        #    <e2> ::= [ <monop> ] <e3>
+        #    <e3> ::= '(' <expression> ')' | <constant>
+        #    <sumop> ::= '+' | '-'
+        #    <multop> ::= '*' | '/'
+        #    <monop> ::= '+' | '-'
+        result = self.parseE1()
+        going = True
+        while going:
             t = self.lexer.getToken()
-        if not tokenIsFloat(t):
-            raise ParserError('Unsupported', t)
-        result = tokenToFloat(t)
-        if negative:
-            result = -result
+            if t == '+':
+                result = result + self.parseE1()
+            elif t == '-':
+                result = result - self.parseE1()
+            else:
+                self.lexer.putToken(t)
+                going = False
+        return result
+    def parseE1(self):
+        '''Returns the result of a sub-expression containing multiplicative operands.'''
+        result = self.parseE2()
+        going = True
+        while going:
+            t = self.lexer.getToken()
+            if t == '*':
+                result = result * self.parseE2()
+            elif t == '/':
+                result = result / self.parseE2()
+            elif t == '%':
+                result = result % self.parseE2()
+            else:
+                self.lexer.putToken(t)
+                going = False
+        return result
+    def parseE2(self):
+        '''Returns the result of a sub-expression containing monadic operands.'''
+        monop = self.lexer.getToken()
+        if monop not in ['+', '-']:
+            self.lexer.putToken(monop)
+            monop = '+'
+        result = self.parseE3()
+        if monop == '-':
+            result = -result;
+        return result
+    def parseE3(self):
+        '''Returns the result of a sub-expression that is a constant or a parenthesised expression.'''
+        t = self.lexer.getToken()
+        if t == '(':
+            result = self.parseExpression()
+            t = self.lexer.getToken(')')
+        else:
+            result = tokenToFloat(t)
         return result
     def parseRange(self, start):
         '''Returns the range as (start, count, increment).'''
