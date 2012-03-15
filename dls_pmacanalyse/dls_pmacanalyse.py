@@ -147,7 +147,7 @@ def tokenToFloat(token):
     elif tokenIsFloat(token):
         result = float(str(token))
     else:
-        raise ParserError("Float expected, got: %s" % t, t)
+        raise ParserError("Float expected, got: %s" % token, token)
     return result
 def numericSplit(a):
     '''Splits a into two parts, a numeric suffix (or 0 if none) and an
@@ -2750,7 +2750,7 @@ class PmacParser(object):
             if not t == '\n':
                 last = t
             t = self.lexer.getToken(wantEol=True)
-        if last is not None and last is not 'RETURN':
+        if last is not None and last != 'RETURN':
             prog.add(PmacToken('RETURN'))
     def parseHash(self):
         m = self.lexer.getToken()
