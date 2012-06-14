@@ -38,6 +38,7 @@ helpText = '''
         --macroics=<num>          As config file 'macroics' statement (see below)
         --checkpositions          Prints a warning if motor positions change during readout
         --debug                   Turns on extra debug output
+        --fixfile=<file>          Generate a fix file that can be loaded to the PMAC
 
   Config file syntax:
     resultsdir <dir>
@@ -276,6 +277,7 @@ class GlobalConfig(object):
         self.includePaths = None
         self.checkPositions = False
         self.debug = False
+        self.fixfile = None
     def createOrGetPmac(self, name):
         if name not in self.pmacs:
             self.pmacs[name] = Pmac(name)
@@ -288,7 +290,8 @@ class GlobalConfig(object):
                 ['help', 'verbose', 'backup=', 'pmac=', 'ts=', 'tcpip=',
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
-                'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments'])
+                'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments',
+                'fixfile='])
         except getopt.GetoptError, err:
             raise ArgumentError(str(err))
         globalPmac = Pmac('global')
@@ -343,6 +346,8 @@ class GlobalConfig(object):
                     raise ArgumentError('No PMAC yet defined')
                 else:
                     curPmac.setReference(a)
+            elif o == '--fixfile':
+                self.fixfile = a
             elif o == '--comparewith':
                 if curPmac is None:
                     raise ArgumentError('No PMAC yet defined')
@@ -522,9 +527,19 @@ class GlobalConfig(object):
                         factoryDefs = self.pmacFactorySettings
                 pmac.loadReference(factoryDefs, self.includePaths)
                 # Make the comparison
-                pmac.compare(page)
+                theFixFile = None
+                if self.fixfile is not None:
+                    theFixFile = open(self.fixfile, "w")
+                matches = pmac.compare(page, theFixFile)
+                if theFixFile is not None:
+                    theFixFile.close()
                 # Write out the HTML
-                page.write()
+                if matches:
+                    # delete any existing comparison file
+                    if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
+                        os.remove('%s/%s_compare.htm' % (self.resultsDir, pmac.name))
+                else:
+                    page.write()
         # Create the top level page
         indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'), 
             '%s/index.htm' % self.resultsDir,
@@ -533,8 +548,11 @@ class GlobalConfig(object):
         for name,pmac in self.pmacs.iteritems():
             row = indexPage.tableRow(table)
             indexPage.tableColumn(row, '%s' % pmac.name)
-            indexPage.href(indexPage.tableColumn(row), 
-                '%s_compare.htm' % pmac.name, 'Comparison results')
+            if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
+                indexPage.href(indexPage.tableColumn(row), 
+                    '%s_compare.htm' % pmac.name, 'Comparison results')
+            else:
+                indexPage.tableColumn(row, 'Matches')
             indexPage.href(indexPage.tableColumn(row), 
                 '%s_ivariables.htm' % pmac.name, 'I variables')
             indexPage.href(indexPage.tableColumn(row), 
@@ -1134,6 +1152,8 @@ class PmacProgram(PmacVariable):
                 result += str(t)
                 if typ==1 and len(result.rsplit('\n',1)[-1]) > 60:
                     result += '\n'
+        if len(result) == 0 or result[-1] != '\n':
+            result += '\n'
         return result
     def compare(self, other):
         # Strip the newline tokens from the two lists.  There's
@@ -1744,7 +1764,7 @@ class PmacState(object):
                 ['i%s' % i,
                 '%s' % self.getMsIVariable(node, i).valStr(),
                 '%s' % description])
-    def compare(self, other, noCompare, pmacName, page):
+    def compare(self, other, noCompare, pmacName, page, fixfile):
         '''Compares the state of this PMAC with the other.'''
         result = True
         table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
@@ -1771,11 +1791,15 @@ class PmacState(object):
                 if not other.vars[a].ro and not other.vars[a].isEmpty():
                     result = False
                     self.writeHtmlRow(page, table, texta, 'Missing', other.vars[a], None)
+                    if fixfile is not None:
+                        fixfile.write(other.vars[a].dump())
             elif not self.vars[a].compare(other.vars[a]):
                 if not other.vars[a].ro and not self.vars[a].ro:
                     result = False
                     self.writeHtmlRow(page, table, texta, 'Mismatch', other.vars[a],
                         self.vars[a])
+                    if fixfile is not None:
+                        fixfile.write(other.vars[a].dump())
         # Check the running PLCs
         for n in range(32):
             plc = self.getPlcProgramNoCreate(n)
@@ -1785,9 +1809,13 @@ class PmacState(object):
                 if plc.shouldBeRunning and not plc.isRunning:
                     result = False
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Not running', None, None)
+                    if fixfile is not None:
+                        fixfile.write('enable plc %s\n' % n)
                 elif not plc.shouldBeRunning and plc.isRunning:
                     result = False
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Running', None, None)
+                    if fixfile is not None:
+                        fixfile.write('disable plc %s\n' % n)
         return result
     def writeHtmlRow(self, page, parent, addr, reason, referenceVar, hardwareVar):
         row = page.tableRow(parent)
@@ -1864,13 +1892,14 @@ class Pmac(object):
         self.hardwareState.htmlMotorMsIVariables(motor, page)
     def htmlGlobalMsIVariables(self, page):
         self.hardwareState.htmlGlobalMsIVariables(page)
-    def compare(self, page):
+    def compare(self, page, fixfile):
         print 'Comparing...'
-        self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page)
+        self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile)
         if self.compareResult:
             print 'Hardware matches reference'
         else:
             print 'Hardware to reference mismatch detected'
+        return self.compareResult
     def setProtocol(self, host, port, termServ):
         self.host = host
         self.port = port
