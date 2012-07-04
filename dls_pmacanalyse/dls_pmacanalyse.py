@@ -515,7 +515,10 @@ class GlobalConfig(object):
                     styleSheet='analysis.css')
                 # Read the hardware (or compare with file)
                 if pmac.compareWith is None:
-                    pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
+                    try:
+                        pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
+                    except PmacReadError as pErr:
+                        print "FAILED TO CONNECT TO " + pmac.name
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -551,8 +554,10 @@ class GlobalConfig(object):
             if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
                 indexPage.href(indexPage.tableColumn(row), 
                     '%s_compare.htm' % pmac.name, 'Comparison results')
-            else:
+            elif os.path.exists('%s/%s_plcs.htm' % (self.resultsDir, pmac.name)):
                 indexPage.tableColumn(row, 'Matches')
+            else:
+                indexPage.tableColumn(row, 'No results')
             indexPage.href(indexPage.tableColumn(row), 
                 '%s_ivariables.htm' % pmac.name, 'I variables')
             indexPage.href(indexPage.tableColumn(row), 
@@ -738,7 +743,7 @@ class GlobalConfig(object):
                     '%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body(), 
-                    ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables'])
+                    ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables', '%'])
                 for id in range(1, 17):
                     row = page.tableRow(table)
                     page.tableColumn(row, '%s' % id)
@@ -758,6 +763,10 @@ class GlobalConfig(object):
                         var.html(page, col)
                     page.href(page.tableColumn(row), '%s_cs%s_q.htm' % (pmac.name, id),
                         'Q Variables')
+                    col = page.tableColumn(row)
+                    var = pmac.hardwareState.getFeedrateOverrideNoCreate(id)
+                    if var is not None:
+                        var.html(page, col)
                 page.write()
                 for id in range(1,17):
                     page = WebPage('Q Variables for %s CS %s' % (pmac.name, id), 
@@ -1058,6 +1067,22 @@ class PmacQVariable(PmacVariable):
         return result
     def copyFrom(self):
         result = PmacQVariable(self.cs, self.n)
+        result.v = self.v
+        result.ro = self.ro
+        return result
+
+class PmacFeedrateOverride(PmacVariable):
+    def __init__(self, cs, v=0):
+        PmacVariable.__init__(self, '&%s%%'%cs, 0, v)
+        self.cs = cs
+    def dump(self, typ=0):
+        if typ == 1:
+            result = '%s' % self.valStr()
+        else:
+            result = '&%s%%%s\n' % (self.cs, self.valStr())
+        return result
+    def copyFrom(self):
+        result = PmacFeedrateOverride(self.cs)
         result.v = self.v
         result.ro = self.ro
         return result
@@ -1675,6 +1700,8 @@ class PmacState(object):
                 result = PmacMsIVariable(n1, n2)
             elif t2 == '#':
                 result = PmacCsAxisDef(n1, n2)
+            elif t2 == '%':
+                result = PmacFeedrateOverride(n1)
             else:
                 raise GeneralError('Illegal program type: %sx%s' % (t1, t2))
             self.vars[addr] = result
@@ -1715,6 +1742,10 @@ class PmacState(object):
         return self.getVar('m', n)
     def getQVariable(self,cs,n):
         return self.getVar2('&', cs, 'q', n)
+    def getFeedrateOverride(self,cs):
+        return self.getVar2('&', cs, '%', 0)
+    def getFeedrateOverrideNoCreate(self,cs):
+        return self.getVarNoCreate2('&', cs, '%', 0)
     def getMsIVariable(self,ms,n):
         return self.getVar2('ms', ms, 'i', n)
     def getCsAxisDef(self,cs,m):
@@ -1774,6 +1805,8 @@ class PmacState(object):
         # For each of these addresses, compare the variable
         for a in addrs:
             texta = a
+            if texta.endswith("%0"):
+                texta = texta[:-1]
             if texta.startswith("i") and not texta.startswith("inv"):
                 i = int(texta[1:])
                 if i in range(100):
@@ -1961,6 +1994,7 @@ class Pmac(object):
             self.readPlcPrograms()
             self.readPvars()
             self.readQvars()
+            self.readFeedrateOverrides()
             self.readIvars()
             self.readMvarDefinitions()
             self.readMsIvars()
@@ -2125,6 +2159,18 @@ class Pmac(object):
                 var = PmacQVariable(cs, o+1, self.toNumber(x))
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
+    def readFeedrateOverrides(self):
+        '''Reads the feedrate overrides of the coordinate systems.'''
+        print 'Reading feedrate overrides...'
+        self.writeBackup('\n; Feedrate overrides\n')
+        for cs in range(1,self.numCoordSystems+1):
+            (returnStr, status) = self.sendCommand('&%s%%' % cs)
+            if not status:
+                raise PmacReadError(returnStr)
+            val = returnStr.split("\r")[0]
+            var = PmacFeedrateOverride(cs, self.toNumber(val))
+            self.hardwareState.addVar(var)
+            self.writeBackup(var.dump())
     def readMvarDefinitions(self):
         '''Reads the M variable definitions.'''
         print 'Reading M-variable definitions...'
@@ -2342,6 +2388,10 @@ class Pmac(object):
                 self.writeBackup(var.dump())
     def loadReference(self, factorySettings, includePaths=None):
         '''Loads the reference PMC file after first initialising the state.'''
+        # Feedrate overrides default to 100
+        for cs in range(1,self.numCoordSystems+1):
+            var = PmacFeedrateOverride(cs, 100.0)
+            self.referenceState.addVar(var)
         if factorySettings is not None:
             self.referenceState.copyFrom(factorySettings)
         if self.reference is not None:
@@ -2373,6 +2423,8 @@ class PmacParser(object):
         while t is not None:
             if t == '&':
                 self.parseAmpersand()
+            elif t == '%':
+                self.parsePercent()
             elif t == '#':
                 self.parseHash()
             elif t == 'OPEN':
@@ -2869,6 +2921,15 @@ class PmacParser(object):
         else:
             self.lexer.putToken(t)
             # Report coordinate system (do nothing)
+    def parsePercent(self):
+        t = self.lexer.getToken()
+        if tokenIsFloat(t):
+            # Set the feedrate override
+            var = self.pmac.getFeedrateOverride(self.curCs)
+            var.set(tokenToFloat(t))
+        else:
+            self.lexer.putToken(t)
+            # Report feedrate override (do nothing)
     def parseAxisDefinition(self, var):
         first = True
         going = True
