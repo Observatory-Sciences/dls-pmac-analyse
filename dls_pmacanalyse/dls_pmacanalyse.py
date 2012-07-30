@@ -961,6 +961,11 @@ class PmacVariable(object):
         return self.html(page, parent)
 
 class PmacIVariable(PmacVariable):
+    useHexAxis = [2, 3, 4, 5, 10, 24, 25, 42, 43, 44, 55, 81, 82, 83, 84, 91, 95]
+    useHexGlobal = range(8000, 8192)
+    axisVarMin = 100
+    axisVarMax = 3299
+    varsPerAxis = 100
     def __init__(self, n, v=0, ro=False):
         PmacVariable.__init__(self, 'i', n, v)
         self.ro = ro
@@ -983,6 +988,22 @@ class PmacIVariable(PmacVariable):
         result = PmacIVariable(self.n)
         result.v = self.v
         result.ro = self.ro
+        return result
+    def valStr(self):
+        if isinstance(self.v, float):
+            result = ('%.12f' % self.v).rstrip('0')
+            if result.endswith('.'):
+                result += '0'
+        else:
+            useHex = False
+            if self.n >= self.axisVarMin and self.n <= self.axisVarMax:
+                useHex = (self.n % self.varsPerAxis) in self.useHexAxis
+            else:
+                useHex = self.n in self.useHexGlobal
+            if useHex:
+                result = '$%x' % self.v
+            else: 
+                result = '%s' % self.v
         return result
 
 class PmacMVariable(PmacVariable):
@@ -2976,7 +2997,7 @@ class PmacLexer(object):
         'PVT', 'RAPID', 'RETURN', 'SENDS', 'SENDP', 'SENDR', 'SENDA', 'SETPHASE', 'SPLINE1',
         'SPLINE2', 'STOP', 'T', 'TA', 'TINIT', 'TM', 'TR', 'TS', 'TSELECT', 'TX', 'TY', 'TZ',
         'UNLOCK', 'WAIT', 'WHILE', 'TRIGGER', '(', ')', '|', '..', '[', ']', 'END', 'READ',
-        'E']
+        'E', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'COS', 'EXP', 'INT', 'LN', 'SIN', 'SQRT', 'TAN']
     shortTokens = {'CHKS':'CHECKSUM', 'CLR':'CLEAR', 'CLS':'CLOSE', 'DAT':'DATE', 'DEF':'DEFINE',
         'GAT':'GATHER', 'LOOK':'LOOKAHEAD', 'ENDI':'ENDIF', 'ROT':'ROTARY', 'UBUF':'UBUFFER',
         'DEL':'DELETE', 'TEMP':'TEMPS', 'DIS':'DISABLE', 'EAVER':'EAVERSION', 'ENA':'ENABLE',

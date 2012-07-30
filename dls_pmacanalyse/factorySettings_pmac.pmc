@@ -8208,247 +8208,567 @@ I8191=$0
 ; -------------------------------------------------------------------------------------------------------------
 
 ms0,i910=7           ; Encoder/Timer n Decode Control
+ms0,i911=0           ; Position compare n channel select
 ms0,i912=1           ; Encoder n Capture Control
 ms0,i913=0           ; Encoder n Capture Control
+ms0,i914=0           ; Encoder n gated select
+ms0,i915=0           ; Encoder n index gate state
 ms0,i916=3           ; Output n Mode Select
+ms0,i917=0           ; Output n invert control
 ms0,i918=0           ; Output n PFM Direction Signal Invert Control
+ms0,i923=0           ; Compare auto-increment value
+ms0,i925=0           ; Compare A position value
+ms0,i926=0           ; Compare B position value
+ms0,i927=0           ; Encoder loss status bit
+ms0,i928=0           ; Compare state write enable
+ms0,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms1,i910=7           ; Encoder/Timer n Decode Control
+ms1,i911=0           ; Position compare n channel select
 ms1,i912=1           ; Encoder n Capture Control
 ms1,i913=0           ; Encoder n Capture Control
+ms1,i914=0           ; Encoder n gated select
+ms1,i915=0           ; Encoder n index gate state
 ms1,i916=3           ; Output n Mode Select
+ms1,i917=0           ; Output n invert control
 ms1,i918=0           ; Output n PFM Direction Signal Invert Control
+ms1,i923=0           ; Compare auto-increment value
+ms1,i925=0           ; Compare A position value
+ms1,i926=0           ; Compare B position value
+ms1,i927=0           ; Encoder loss status bit
+ms1,i928=0           ; Compare state write enable
+ms1,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms4,i910=7           ; Encoder/Timer n Decode Control
+ms4,i911=0           ; Position compare n channel select
 ms4,i912=1           ; Encoder n Capture Control
 ms4,i913=0           ; Encoder n Capture Control
+ms4,i914=0           ; Encoder n gated select
+ms4,i915=0           ; Encoder n index gate state
 ms4,i916=3           ; Output n Mode Select
+ms4,i917=0           ; Output n invert control
 ms4,i918=0           ; Output n PFM Direction Signal Invert Control
+ms4,i923=0           ; Compare auto-increment value
+ms4,i925=0           ; Compare A position value
+ms4,i926=0           ; Compare B position value
+ms4,i927=0           ; Encoder loss status bit
+ms4,i928=0           ; Compare state write enable
+ms4,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms5,i910=7           ; Encoder/Timer n Decode Control
+ms5,i911=0           ; Position compare n channel select
 ms5,i912=1           ; Encoder n Capture Control
 ms5,i913=0           ; Encoder n Capture Control
+ms5,i914=0           ; Encoder n gated select
+ms5,i915=0           ; Encoder n index gate state
 ms5,i916=3           ; Output n Mode Select
+ms5,i917=0           ; Output n invert control
 ms5,i918=0           ; Output n PFM Direction Signal Invert Control
+ms5,i923=0           ; Compare auto-increment value
+ms5,i925=0           ; Compare A position value
+ms5,i926=0           ; Compare B position value
+ms5,i927=0           ; Encoder loss status bit
+ms5,i928=0           ; Compare state write enable
+ms5,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms8,i910=7           ; Encoder/Timer n Decode Control
+ms8,i911=0           ; Position compare n channel select
 ms8,i912=1           ; Encoder n Capture Control
 ms8,i913=0           ; Encoder n Capture Control
+ms8,i914=0           ; Encoder n gated select
+ms8,i915=0           ; Encoder n index gate state
 ms8,i916=3           ; Output n Mode Select
+ms8,i917=0           ; Output n invert control
 ms8,i918=0           ; Output n PFM Direction Signal Invert Control
+ms8,i923=0           ; Compare auto-increment value
+ms8,i925=0           ; Compare A position value
+ms8,i926=0           ; Compare B position value
+ms8,i927=0           ; Encoder loss status bit
+ms8,i928=0           ; Compare state write enable
+ms8,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms9,i910=7           ; Encoder/Timer n Decode Control
+ms9,i911=0           ; Position compare n channel select
 ms9,i912=1           ; Encoder n Capture Control
 ms9,i913=0           ; Encoder n Capture Control
+ms9,i914=0           ; Encoder n gated select
+ms9,i915=0           ; Encoder n index gate state
 ms9,i916=3           ; Output n Mode Select
+ms9,i917=0           ; Output n invert control
 ms9,i918=0           ; Output n PFM Direction Signal Invert Control
+ms9,i923=0           ; Compare auto-increment value
+ms9,i925=0           ; Compare A position value
+ms9,i926=0           ; Compare B position value
+ms9,i927=0           ; Encoder loss status bit
+ms9,i928=0           ; Compare state write enable
+ms9,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms12,i910=7           ; Encoder/Timer n Decode Control
+ms12,i911=0           ; Position compare n channel select
 ms12,i912=1           ; Encoder n Capture Control
 ms12,i913=0           ; Encoder n Capture Control
+ms12,i914=0           ; Encoder n gated select
+ms12,i915=0           ; Encoder n index gate state
 ms12,i916=3           ; Output n Mode Select
+ms12,i917=0           ; Output n invert control
 ms12,i918=0           ; Output n PFM Direction Signal Invert Control
+ms12,i923=0           ; Compare auto-increment value
+ms12,i925=0           ; Compare A position value
+ms12,i926=0           ; Compare B position value
+ms12,i927=0           ; Encoder loss status bit
+ms12,i928=0           ; Compare state write enable
+ms12,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms13,i910=7           ; Encoder/Timer n Decode Control
+ms13,i911=0           ; Position compare n channel select
 ms13,i912=1           ; Encoder n Capture Control
 ms13,i913=0           ; Encoder n Capture Control
+ms13,i914=0           ; Encoder n gated select
+ms13,i915=0           ; Encoder n index gate state
 ms13,i916=3           ; Output n Mode Select
+ms13,i917=0           ; Output n invert control
 ms13,i918=0           ; Output n PFM Direction Signal Invert Control
+ms13,i923=0           ; Compare auto-increment value
+ms13,i925=0           ; Compare A position value
+ms13,i926=0           ; Compare B position value
+ms13,i927=0           ; Encoder loss status bit
+ms13,i928=0           ; Compare state write enable
+ms13,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms16,i910=7           ; Encoder/Timer n Decode Control
+ms16,i911=0           ; Position compare n channel select
 ms16,i912=1           ; Encoder n Capture Control
 ms16,i913=0           ; Encoder n Capture Control
+ms16,i914=0           ; Encoder n gated select
+ms16,i915=0           ; Encoder n index gate state
 ms16,i916=3           ; Output n Mode Select
+ms16,i917=0           ; Output n invert control
 ms16,i918=0           ; Output n PFM Direction Signal Invert Control
+ms16,i923=0           ; Compare auto-increment value
+ms16,i925=0           ; Compare A position value
+ms16,i926=0           ; Compare B position value
+ms16,i927=0           ; Encoder loss status bit
+ms16,i928=0           ; Compare state write enable
+ms16,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms17,i910=7           ; Encoder/Timer n Decode Control
+ms17,i911=0           ; Position compare n channel select
 ms17,i912=1           ; Encoder n Capture Control
 ms17,i913=0           ; Encoder n Capture Control
+ms17,i914=0           ; Encoder n gated select
+ms17,i915=0           ; Encoder n index gate state
 ms17,i916=3           ; Output n Mode Select
+ms17,i917=0           ; Output n invert control
 ms17,i918=0           ; Output n PFM Direction Signal Invert Control
+ms17,i923=0           ; Compare auto-increment value
+ms17,i925=0           ; Compare A position value
+ms17,i926=0           ; Compare B position value
+ms17,i927=0           ; Encoder loss status bit
+ms17,i928=0           ; Compare state write enable
+ms17,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms20,i910=7           ; Encoder/Timer n Decode Control
+ms20,i911=0           ; Position compare n channel select
 ms20,i912=1           ; Encoder n Capture Control
 ms20,i913=0           ; Encoder n Capture Control
+ms20,i914=0           ; Encoder n gated select
+ms20,i915=0           ; Encoder n index gate state
 ms20,i916=3           ; Output n Mode Select
+ms20,i917=0           ; Output n invert control
 ms20,i918=0           ; Output n PFM Direction Signal Invert Control
+ms20,i923=0           ; Compare auto-increment value
+ms20,i925=0           ; Compare A position value
+ms20,i926=0           ; Compare B position value
+ms20,i927=0           ; Encoder loss status bit
+ms20,i928=0           ; Compare state write enable
+ms20,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms21,i910=7           ; Encoder/Timer n Decode Control
+ms21,i911=0           ; Position compare n channel select
 ms21,i912=1           ; Encoder n Capture Control
 ms21,i913=0           ; Encoder n Capture Control
+ms21,i914=0           ; Encoder n gated select
+ms21,i915=0           ; Encoder n index gate state
 ms21,i916=3           ; Output n Mode Select
+ms21,i917=0           ; Output n invert control
 ms21,i918=0           ; Output n PFM Direction Signal Invert Control
+ms21,i923=0           ; Compare auto-increment value
+ms21,i925=0           ; Compare A position value
+ms21,i926=0           ; Compare B position value
+ms21,i927=0           ; Encoder loss status bit
+ms21,i928=0           ; Compare state write enable
+ms21,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms24,i910=7           ; Encoder/Timer n Decode Control
+ms24,i911=0           ; Position compare n channel select
 ms24,i912=1           ; Encoder n Capture Control
 ms24,i913=0           ; Encoder n Capture Control
+ms24,i914=0           ; Encoder n gated select
+ms24,i915=0           ; Encoder n index gate state
 ms24,i916=3           ; Output n Mode Select
+ms24,i917=0           ; Output n invert control
 ms24,i918=0           ; Output n PFM Direction Signal Invert Control
+ms24,i923=0           ; Compare auto-increment value
+ms24,i925=0           ; Compare A position value
+ms24,i926=0           ; Compare B position value
+ms24,i927=0           ; Encoder loss status bit
+ms24,i928=0           ; Compare state write enable
+ms24,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms25,i910=7           ; Encoder/Timer n Decode Control
+ms25,i911=0           ; Position compare n channel select
 ms25,i912=1           ; Encoder n Capture Control
 ms25,i913=0           ; Encoder n Capture Control
+ms25,i914=0           ; Encoder n gated select
+ms25,i915=0           ; Encoder n index gate state
 ms25,i916=3           ; Output n Mode Select
+ms25,i917=0           ; Output n invert control
 ms25,i918=0           ; Output n PFM Direction Signal Invert Control
+ms25,i923=0           ; Compare auto-increment value
+ms25,i925=0           ; Compare A position value
+ms25,i926=0           ; Compare B position value
+ms25,i927=0           ; Encoder loss status bit
+ms25,i928=0           ; Compare state write enable
+ms25,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms28,i910=7           ; Encoder/Timer n Decode Control
+ms28,i911=0           ; Position compare n channel select
 ms28,i912=1           ; Encoder n Capture Control
 ms28,i913=0           ; Encoder n Capture Control
+ms28,i914=0           ; Encoder n gated select
+ms28,i915=0           ; Encoder n index gate state
 ms28,i916=3           ; Output n Mode Select
+ms28,i917=0           ; Output n invert control
 ms28,i918=0           ; Output n PFM Direction Signal Invert Control
+ms28,i923=0           ; Compare auto-increment value
+ms28,i925=0           ; Compare A position value
+ms28,i926=0           ; Compare B position value
+ms28,i927=0           ; Encoder loss status bit
+ms28,i928=0           ; Compare state write enable
+ms28,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms29,i910=7           ; Encoder/Timer n Decode Control
+ms29,i911=0           ; Position compare n channel select
 ms29,i912=1           ; Encoder n Capture Control
 ms29,i913=0           ; Encoder n Capture Control
+ms29,i914=0           ; Encoder n gated select
+ms29,i915=0           ; Encoder n index gate state
 ms29,i916=3           ; Output n Mode Select
+ms29,i917=0           ; Output n invert control
 ms29,i918=0           ; Output n PFM Direction Signal Invert Control
+ms29,i923=0           ; Compare auto-increment value
+ms29,i925=0           ; Compare A position value
+ms29,i926=0           ; Compare B position value
+ms29,i927=0           ; Encoder loss status bit
+ms29,i928=0           ; Compare state write enable
+ms29,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms32,i910=7           ; Encoder/Timer n Decode Control
+ms32,i911=0           ; Position compare n channel select
 ms32,i912=1           ; Encoder n Capture Control
 ms32,i913=0           ; Encoder n Capture Control
+ms32,i914=0           ; Encoder n gated select
+ms32,i915=0           ; Encoder n index gate state
 ms32,i916=3           ; Output n Mode Select
+ms32,i917=0           ; Output n invert control
 ms32,i918=0           ; Output n PFM Direction Signal Invert Control
+ms32,i923=0           ; Compare auto-increment value
+ms32,i925=0           ; Compare A position value
+ms32,i926=0           ; Compare B position value
+ms32,i927=0           ; Encoder loss status bit
+ms32,i928=0           ; Compare state write enable
+ms32,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms33,i910=7           ; Encoder/Timer n Decode Control
+ms33,i911=0           ; Position compare n channel select
 ms33,i912=1           ; Encoder n Capture Control
 ms33,i913=0           ; Encoder n Capture Control
+ms33,i914=0           ; Encoder n gated select
+ms33,i915=0           ; Encoder n index gate state
 ms33,i916=3           ; Output n Mode Select
+ms33,i917=0           ; Output n invert control
 ms33,i918=0           ; Output n PFM Direction Signal Invert Control
+ms33,i923=0           ; Compare auto-increment value
+ms33,i925=0           ; Compare A position value
+ms33,i926=0           ; Compare B position value
+ms33,i927=0           ; Encoder loss status bit
+ms33,i928=0           ; Compare state write enable
+ms33,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms36,i910=7           ; Encoder/Timer n Decode Control
+ms36,i911=0           ; Position compare n channel select
 ms36,i912=1           ; Encoder n Capture Control
 ms36,i913=0           ; Encoder n Capture Control
+ms36,i914=0           ; Encoder n gated select
+ms36,i915=0           ; Encoder n index gate state
 ms36,i916=3           ; Output n Mode Select
+ms36,i917=0           ; Output n invert control
 ms36,i918=0           ; Output n PFM Direction Signal Invert Control
+ms36,i923=0           ; Compare auto-increment value
+ms36,i925=0           ; Compare A position value
+ms36,i926=0           ; Compare B position value
+ms36,i927=0           ; Encoder loss status bit
+ms36,i928=0           ; Compare state write enable
+ms36,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms37,i910=7           ; Encoder/Timer n Decode Control
+ms37,i911=0           ; Position compare n channel select
 ms37,i912=1           ; Encoder n Capture Control
 ms37,i913=0           ; Encoder n Capture Control
+ms37,i914=0           ; Encoder n gated select
+ms37,i915=0           ; Encoder n index gate state
 ms37,i916=3           ; Output n Mode Select
+ms37,i917=0           ; Output n invert control
 ms37,i918=0           ; Output n PFM Direction Signal Invert Control
+ms37,i923=0           ; Compare auto-increment value
+ms37,i925=0           ; Compare A position value
+ms37,i926=0           ; Compare B position value
+ms37,i927=0           ; Encoder loss status bit
+ms37,i928=0           ; Compare state write enable
+ms37,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms40,i910=7           ; Encoder/Timer n Decode Control
+ms40,i911=0           ; Position compare n channel select
 ms40,i912=1           ; Encoder n Capture Control
 ms40,i913=0           ; Encoder n Capture Control
+ms40,i914=0           ; Encoder n gated select
+ms40,i915=0           ; Encoder n index gate state
 ms40,i916=3           ; Output n Mode Select
+ms40,i917=0           ; Output n invert control
 ms40,i918=0           ; Output n PFM Direction Signal Invert Control
+ms40,i923=0           ; Compare auto-increment value
+ms40,i925=0           ; Compare A position value
+ms40,i926=0           ; Compare B position value
+ms40,i927=0           ; Encoder loss status bit
+ms40,i928=0           ; Compare state write enable
+ms40,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms41,i910=7           ; Encoder/Timer n Decode Control
+ms41,i911=0           ; Position compare n channel select
 ms41,i912=1           ; Encoder n Capture Control
 ms41,i913=0           ; Encoder n Capture Control
+ms41,i914=0           ; Encoder n gated select
+ms41,i915=0           ; Encoder n index gate state
 ms41,i916=3           ; Output n Mode Select
+ms41,i917=0           ; Output n invert control
 ms41,i918=0           ; Output n PFM Direction Signal Invert Control
+ms41,i923=0           ; Compare auto-increment value
+ms41,i925=0           ; Compare A position value
+ms41,i926=0           ; Compare B position value
+ms41,i927=0           ; Encoder loss status bit
+ms41,i928=0           ; Compare state write enable
+ms41,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms44,i910=7           ; Encoder/Timer n Decode Control
+ms44,i911=0           ; Position compare n channel select
 ms44,i912=1           ; Encoder n Capture Control
 ms44,i913=0           ; Encoder n Capture Control
+ms44,i914=0           ; Encoder n gated select
+ms44,i915=0           ; Encoder n index gate state
 ms44,i916=3           ; Output n Mode Select
+ms44,i917=0           ; Output n invert control
 ms44,i918=0           ; Output n PFM Direction Signal Invert Control
+ms44,i923=0           ; Compare auto-increment value
+ms44,i925=0           ; Compare A position value
+ms44,i926=0           ; Compare B position value
+ms44,i927=0           ; Encoder loss status bit
+ms44,i928=0           ; Compare state write enable
+ms44,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms45,i910=7           ; Encoder/Timer n Decode Control
+ms45,i911=0           ; Position compare n channel select
 ms45,i912=1           ; Encoder n Capture Control
 ms45,i913=0           ; Encoder n Capture Control
+ms45,i914=0           ; Encoder n gated select
+ms45,i915=0           ; Encoder n index gate state
 ms45,i916=3           ; Output n Mode Select
+ms45,i917=0           ; Output n invert control
 ms45,i918=0           ; Output n PFM Direction Signal Invert Control
+ms45,i923=0           ; Compare auto-increment value
+ms45,i925=0           ; Compare A position value
+ms45,i926=0           ; Compare B position value
+ms45,i927=0           ; Encoder loss status bit
+ms45,i928=0           ; Compare state write enable
+ms45,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms48,i910=7           ; Encoder/Timer n Decode Control
+ms48,i911=0           ; Position compare n channel select
 ms48,i912=1           ; Encoder n Capture Control
 ms48,i913=0           ; Encoder n Capture Control
+ms48,i914=0           ; Encoder n gated select
+ms48,i915=0           ; Encoder n index gate state
 ms48,i916=3           ; Output n Mode Select
+ms48,i917=0           ; Output n invert control
 ms48,i918=0           ; Output n PFM Direction Signal Invert Control
+ms48,i923=0           ; Compare auto-increment value
+ms48,i925=0           ; Compare A position value
+ms48,i926=0           ; Compare B position value
+ms48,i927=0           ; Encoder loss status bit
+ms48,i928=0           ; Compare state write enable
+ms48,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms49,i910=7           ; Encoder/Timer n Decode Control
+ms49,i911=0           ; Position compare n channel select
 ms49,i912=1           ; Encoder n Capture Control
 ms49,i913=0           ; Encoder n Capture Control
+ms49,i914=0           ; Encoder n gated select
+ms49,i915=0           ; Encoder n index gate state
 ms49,i916=3           ; Output n Mode Select
+ms49,i917=0           ; Output n invert control
 ms49,i918=0           ; Output n PFM Direction Signal Invert Control
+ms49,i923=0           ; Compare auto-increment value
+ms49,i925=0           ; Compare A position value
+ms49,i926=0           ; Compare B position value
+ms49,i927=0           ; Encoder loss status bit
+ms49,i928=0           ; Compare state write enable
+ms49,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms52,i910=7           ; Encoder/Timer n Decode Control
+ms52,i911=0           ; Position compare n channel select
 ms52,i912=1           ; Encoder n Capture Control
 ms52,i913=0           ; Encoder n Capture Control
+ms52,i914=0           ; Encoder n gated select
+ms52,i915=0           ; Encoder n index gate state
 ms52,i916=3           ; Output n Mode Select
+ms52,i917=0           ; Output n invert control
 ms52,i918=0           ; Output n PFM Direction Signal Invert Control
+ms52,i923=0           ; Compare auto-increment value
+ms52,i925=0           ; Compare A position value
+ms52,i926=0           ; Compare B position value
+ms52,i927=0           ; Encoder loss status bit
+ms52,i928=0           ; Compare state write enable
+ms52,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms53,i910=7           ; Encoder/Timer n Decode Control
+ms53,i911=0           ; Position compare n channel select
 ms53,i912=1           ; Encoder n Capture Control
 ms53,i913=0           ; Encoder n Capture Control
+ms53,i914=0           ; Encoder n gated select
+ms53,i915=0           ; Encoder n index gate state
 ms53,i916=3           ; Output n Mode Select
+ms53,i917=0           ; Output n invert control
 ms53,i918=0           ; Output n PFM Direction Signal Invert Control
+ms53,i923=0           ; Compare auto-increment value
+ms53,i925=0           ; Compare A position value
+ms53,i926=0           ; Compare B position value
+ms53,i927=0           ; Encoder loss status bit
+ms53,i928=0           ; Compare state write enable
+ms53,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms56,i910=7           ; Encoder/Timer n Decode Control
+ms56,i911=0           ; Position compare n channel select
 ms56,i912=1           ; Encoder n Capture Control
 ms56,i913=0           ; Encoder n Capture Control
+ms56,i914=0           ; Encoder n gated select
+ms56,i915=0           ; Encoder n index gate state
 ms56,i916=3           ; Output n Mode Select
+ms56,i917=0           ; Output n invert control
 ms56,i918=0           ; Output n PFM Direction Signal Invert Control
+ms56,i923=0           ; Compare auto-increment value
+ms56,i925=0           ; Compare A position value
+ms56,i926=0           ; Compare B position value
+ms56,i927=0           ; Encoder loss status bit
+ms56,i928=0           ; Compare state write enable
+ms56,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 ms57,i910=7           ; Encoder/Timer n Decode Control
+ms57,i911=0           ; Position compare n channel select
 ms57,i912=1           ; Encoder n Capture Control
 ms57,i913=0           ; Encoder n Capture Control
+ms57,i914=0           ; Encoder n gated select
+ms57,i915=0           ; Encoder n index gate state
 ms57,i916=3           ; Output n Mode Select
+ms57,i917=0           ; Output n invert control
 ms57,i918=0           ; Output n PFM Direction Signal Invert Control
+ms57,i923=0           ; Compare auto-increment value
+ms57,i925=0           ; Compare A position value
+ms57,i926=0           ; Compare B position value
+ms57,i927=0           ; Encoder loss status bit
+ms57,i928=0           ; Compare state write enable
+ms57,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms60,i910=7           ; Encoder/Timer n Decode Control
+ms60,i911=0           ; Position compare n channel select
 ms60,i912=1           ; Encoder n Capture Control
 ms60,i913=0           ; Encoder n Capture Control
+ms60,i914=0           ; Encoder n gated select
+ms60,i915=0           ; Encoder n index gate state
 ms60,i916=3           ; Output n Mode Select
+ms60,i917=0           ; Output n invert control
 ms60,i918=0           ; Output n PFM Direction Signal Invert Control
+ms60,i923=0           ; Compare auto-increment value
+ms60,i925=0           ; Compare A position value
+ms60,i926=0           ; Compare B position value
+ms60,i927=0           ; Encoder loss status bit
+ms60,i928=0           ; Compare state write enable
+ms60,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
 
 ms61,i910=7           ; Encoder/Timer n Decode Control
+ms61,i911=0           ; Position compare n channel select
 ms61,i912=1           ; Encoder n Capture Control
 ms61,i913=0           ; Encoder n Capture Control
+ms61,i914=0           ; Encoder n gated select
+ms61,i915=0           ; Encoder n index gate state
 ms61,i916=3           ; Output n Mode Select
+ms61,i917=0           ; Output n invert control
 ms61,i918=0           ; Output n PFM Direction Signal Invert Control
+ms61,i923=0           ; Compare auto-increment value
+ms61,i925=0           ; Compare A position value
+ms61,i926=0           ; Compare B position value
+ms61,i927=0           ; Encoder loss status bit
+ms61,i928=0           ; Compare state write enable
+ms61,i929=0           ; Compare output initial state
 
 ; -------------------------------------------------------------------------------------------------------------
