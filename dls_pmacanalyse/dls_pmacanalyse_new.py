@@ -7,7 +7,7 @@
 # Purpose: Provide a whole range of PMAC monitoring services, backups, compares, etc.
 # ------------------------------------------------------------------------------
 
-import getopt, sys, re, os, datetime, os.path
+import getopt, sys, re, os, datetime, os.path, smtplib
 from xml.dom.minidom import *
 from pkg_resources import require
 require('dls_pmaclib')
@@ -114,6 +114,21 @@ helpText = '''
       The number of macro ICs the PMAC has.  If not specified, the number
       is automatically determined.
   '''
+
+def printCheck(print_string):
+    '''Won't print if email option is used'''
+    if GlobalConfig.email == False:
+        print print_string
+
+def mail(serverURL='outbox.rl.ac.uk', sender='', to='', subject='', text=''):
+    # Diamond SMTP Address = outbox.rl.ac.uk    
+    headers = "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n" % (sender, to, subject)
+    message = headers + text
+
+    mailServer = smtplib.SMTP(serverURL)
+    #mailServer.set_debuglevel(1)
+    mailServer.sendmail(sender, to, message)
+    mailServer.quit()
 
 def tokenIsInt(token):
     '''Returns true if the token is an integer.'''
@@ -263,6 +278,7 @@ class PmacToken(object):
 
 class GlobalConfig(object):
     '''A single instance of this class contains the global configuration.'''
+    email = False
     def __init__(self):
         '''Constructor.'''
         self.verbose = False
@@ -278,29 +294,37 @@ class GlobalConfig(object):
         self.checkPositions = False
         self.debug = False
         self.fixfile = None
+        self.mismatch = False
+        self.mismatchList = ''
+        self.emailAddr = None
+
     def createOrGetPmac(self, name):
         if name not in self.pmacs:
-            self.pmacs[name] = Pmac(name)
+            self.pmacs[name] = Pmac(name, self)
         return self.pmacs[name]
+
     def processArguments(self):
         '''Process the command line arguments.  Returns False
            if the program is to print the help and exit.'''
         try:
             opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
-                ['help', 'verbose', 'backup=', 'pmac=', 'ts=', 'tcpip=',
+                ['help', 'verbose', 'email=', 'backup=', 'pmac=', 'ts=', 'tcpip=',
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
                 'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments',
                 'fixfile='])
         except getopt.GetoptError, err:
             raise ArgumentError(str(err))
-        globalPmac = Pmac('global')
+        globalPmac = Pmac('global', self)
         curPmac = None
         for o, a in opts:
             if o in ('-h', '--help'):
                 return False
             elif o in ('-v', '--verbose'):
                 self.verbose = True
+            elif o in ('--email'):
+                GlobalConfig.email = True
+                self.emailAddr = a
             elif o == '--backup':
                 self.backupDir = a
             elif o == '--comments':
@@ -400,7 +424,7 @@ class GlobalConfig(object):
         file = open(self.configFile, 'r')
         if file is None:
             raise ConfigError('Could not open config file: %s' % self.configFile)
-        globalPmac = Pmac('global')
+        globalPmac = Pmac('global', self)
         curPmac = None
         for line in file:
             words = line.split(';', 1)[0].strip().split()
@@ -518,7 +542,7 @@ class GlobalConfig(object):
                     try:
                         pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
                     except PmacReadError as pErr:
-                        print "FAILED TO CONNECT TO " + pmac.name
+                        printCheck("FAILED TO CONNECT TO " + pmac.name)
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -554,10 +578,8 @@ class GlobalConfig(object):
             if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
                 indexPage.href(indexPage.tableColumn(row), 
                     '%s_compare.htm' % pmac.name, 'Comparison results')
-            elif os.path.exists('%s/%s_plcs.htm' % (self.resultsDir, pmac.name)):
-                indexPage.tableColumn(row, 'Matches')
             else:
-                indexPage.tableColumn(row, 'No results')
+                indexPage.tableColumn(row, 'Matches')
             indexPage.href(indexPage.tableColumn(row), 
                 '%s_ivariables.htm' % pmac.name, 'I variables')
             indexPage.href(indexPage.tableColumn(row), 
@@ -567,7 +589,7 @@ class GlobalConfig(object):
             if pmac.numMacroStationIcs == 0:
                 indexPage.tableColumn(row, '-')
             elif pmac.numMacroStationIcs is None and \
-                    not os.path.exists('%s/%s_msivariables.htm' % (self.resultsDir, pmac.name)):
+                not os.path.exists('%s/%s_msivariables.htm' % (self.resultsDir, pmac.name)):
                 indexPage.tableColumn(row, '-')
             else:
                 indexPage.href(indexPage.tableColumn(row), 
@@ -743,7 +765,7 @@ class GlobalConfig(object):
                     '%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body(), 
-                    ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables', '%'])
+                    ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables'])
                 for id in range(1, 17):
                     row = page.tableRow(table)
                     page.tableColumn(row, '%s' % id)
@@ -763,10 +785,6 @@ class GlobalConfig(object):
                         var.html(page, col)
                     page.href(page.tableColumn(row), '%s_cs%s_q.htm' % (pmac.name, id),
                         'Q Variables')
-                    col = page.tableColumn(row)
-                    var = pmac.hardwareState.getFeedrateOverrideNoCreate(id)
-                    if var is not None:
-                        var.html(page, col)
                 page.write()
                 for id in range(1,17):
                     page = WebPage('Q Variables for %s CS %s' % (pmac.name, id), 
@@ -782,6 +800,13 @@ class GlobalConfig(object):
                         page.tableColumn(row, var.valStr())
                     page.write()
         self.hudsonXmlReport()
+        if self.mismatch and self.email:
+            # Mismatch detected
+            mail('outbox.rl.ac.uk', self.emailAddr, self.emailAddr, 'PMAC to Reference File Comparisons', 'Mismatch detected between the following PMACs and their reference files\r\r%s' % self.mismatchList)
+        else:
+            # No mismatches
+            pass
+
     def loadFactorySettings(self, pmac, fileName, includeFiles):
         for i in range(8192):
             pmac.getIVariable(i)
@@ -961,11 +986,6 @@ class PmacVariable(object):
         return self.html(page, parent)
 
 class PmacIVariable(PmacVariable):
-    useHexAxis = [2, 3, 4, 5, 10, 24, 25, 42, 43, 44, 55, 81, 82, 83, 84, 91, 95]
-    useHexGlobal = range(8000, 8192)
-    axisVarMin = 100
-    axisVarMax = 3299
-    varsPerAxis = 100
     def __init__(self, n, v=0, ro=False):
         PmacVariable.__init__(self, 'i', n, v)
         self.ro = ro
@@ -988,22 +1008,6 @@ class PmacIVariable(PmacVariable):
         result = PmacIVariable(self.n)
         result.v = self.v
         result.ro = self.ro
-        return result
-    def valStr(self):
-        if isinstance(self.v, float):
-            result = ('%.12f' % self.v).rstrip('0')
-            if result.endswith('.'):
-                result += '0'
-        else:
-            useHex = False
-            if self.n >= self.axisVarMin and self.n <= self.axisVarMax:
-                useHex = (self.n % self.varsPerAxis) in self.useHexAxis
-            else:
-                useHex = self.n in self.useHexGlobal
-            if useHex:
-                result = '$%x' % self.v
-            else: 
-                result = '%s' % self.v
         return result
 
 class PmacMVariable(PmacVariable):
@@ -1092,22 +1096,6 @@ class PmacQVariable(PmacVariable):
         result.ro = self.ro
         return result
 
-class PmacFeedrateOverride(PmacVariable):
-    def __init__(self, cs, v=0):
-        PmacVariable.__init__(self, '&%s%%'%cs, 0, v)
-        self.cs = cs
-    def dump(self, typ=0):
-        if typ == 1:
-            result = '%s' % self.valStr()
-        else:
-            result = '&%s%%%s\n' % (self.cs, self.valStr())
-        return result
-    def copyFrom(self):
-        result = PmacFeedrateOverride(self.cs)
-        result.v = self.v
-        result.ro = self.ro
-        return result
-
 class PmacMsIVariable(PmacVariable):
     def __init__(self, ms, n, v='', ro=False):
         PmacVariable.__init__(self, 'ms%si'%ms, n, v)
@@ -1178,7 +1166,7 @@ class PmacProgram(PmacVariable):
         self.lines = lines
     def add(self, t):
         if not isinstance(t, PmacToken):
-            print 'PmacProgram: %s is not a token' % repr(t)
+            printCheck('PmacProgram: %s is not a token' % repr(t))
         self.v.append(t)
     def clear(self):
         self.v = []
@@ -1721,8 +1709,6 @@ class PmacState(object):
                 result = PmacMsIVariable(n1, n2)
             elif t2 == '#':
                 result = PmacCsAxisDef(n1, n2)
-            elif t2 == '%':
-                result = PmacFeedrateOverride(n1)
             else:
                 raise GeneralError('Illegal program type: %sx%s' % (t1, t2))
             self.vars[addr] = result
@@ -1763,10 +1749,6 @@ class PmacState(object):
         return self.getVar('m', n)
     def getQVariable(self,cs,n):
         return self.getVar2('&', cs, 'q', n)
-    def getFeedrateOverride(self,cs):
-        return self.getVar2('&', cs, '%', 0)
-    def getFeedrateOverrideNoCreate(self,cs):
-        return self.getVarNoCreate2('&', cs, '%', 0)
     def getMsIVariable(self,ms,n):
         return self.getVar2('ms', ms, 'i', n)
     def getCsAxisDef(self,cs,m):
@@ -1826,8 +1808,6 @@ class PmacState(object):
         # For each of these addresses, compare the variable
         for a in addrs:
             texta = a
-            if texta.endswith("%0"):
-                texta = texta[:-1]
             if texta.startswith("i") and not texta.startswith("inv"):
                 i = int(texta[1:])
                 if i in range(100):
@@ -1894,7 +1874,7 @@ class PmacState(object):
         file = open(fileName, 'r')
         if file is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
-        print 'Loading PMC file %s...' % fileName
+        printCheck('Loading PMC file %s...' % fileName)
         parser = PmacParser(file, self)
         parser.onLine()
     def loadPmcFileWithPreprocess(self, fileName, includePaths):
@@ -1903,7 +1883,7 @@ class PmacState(object):
             p = clsPmacParser(includePaths = includePaths.split(':'))
         else:
             p = clsPmacParser()
-        print 'Loading PMC file %s...' % fileName
+        printCheck('Loading PMC file %s...' % fileName)
         converted = p.parse(fileName, debug=True)
         if converted is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
@@ -1912,8 +1892,9 @@ class PmacState(object):
 
 class Pmac(object):
     '''A class that represents a single PMAC and its state.'''
-    def __init__(self, name):
+    def __init__(self, name, globalConfig):
         self.name = name
+        self.globalConfig = globalConfig
         self.noCompare = PmacState('noCompare')
         self.reference = None
         self.compareWith = None
@@ -1937,7 +1918,7 @@ class Pmac(object):
             (returnStr, status) = self.sendCommand('#%sP' % (axis+1))
             self.initialPositions[axis+1] = returnStr
             text += '%s ' % returnStr[:-2]
-        print text
+        printCheck(text)
     def htmlMotorIVariables(self, motor, page):
         self.hardwareState.htmlMotorIVariables(motor, page, self.geobrick)
     def htmlGlobalIVariables(self, page):
@@ -1947,12 +1928,14 @@ class Pmac(object):
     def htmlGlobalMsIVariables(self, page):
         self.hardwareState.htmlGlobalMsIVariables(page)
     def compare(self, page, fixfile):
-        print 'Comparing...'
+        printCheck('Comparing...')
         self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile)
         if self.compareResult:
-            print 'Hardware matches reference'
+            printCheck('Hardware matches reference')
         else:
-            print 'Hardware to reference mismatch detected'
+            printCheck('Hardware to reference mismatch detected')
+            self.globalConfig.mismatch = True
+            self.globalConfig.mismatchList += self.name + '\r'
         return self.compareResult
     def setProtocol(self, host, port, termServ):
         self.host = host
@@ -1986,7 +1969,7 @@ class Pmac(object):
             # Open the backup file if required
             if backupDir is not None:
                 fileName = '%s/%s.pmc' % (backupDir, self.name)
-                print "Opening backup file %s" % fileName
+                printCheck("Opening backup file %s" % fileName)
                 self.backupFile = open(fileName, 'w')
                 if file is None:
                     raise AnalyseError('Could not open backup file: %s' % fileName)
@@ -2000,14 +1983,14 @@ class Pmac(object):
             msg = self.pti.connect()
             if msg != None:
                 raise PmacReadError(msg)
-            print 'Connected to a PMAC via "%s" using port %s.' % (self.host, self.port)
+            printCheck('Connected to a PMAC via "%s" using port %s.' % (self.host, self.port))
             # Work out what kind of PMAC we have, if necessary
             self.determinePmacType()
             self.determineNumAxes()
             self.determineNumCoordSystems()
             # Read the axis current positions
             self.positionsBefore = self.readCurrentPositions()
-            #print 'Current positions: %s' % self.positionsBefore
+            #printCheck('Current positions: %s' % self.positionsBefore)
             # Read the data
             self.readCoordinateSystemDefinitions()
             self.readMotionPrograms()
@@ -2015,7 +1998,6 @@ class Pmac(object):
             self.readPlcPrograms()
             self.readPvars()
             self.readQvars()
-            self.readFeedrateOverrides()
             self.readIvars()
             self.readMvarDefinitions()
             self.readMsIvars()
@@ -2026,10 +2008,10 @@ class Pmac(object):
         finally:
             # Disconnect from the PMAC
             if self.pti is not None:
-                print 'Disconnecting from PMAC...'
+                printCheck('Disconnecting from PMAC...')
                 msg = self.pti.disconnect()
                 self.pti = None
-                print 'Connection to the PMAC closed.'
+                printCheck('Connection to the PMAC closed.')
             # Close the backup file
             if self.backupFile is not None:
                 self.backupFile.close()
@@ -2045,15 +2027,15 @@ class Pmac(object):
                 else:
                     match = False
             if match:
-                print 'No axes moved during hardware readout'
+                printCheck('No axes moved during hardware readout')
             else:
-                print 'One or more axes have moved:'
-                print '  Before: %s' % positions
-                print '  Now:    %s' % now
+                printCheck('One or more axes have moved:')
+                printCheck('  Before: %s' % positions)
+                printCheck('  Now:    %s' % now)
     def sendCommand(self, text):
         (returnStr, status) = self.pti.sendCommand(text)
         if self.debug:
-            print '%s --> %s' % (repr(text), repr(returnStr))
+            printCheck('%s --> %s' % (repr(text), repr(returnStr)))
         return (returnStr, status)
     def readCurrentPositions(self):
         ''' Returns the current position as a list.'''
@@ -2075,7 +2057,7 @@ class Pmac(object):
                 self.geobrick = True
             else:
                 self.geobrick = False
-            print 'Geobrick= %s' % self.geobrick
+            printCheck('Geobrick= %s' % self.geobrick)
     def determineNumAxes(self):
         '''Determines the number of axes the PMAC has by determining the
            number of macro station ICs.'''
@@ -2091,7 +2073,7 @@ class Pmac(object):
         self.numAxes = self.numMacroStationIcs * 8
         if self.geobrick:
             self.numAxes += 8
-        print 'Num axes= %s' % self.numAxes
+        printCheck('Num axes= %s' % self.numAxes)
     def determineNumCoordSystems(self):
         '''Determines the number of coordinate systems that are active by
            reading i68.'''
@@ -2105,7 +2087,7 @@ class Pmac(object):
             self.backupFile.write(text)
     def readIvars(self):
         '''Reads the I variables.'''
-        print 'Reading I-variables...'
+        printCheck('Reading I-variables...')
         self.writeBackup('\n; I-variables\n')
         roVars = set([3,4,6,9,20,21,22,23,24,41,58]+range(4900,5000)+
             [5111,5112,5211,5212,5311,5312,5411,5412,5511,5512,5611,5612,5711,
@@ -2150,7 +2132,7 @@ class Pmac(object):
                 plc.setIsRunning(runningState)
     def readPvars(self):
         '''Reads the P variables.'''
-        print 'Reading P-variables...'
+        printCheck('Reading P-variables...')
         self.writeBackup('\n; P-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2169,7 +2151,7 @@ class Pmac(object):
             i += varsPerBlock
     def readQvars(self):
         '''Reads the Q variables of a coordinate system.'''
-        print 'Reading Q-variables...'
+        printCheck('Reading Q-variables...')
         for cs in range(1,self.numCoordSystems+1):
             self.writeBackup('\n; &%s Q-variables\n' % cs)
             (returnStr, status) = self.sendCommand('&%sq1..199' % cs)
@@ -2180,21 +2162,9 @@ class Pmac(object):
                 var = PmacQVariable(cs, o+1, self.toNumber(x))
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
-    def readFeedrateOverrides(self):
-        '''Reads the feedrate overrides of the coordinate systems.'''
-        print 'Reading feedrate overrides...'
-        self.writeBackup('\n; Feedrate overrides\n')
-        for cs in range(1,self.numCoordSystems+1):
-            (returnStr, status) = self.sendCommand('&%s%%' % cs)
-            if not status:
-                raise PmacReadError(returnStr)
-            val = returnStr.split("\r")[0]
-            var = PmacFeedrateOverride(cs, self.toNumber(val))
-            self.hardwareState.addVar(var)
-            self.writeBackup(var.dump())
     def readMvarDefinitions(self):
         '''Reads the M variable definitions.'''
-        print 'Reading M-variable definitions...'
+        printCheck('Reading M-variable definitions...')
         self.writeBackup('\n; M-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2215,7 +2185,7 @@ class Pmac(object):
             i += varsPerBlock
     def readCoordinateSystemDefinitions(self):
         '''Reads the coordinate system definitions.'''
-        print 'Reading coordinate system definitions...'
+        printCheck('Reading coordinate system definitions...')
         self.writeBackup('\n; Coordinate system definitions\n')
         self.writeBackup('undefine all\n')
         for cs in range(1,self.numCoordSystems+1):
@@ -2234,7 +2204,7 @@ class Pmac(object):
         '''Reads the kinematic programs.  Note that this
            function will fail if a program exceeds 1350 characters and small buffers
            are required.'''
-        print 'Reading kinematic programs...'
+        printCheck('Reading kinematic programs...')
         self.writeBackup('\n; Kinematic programs\n')
         for cs in range(1,self.numCoordSystems+1):
             (returnStr, status) = self.sendCommand('&%s list forward' % cs)
@@ -2297,7 +2267,7 @@ class Pmac(object):
                         lines.append(line)
                         offsets.append(parts[0])
                     else:
-                        print "Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m))
+                        printCheck("Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m)))
                         #raise PmacReadError("Warning: could not split line into offset and text")
                 if len(more) < 2:
                     # If we only got one line, it may be incomplete
@@ -2310,7 +2280,7 @@ class Pmac(object):
         return (lines, offsets)
     def readPlcPrograms(self):
         '''Reads the PLC programs'''
-        print 'Reading PLC programs...'
+        printCheck('Reading PLC programs...')
         self.writeBackup('\n; PLC programs\n')
         for plc in range(32):
             (lines, offsets) = self.getListingLines('plc %s' % plc)
@@ -2322,7 +2292,7 @@ class Pmac(object):
     def readMotionPrograms(self):
         '''Reads the motion programs. Note
            that only the first 256 programs are read, there are actually 32768.'''
-        print 'Reading motion programs...'
+        printCheck('Reading motion programs...')
         self.writeBackup('\n; Motion programs\n')
         for prog in range(1,256):
             (lines, offsets) = self.getListingLines('program %s' % prog)
@@ -2337,7 +2307,7 @@ class Pmac(object):
     def readMsIvars(self):
         '''Reads the macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print 'Reading macro station I-variables'
+            printCheck('Reading macro station I-variables')
             self.writeBackup('\n; Macro station I-variables\n')
             reqMacroStations = []
             if self.numMacroStationIcs >= 1:
@@ -2355,7 +2325,7 @@ class Pmac(object):
     def readGlobalMsIvars(self):
         '''Reads the global macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print 'Reading global macrostation I-variables'
+            printCheck('Reading global macrostation I-variables')
             self.writeBackup('\n; Macro station global I-variables\n')
             if self.numMacroStationIcs in [1,2]:
                 reqMacroStations = [0]
@@ -2409,10 +2379,6 @@ class Pmac(object):
                 self.writeBackup(var.dump())
     def loadReference(self, factorySettings, includePaths=None):
         '''Loads the reference PMC file after first initialising the state.'''
-        # Feedrate overrides default to 100
-        for cs in range(1,self.numCoordSystems+1):
-            var = PmacFeedrateOverride(cs, 100.0)
-            self.referenceState.addVar(var)
         if factorySettings is not None:
             self.referenceState.copyFrom(factorySettings)
         if self.reference is not None:
@@ -2444,8 +2410,6 @@ class PmacParser(object):
         while t is not None:
             if t == '&':
                 self.parseAmpersand()
-            elif t == '%':
-                self.parsePercent()
             elif t == '#':
                 self.parseHash()
             elif t == 'OPEN':
@@ -2694,18 +2658,9 @@ class PmacParser(object):
                 self.lexer.putToken(t)
                 # Report I variable values (do nothing)
         elif n == '(':
-            n = self.parseExpression()
-            t = self.lexer.getToken(')')
-            t = self.lexer.getToken()
-            if t == '=':
-                val = self.parseExpression()
-                var = self.pmac.getIVariable(n)
-                var.set(val)
-            else:
-                self.lexer.putToken(t)
-                # Report I variable values (do nothing)
+            raise ParserError('Unsupported', t)
         else:
-            raise ParserError('Unexpected statement: I %s' % n, n)
+            raise ParserError('Unexpected statement: I %s' % t, t)
     def parseP(self):
         n = self.lexer.getToken()
         if tokenIsInt(n):
@@ -2723,16 +2678,7 @@ class PmacParser(object):
                 self.lexer.putToken(t)
                 # Report P variable values (do nothing)
         elif n == '(':
-            n = self.parseExpression()
-            t = self.lexer.getToken(')')
-            t = self.lexer.getToken()
-            if t == '=':
-                val = self.parseExpression()
-                var = self.pmac.getPVariable(n)
-                var.set(val)
-            else:
-                self.lexer.putToken(t)
-                # Report P variable values (do nothing)
+            raise ParserError('Unsupported', t)
         else:
             self.lexer.putToken(n)
             # Report motor position (do nothing)
@@ -2753,16 +2699,7 @@ class PmacParser(object):
                 self.lexer.putToken(t)
                 # Report Q variable values (do nothing)
         elif n == '(':
-            n = self.parseExpression()
-            t = self.lexer.getToken(')')
-            t = self.lexer.getToken()
-            if t == '=':
-                val = self.parseExpression()
-                var = self.pmac.getQVariable(n)
-                var.set(val)
-            else:
-                self.lexer.putToken(t)
-                # Report Q variable values (do nothing)
+            raise ParserError('Unsupported', t)
         else:
             self.lexer.putToken(n)
             # Quit program (do nothing)
@@ -2969,15 +2906,6 @@ class PmacParser(object):
         else:
             self.lexer.putToken(t)
             # Report coordinate system (do nothing)
-    def parsePercent(self):
-        t = self.lexer.getToken()
-        if tokenIsFloat(t):
-            # Set the feedrate override
-            var = self.pmac.getFeedrateOverride(self.curCs)
-            var.set(tokenToFloat(t))
-        else:
-            self.lexer.putToken(t)
-            # Report feedrate override (do nothing)
     def parseAxisDefinition(self, var):
         first = True
         going = True
@@ -3024,7 +2952,7 @@ class PmacLexer(object):
         'PVT', 'RAPID', 'RETURN', 'SENDS', 'SENDP', 'SENDR', 'SENDA', 'SETPHASE', 'SPLINE1',
         'SPLINE2', 'STOP', 'T', 'TA', 'TINIT', 'TM', 'TR', 'TS', 'TSELECT', 'TX', 'TY', 'TZ',
         'UNLOCK', 'WAIT', 'WHILE', 'TRIGGER', '(', ')', '|', '..', '[', ']', 'END', 'READ',
-        'E', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'COS', 'EXP', 'INT', 'LN', 'SIN', 'SQRT', 'TAN']
+        'E']
     shortTokens = {'CHKS':'CHECKSUM', 'CLR':'CLEAR', 'CLS':'CLOSE', 'DAT':'DATE', 'DEF':'DEFINE',
         'GAT':'GATHER', 'LOOK':'LOOKAHEAD', 'ENDI':'ENDIF', 'ROT':'ROTARY', 'UBUF':'UBUFFER',
         'DEL':'DELETE', 'TEMP':'TEMPS', 'DIS':'DISABLE', 'EAVER':'EAVERSION', 'ENA':'ENABLE',
@@ -3144,7 +3072,7 @@ class PmacLexer(object):
         if len(bestToken) == 0:
             raise LexerError(text, self.fileName, self.line)
         if self.debug:
-            print '{%s from %s}' % (bestToken, text)
+            printCheck('{%s from %s}' % (bestToken, text))
         return bestToken
     def expandToken(self, token):
         '''If the token is a short form, it is expanded to the full form.'''
@@ -3166,7 +3094,7 @@ class PmacLexer(object):
         # Is it the expected one
         if shouldBe is not None and not shouldBe == result:
             raise ParserError('Expected %s, got %s' % (shouldBe, result), result)
-        #print "{%s:%s}" % (repr(result), self.line)
+        #printCheck("{%s:%s}" % (repr(result), self.line))
         return result
     def putToken(self, token):
         '''Puts a token at the head of the list.'''
@@ -3179,7 +3107,7 @@ def main():
         config.processConfigFile()
         config.analyse()
     else:
-        print helpText
+        print(helpText)
     return 0
 
 if __name__ == '__main__':
