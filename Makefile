@@ -1,8 +1,6 @@
 # Specify defaults for testing
-PREFIX = /dls_sw/prod/tools/RHEL5
-PYTHON = $(PREFIX)/bin/python2.6
-INSTALL_DIR = /dls_sw/work/common/python/test/packages
-SCRIPT_DIR = /dls_sw/work/common/python/test/scripts
+PREFIX = $(PWD)/prefix
+PYTHON = dls-python
 MODULEVER = 0.0
 
 # Override with any release info
@@ -26,5 +24,4 @@ clean:
 install: dist
 	$(PYTHON) setup.py easy_install -m \
 		--record=installed.files \
-		--install-dir=$(INSTALL_DIR) \
-		--script-dir=$(SCRIPT_DIR) dist/*.egg        
+		--prefix=$(PREFIX) dist/*.egg        
