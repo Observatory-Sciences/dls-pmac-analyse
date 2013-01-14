@@ -1,5 +1,5 @@
 # Specify defaults for testing
-PREFIX = $(PWD)/prefix
+PREFIX := $(shell pwd)/prefix
 PYTHON = dls-python
 MODULEVER = 0.0
 
