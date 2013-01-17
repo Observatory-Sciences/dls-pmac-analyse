@@ -3024,7 +3024,7 @@ class PmacLexer(object):
         'PVT', 'RAPID', 'RETURN', 'SENDS', 'SENDP', 'SENDR', 'SENDA', 'SETPHASE', 'SPLINE1',
         'SPLINE2', 'STOP', 'T', 'TA', 'TINIT', 'TM', 'TR', 'TS', 'TSELECT', 'TX', 'TY', 'TZ',
         'UNLOCK', 'WAIT', 'WHILE', 'TRIGGER', '(', ')', '|', '..', '[', ']', 'END', 'READ',
-        'E', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'COS', 'EXP', 'INT', 'LN', 'SIN', 'SQRT', 'TAN']
+        'E', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'COS', 'EXP', 'INT', 'LN', 'SIN', 'SQRT', 'TAN', '~']
     shortTokens = {'CHKS':'CHECKSUM', 'CLR':'CLEAR', 'CLS':'CLOSE', 'DAT':'DATE', 'DEF':'DEFINE',
         'GAT':'GATHER', 'LOOK':'LOOKAHEAD', 'ENDI':'ENDIF', 'ROT':'ROTARY', 'UBUF':'UBUFFER',
         'DEL':'DELETE', 'TEMP':'TEMPS', 'DIS':'DISABLE', 'EAVER':'EAVERSION', 'ENA':'ENABLE',
