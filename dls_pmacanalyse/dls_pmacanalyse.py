@@ -564,6 +564,8 @@ class GlobalConfig(object):
                 '%s_pvariables.htm' % pmac.name, 'P variables')
             indexPage.href(indexPage.tableColumn(row), 
                 '%s_mvariables.htm' % pmac.name, 'M variables')
+            indexPage.href(indexPage.tableColumn(row), 
+                '%s_mvariablevalues.htm' % pmac.name, 'M variable values')
             if pmac.numMacroStationIcs == 0:
                 indexPage.tableColumn(row, '-')
             elif pmac.numMacroStationIcs is None and \
@@ -648,6 +650,23 @@ class GlobalConfig(object):
                         page.tableColumn(row, 'm%s->' % m)
                     var = pmac.hardwareState.getMVariable(m)
                     page.tableColumn(row, var.valStr())
+                for i in range(8):
+                    page.tableColumn(row, '')
+                page.write()
+        # Dump the M variable values for each pmac
+        for name,pmac in self.pmacs.iteritems():
+            if self.onlyPmac is None or self.onlyPmac == name:
+                page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
+                    '%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name), 
+                    styleSheet='analysis.css')
+                table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                row = None
+                for m in range(8192):
+                    if m % 10 == 0:
+                        row = page.tableRow(table)
+                        page.tableColumn(row, 'm%s' % m)
+                    var = pmac.hardwareState.getMVariable(m)
+                    page.tableColumn(row, var.contentsStr())
                 for i in range(8):
                     page.tableColumn(row, '')
                 page.write()
@@ -953,6 +972,8 @@ class PmacVariable(object):
         else:
             result = '%s' % self.v
         return result
+    def getFloatValue(self):
+        return float(self.v)
     def html(self, page, parent):
         page.text(parent, self.valStr())
     def isEmpty(self):
@@ -1037,12 +1058,16 @@ class PmacMVariable(PmacVariable):
         else:
             raise GeneralError('Unsupported')
         return result
+    def contentsStr(self):
+        return PmacVariable.valStr(self)
     def set(self, type, address, offset, width, format):
         self.type = type
         self.address = address
         self.offset = offset
         self.width = width
         self.format = format
+    def setValue(self, v):
+        self.v = v
     def copyFrom(self):
         result = PmacMVariable(self.n)
         result.v = self.v
@@ -1432,6 +1457,7 @@ class PmacPlcProgram(PmacProgram):
                 state = "idle"
     def setIsRunning(self, state):
         self.isRunning = state
+
 class PmacState(object):
     '''Represents the internal state of a PMAC.'''
     globalIVariableDescriptions = {0:'Serial card number', 1:'Serial card mode',
@@ -1679,6 +1705,17 @@ class PmacState(object):
     def __init__(self, descr):
         self.vars = {}
         self.descr = descr
+        self.inlineExpressionResolutionState = None
+    def setInlineExpressionResolutionState(self, state):
+        self.inlineExpressionResolutionState = state
+    def getInlineExpressionIValue(self, n):
+        return self.inlineExpressionResolutionState.getIVariable(n).getFloatValue()
+    def getInlineExpressionPValue(self, n):
+        return self.inlineExpressionResolutionState.getPVariable(n).getFloatValue()
+    def getInlineExpressionQValue(self, n):
+        return self.inlineExpressionResolutionState.getQVariable(n).getFloatValue()
+    def getInlineExpressionMValue(self, n):
+        return self.inlineExpressionResolutionState.getMVariable(n).getFloatValue()
     def addVar(self, var):
         self.vars[var.addr()] = var
     def removeVar(self, var):
@@ -2018,6 +2055,7 @@ class Pmac(object):
             self.readFeedrateOverrides()
             self.readIvars()
             self.readMvarDefinitions()
+            self.readMvarValues()
             self.readMsIvars()
             self.readGlobalMsIvars()
             self.readPlcDisableState()
@@ -2212,6 +2250,25 @@ class Pmac(object):
                 parser.parseMVariableAddress(variable=var)
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
+            i += varsPerBlock
+    def readMvarValues(self):
+        '''Reads the M variable values.'''
+        print 'Reading M-variable values...'
+        varsPerBlock = 100
+        i = 0
+        while i < 8192:
+            iend = i + varsPerBlock - 1
+            if iend >= 8192:
+                iend = 8191
+            (returnStr, status) = self.sendCommand('m%s..%s' % (i, iend))
+            if not status:
+                raise PmacReadError(returnStr)
+            mvars = enumerate(returnStr.split("\r")[:-1])
+            for o,x in mvars:
+                var = self.hardwareState.getMVariable(i+o)
+                var.setValue(self.toNumber(x))
+                #if (i+o) == 99:
+                #    print "m99 ->%s, =%s, x=%s" % (var.valStr(), var.contentsStr(), x)
             i += varsPerBlock
     def readCoordinateSystemDefinitions(self):
         '''Reads the coordinate system definitions.'''
@@ -2416,6 +2473,7 @@ class Pmac(object):
         if factorySettings is not None:
             self.referenceState.copyFrom(factorySettings)
         if self.reference is not None:
+            self.referenceState.setInlineExpressionResolutionState(self.hardwareState)
             self.referenceState.loadPmcFileWithPreprocess(self.reference, includePaths)
     def loadCompareWith(self):
         '''Loads the compare with file.'''
@@ -2550,8 +2608,13 @@ class PmacParser(object):
             (start, count, increment) = self.parseRange(tokenToInt(n))
             t = self.lexer.getToken()
             if t == '=':
-                # Assign to m variable
-                raise ParserError('Unsupported', t)
+                val = self.parseExpression()
+                n = start
+                while count > 0:
+                    var = self.pmac.getMVariable(n)
+                    var.setValue(val)
+                    n += increment
+                    count -= 1
             elif t == '->':
                 t = self.lexer.getToken()
                 if t in ['*', 'D', 'DP', 'F', 'L', 'TWB', 'TWD', 'TWR', 'TWS', 'X', 'Y']:
@@ -2786,9 +2849,9 @@ class PmacParser(object):
         #    <expression> ::= <e1> { <sumop> <e1> }
         #    <e1> ::= <e2> { <multop> <e2> }
         #    <e2> ::= [ <monop> ] <e3>
-        #    <e3> ::= '(' <expression> ')' | <constant>
-        #    <sumop> ::= '+' | '-'
-        #    <multop> ::= '*' | '/'
+        #    <e3> ::= '(' <expression> ')' | <constant> | 'P'<integer> | 'Q'<integer> | 'I'<integer> | 'M' <integer>
+        #    <sumop> ::= '+' | '-' | '|' | '^'
+        #    <multop> ::= '*' | '/' | '%' | '&'
         #    <monop> ::= '+' | '-'
         result = self.parseE1()
         going = True
@@ -2798,6 +2861,10 @@ class PmacParser(object):
                 result = result + self.parseE1()
             elif t == '-':
                 result = result - self.parseE1()
+            elif t == '|':
+                result = float(int(result) | int(self.parseE1()))
+            elif t == '^':
+                result = float(int(result) ^ int(self.parseE1()))
             else:
                 self.lexer.putToken(t)
                 going = False
@@ -2814,6 +2881,8 @@ class PmacParser(object):
                 result = result / self.parseE2()
             elif t == '%':
                 result = result % self.parseE2()
+            elif t == '&':
+                result = float(int(result) & int(self.parseE2()))
             else:
                 self.lexer.putToken(t)
                 going = False
@@ -2829,11 +2898,24 @@ class PmacParser(object):
             result = -result;
         return result
     def parseE3(self):
-        '''Returns the result of a sub-expression that is a constant or a parenthesised expression.'''
+        '''Returns the result of a sub-expression that is an I,P,Q or M variable or
+           a constant or a parenthesised expression.'''
         t = self.lexer.getToken()
         if t == '(':
             result = self.parseExpression()
             t = self.lexer.getToken(')')
+        elif t == 'I':
+            t = self.lexer.getToken()
+            result = self.pmac.getInlineExpressionIValue(tokenToInt(t))
+        elif t == 'Q':
+            t = self.lexer.getToken()
+            result = self.pmac.getInlineExpressionQValue(tokenToInt(t))
+        elif t == 'P':
+            t = self.lexer.getToken()
+            result = self.pmac.getInlineExpressionPValue(tokenToInt(t))
+        elif t == 'M':
+            t = self.lexer.getToken()
+            result = self.pmac.getInlineExpressionMValue(tokenToInt(t))
         else:
             result = tokenToFloat(t)
         return result
