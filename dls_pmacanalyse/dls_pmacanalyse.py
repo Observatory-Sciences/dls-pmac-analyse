@@ -518,6 +518,8 @@ class GlobalConfig(object):
                     try:
                         pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
                     except PmacReadError as pErr:
+                    	import traceback
+                    	traceback.print_exc()
                         print "FAILED TO CONNECT TO " + pmac.name
                 else:
                     pmac.loadCompareWith()
@@ -2325,7 +2327,7 @@ class Pmac(object):
         lines = []
         offsets = []
         startPos = 0
-        increment = 100
+        increment = 80
         going = True
         possiblyIncomplete = False
         while going:
