@@ -16,7 +16,7 @@ dist: setup.py $(wildcard dls_pmacanalyse/*.py) $(wildcard dls_pmacanalyse/*.pmc
 # Clean the module
 clean:
 	$(PYTHON) setup.py clean
-	-rm -rf build dist *egg-info installed.files
+	-rm -rf build dist *egg-info installed.files prefix
 	-find -name '*.pyc' -exec rm {} \;
 	$(MAKE) -C documentation clean
 
@@ -24,4 +24,4 @@ clean:
 install: dist
 	$(PYTHON) setup.py easy_install -m \
 		--record=installed.files \
-		--prefix=$(PREFIX) dist/*.egg        
+		--prefix=$(PREFIX) dist/*.egg

@@ -6,6 +6,7 @@ version = os.environ.get("MODULEVER", "0.0")
         
 setup(
 #    install_requires = ['cothread'], # require statements go here
+    install_requires = [ 'dls_pmaclib==1.5' ],
     name = 'dls_pmacanalyse',
     version = version,
     description = 'Module',

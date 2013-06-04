@@ -9,8 +9,6 @@
 
 import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
-from pkg_resources import require
-require('dls_pmaclib')
 from dls_pmaclib.dls_pmcpreprocessor import *
 from dls_pmaclib.dls_pmacremote import *
 
@@ -3267,6 +3265,8 @@ def main():
     return 0
 
 if __name__ == '__main__':
+    from pkg_resources import require
+    require('dls_pmaclib')
     sys.exit(main())
 
 
