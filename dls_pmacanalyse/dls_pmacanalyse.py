@@ -1712,8 +1712,8 @@ class PmacState(object):
         return self.inlineExpressionResolutionState.getIVariable(n).getFloatValue()
     def getInlineExpressionPValue(self, n):
         return self.inlineExpressionResolutionState.getPVariable(n).getFloatValue()
-    def getInlineExpressionQValue(self, n):
-        return self.inlineExpressionResolutionState.getQVariable(n).getFloatValue()
+    def getInlineExpressionQValue(self, cs, n):
+        return self.inlineExpressionResolutionState.getQVariable(cs, n).getFloatValue()
     def getInlineExpressionMValue(self, n):
         return self.inlineExpressionResolutionState.getMVariable(n).getFloatValue()
     def addVar(self, var):
@@ -2909,7 +2909,7 @@ class PmacParser(object):
             result = self.pmac.getInlineExpressionIValue(tokenToInt(t))
         elif t == 'Q':
             t = self.lexer.getToken()
-            result = self.pmac.getInlineExpressionQValue(tokenToInt(t))
+            result = self.pmac.getInlineExpressionQValue(self.curCs, tokenToInt(t))
         elif t == 'P':
             t = self.lexer.getToken()
             result = self.pmac.getInlineExpressionPValue(tokenToInt(t))
