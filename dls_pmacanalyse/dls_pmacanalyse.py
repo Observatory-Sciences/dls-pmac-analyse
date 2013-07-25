@@ -3266,7 +3266,7 @@ def main():
 
 if __name__ == '__main__':
     from pkg_resources import require
-    require('dls_pmaclib==1-4')
+    require('dls_pmaclib')
     sys.exit(main())
 
 
