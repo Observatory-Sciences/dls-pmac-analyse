@@ -1,4 +1,4 @@
-#!/bin/env dls-python2.6
+#!/bin/env dls-python
 # ------------------------------------------------------------------------------
 # pmacanalyse.py
 # 
@@ -11,6 +11,8 @@ import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
 from dls_pmaclib.dls_pmcpreprocessor import *
 from dls_pmaclib.dls_pmacremote import *
+#from dls_pmcpreprocessor import *
+#from dls_pmacremote import *
 
 helpText = '''
   Analyse or backup a group of Delta-Tau PMAC motor controllers.
@@ -37,6 +39,7 @@ helpText = '''
         --checkpositions          Prints a warning if motor positions change during readout
         --debug                   Turns on extra debug output
         --fixfile=<file>          Generate a fix file that can be loaded to the PMAC
+        --unfixfile=<file>        Generate a file that can be used to correct the reference
 
   Config file syntax:
     resultsdir <dir>
@@ -276,6 +279,7 @@ class GlobalConfig(object):
         self.checkPositions = False
         self.debug = False
         self.fixfile = None
+        self.unfixfile = None
     def createOrGetPmac(self, name):
         if name not in self.pmacs:
             self.pmacs[name] = Pmac(name)
@@ -289,7 +293,7 @@ class GlobalConfig(object):
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
                 'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments',
-                'fixfile='])
+                'fixfile=', 'unfixfile='])
         except getopt.GetoptError, err:
             raise ArgumentError(str(err))
         globalPmac = Pmac('global')
@@ -346,6 +350,8 @@ class GlobalConfig(object):
                     curPmac.setReference(a)
             elif o == '--fixfile':
                 self.fixfile = a
+            elif o == '--unfixfile':
+                self.unfixfile = a
             elif o == '--comparewith':
                 if curPmac is None:
                     raise ArgumentError('No PMAC yet defined')
@@ -533,9 +539,14 @@ class GlobalConfig(object):
                 theFixFile = None
                 if self.fixfile is not None:
                     theFixFile = open(self.fixfile, "w")
-                matches = pmac.compare(page, theFixFile)
+                theUnfixFile = None
+                if self.unfixfile is not None:
+                    theUnfixFile = open(self.unfixfile, "w")
+                matches = pmac.compare(page, theFixFile, theUnfixFile)
                 if theFixFile is not None:
                     theFixFile.close()
+                if theUnfixFile is not None:
+                    theUnfixFile.close()
                 # Write out the HTML
                 if matches:
                     # delete any existing comparison file
@@ -1853,7 +1864,7 @@ class PmacState(object):
                 ['i%s' % i,
                 '%s' % self.getMsIVariable(node, i).valStr(),
                 '%s' % description])
-    def compare(self, other, noCompare, pmacName, page, fixfile):
+    def compare(self, other, noCompare, pmacName, page, fixfile, unfixfile):
         '''Compares the state of this PMAC with the other.'''
         result = True
         table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
@@ -1878,6 +1889,8 @@ class PmacState(object):
                 if not self.vars[a].ro and not self.vars[a].isEmpty():
                     result = False
                     self.writeHtmlRow(page, table, texta, 'Missing', None, self.vars[a])
+                    if unfixfile is not None:
+                        unfixfile.write(self.vars[a].dump())
             elif a not in self.vars:
                 if not other.vars[a].ro and not other.vars[a].isEmpty():
                     result = False
@@ -1891,6 +1904,8 @@ class PmacState(object):
                         self.vars[a])
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
+                    if unfixfile is not None:
+                        unfixfile.write(self.vars[a].dump())
         # Check the running PLCs
         for n in range(32):
             plc = self.getPlcProgramNoCreate(n)
@@ -1902,11 +1917,15 @@ class PmacState(object):
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Not running', None, None)
                     if fixfile is not None:
                         fixfile.write('enable plc %s\n' % n)
+                    if unfixfile is not None:
+                        unfixfile.write('disable plc %s\n' % n)
                 elif not plc.shouldBeRunning and plc.isRunning:
                     result = False
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Running', None, None)
                     if fixfile is not None:
                         fixfile.write('disable plc %s\n' % n)
+                    if unfixfile is not None:
+                        unfixfile.write('enable plc %s\n' % n)
         return result
     def writeHtmlRow(self, page, parent, addr, reason, referenceVar, hardwareVar):
         row = page.tableRow(parent)
@@ -1983,9 +2002,9 @@ class Pmac(object):
         self.hardwareState.htmlMotorMsIVariables(motor, page)
     def htmlGlobalMsIVariables(self, page):
         self.hardwareState.htmlGlobalMsIVariables(page)
-    def compare(self, page, fixfile):
+    def compare(self, page, fixfile, unfixfile):
         print 'Comparing...'
-        self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile)
+        self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile, unfixfile)
         if self.compareResult:
             print 'Hardware matches reference'
         else:
@@ -3211,7 +3230,7 @@ class PmacLexer(object):
                     noTerminator = False
                 pos += 1
             if noTerminator:
-                raise LexerError(line, self.fileName, self.line)
+                raise LexerError(text, self.fileName, self.line)
             else:
                 bestToken = curToken
         else:
