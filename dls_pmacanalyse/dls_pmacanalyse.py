@@ -34,7 +34,7 @@ helpText = '''
         --reference=<filename>    As config file 'reference' statement (see below)
         --include=<paths>         As config file 'include' statement (see below)
         --nofactorydefs           As config file 'nofactorydefs' statement (see below)
-        --only=<name>             Only analyse the named pmac
+        --only=<name>             Only analyse the named pmac. There can be more than one of these.
         --macroics=<num>          As config file 'macroics' statement (see below)
         --checkpositions          Prints a warning if motor positions change during readout
         --debug                   Turns on extra debug output
@@ -274,7 +274,7 @@ class GlobalConfig(object):
         self.pmacFactorySettings = PmacState('pmacFactorySettings')
         self.geobrickFactorySettings = PmacState('geobrickFactorySettings')
         self.resultsDir = 'pmacAnalysis'
-        self.onlyPmac = None
+        self.onlyPmacs = None
         self.includePaths = None
         self.checkPositions = False
         self.debug = False
@@ -382,7 +382,9 @@ class GlobalConfig(object):
                         start += increment
                         count -= 1
             elif o == '--only':
-                self.onlyPmac = a
+                if self.onlyPmacs is None:
+                    self.onlyPmacs = []
+                self.onlyPmacs.append(a)
             elif o == '--include':
                 self.includePaths = a
             elif o == '--macroics':
@@ -512,7 +514,7 @@ class GlobalConfig(object):
             ''')
         # Analyse each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the comparison web page
                 page = WebPage('Comparison results for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_compare.htm' % (self.resultsDir, pmac.name),
@@ -594,7 +596,7 @@ class GlobalConfig(object):
         indexPage.write()
         # Dump the I variables for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the I variables top level web page
                 page = WebPage('I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_ivariables.htm' % (self.resultsDir, pmac.name), 
@@ -621,7 +623,7 @@ class GlobalConfig(object):
                     page.write()
         # Dump the macrostation I variables for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 if pmac.numMacroStationIcs > 0:
                     # Create the MS,I variables top level web page
                     page = WebPage('Macrostation I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
@@ -649,7 +651,7 @@ class GlobalConfig(object):
                         page.write()
         # Dump the M variables for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 page = WebPage('M Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_mvariables.htm' % (self.resultsDir, pmac.name), 
                     styleSheet='analysis.css')
@@ -666,7 +668,7 @@ class GlobalConfig(object):
                 page.write()
         # Dump the M variable values for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name), 
                     styleSheet='analysis.css')
@@ -683,7 +685,7 @@ class GlobalConfig(object):
                 page.write()
         # Dump the P variables for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 page = WebPage('P Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_pvariables.htm' % (self.resultsDir, pmac.name), 
                     styleSheet='analysis.css')
@@ -700,7 +702,7 @@ class GlobalConfig(object):
                 page.write()
         # Dump the PLCs for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the PLC top level web page
                 page = WebPage('PLCs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_plcs.htm' % (self.resultsDir, pmac.name),
@@ -743,7 +745,7 @@ class GlobalConfig(object):
                     page.write()
         # Dump the motion programs for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the motion program top level web page
                 page = WebPage('Motion Programs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_motionprogs.htm' % (self.resultsDir, pmac.name),
@@ -767,7 +769,7 @@ class GlobalConfig(object):
                         page.write()
         # Dump the coordinate systems for each pmac
         for name,pmac in self.pmacs.iteritems():
-            if self.onlyPmac is None or self.onlyPmac == name:
+            if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the coordinate systems top level web page
                 page = WebPage('Coordinate Systems for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
                     '%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
