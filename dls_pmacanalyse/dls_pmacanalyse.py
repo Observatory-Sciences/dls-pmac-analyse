@@ -2663,7 +2663,7 @@ class PmacParser(object):
                 t = self.lexer.getToken()
             address = tokenToInt(t)
         elif type in ['TWB', 'TWD', 'TWR', 'TWS']:
-            raise ParseError('Unsupported', self.lexer.line)
+            raise ParserError('Unsupported', self.lexer.line)
         elif type in ['X', 'Y']:
             t = self.lexer.getToken()
             if t == ':':
