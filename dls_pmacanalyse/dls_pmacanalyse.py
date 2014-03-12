@@ -9,10 +9,10 @@
 
 import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
-from dls_pmaclib.dls_pmcpreprocessor import *
-from dls_pmaclib.dls_pmacremote import *
-#from dls_pmcpreprocessor import *
-#from dls_pmacremote import *
+#from dls_pmaclib.dls_pmcpreprocessor import *
+#from dls_pmaclib.dls_pmacremote import *
+from dls_pmcpreprocessor import *
+from dls_pmacremote import *
 
 helpText = '''
   Analyse or backup a group of Delta-Tau PMAC motor controllers.
@@ -233,7 +233,7 @@ class ParserError(Exception):
 
 class GeneralError(Exception):
     '''General error exception.'''
-    def __init__(self, message, line):
+    def __init__(self, message):
         self.message = message
     def __str__(self):
         return self.message
@@ -1067,6 +1067,8 @@ class PmacMVariable(PmacVariable):
                     if not self.format == 'U':
                         result += ',%s' % self.format
         elif self.type in ['D','DP','F','L']:
+            result += '%s:$%x' % (self.type, self.address)
+        elif self.type in ['TWS','TWR','TWD','TWB']:
             result += '%s:$%x' % (self.type, self.address)
         else:
             raise GeneralError('Unsupported')
@@ -2663,7 +2665,10 @@ class PmacParser(object):
                 t = self.lexer.getToken()
             address = tokenToInt(t)
         elif type in ['TWB', 'TWD', 'TWR', 'TWS']:
-            raise ParserError('Unsupported', self.lexer.line)
+            t = self.lexer.getToken()
+            if t == ':':
+                t = self.lexer.getToken()
+            address = tokenToInt(t)
         elif type in ['X', 'Y']:
             t = self.lexer.getToken()
             if t == ':':
