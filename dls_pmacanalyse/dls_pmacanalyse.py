@@ -9,10 +9,10 @@
 
 import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
-#from dls_pmaclib.dls_pmcpreprocessor import *
-#from dls_pmaclib.dls_pmacremote import *
-from dls_pmcpreprocessor import *
-from dls_pmacremote import *
+from dls_pmaclib.dls_pmcpreprocessor import *
+from dls_pmaclib.dls_pmacremote import *
+#from dls_pmcpreprocessor import *
+#from dls_pmacremote import *
 
 helpText = '''
   Analyse or backup a group of Delta-Tau PMAC motor controllers.
