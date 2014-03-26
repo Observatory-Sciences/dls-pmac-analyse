@@ -9,10 +9,10 @@
 
 import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
-from dls_pmaclib.dls_pmcpreprocessor import *
-from dls_pmaclib.dls_pmacremote import *
-#from dls_pmcpreprocessor import *
-#from dls_pmacremote import *
+#from dls_pmaclib.dls_pmcpreprocessor import *
+#from dls_pmaclib.dls_pmacremote import *
+from dls_pmcpreprocessor import *
+from dls_pmacremote import *
 
 helpText = '''
   Analyse or backup a group of Delta-Tau PMAC motor controllers.
@@ -2350,7 +2350,6 @@ class Pmac(object):
         startPos = 0
         increment = 80
         going = True
-        possiblyIncomplete = False
         while going:
             (returnStr, status) = self.sendCommand('list %s,%s,%s' % (thing, startPos, increment))
             startPos += increment
@@ -2365,9 +2364,6 @@ class Pmac(object):
             if returnStr.find('ERR') >= 0:
                 going = False
             else:
-                # Print a warning if the last block may have been incomplete
-                if possiblyIncomplete:
-                    raise PmacReadError('Less that 2 lines in a buffer, completion not gauranteed')
                 # Seperate into lines
                 more = returnStr.split('\r')[:-1]
                 # Add the lines to the current set of lines, removing the
@@ -2384,8 +2380,7 @@ class Pmac(object):
                         print "Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m))
                         #raise PmacReadError("Warning: could not split line into offset and text")
                 if len(more) < 2:
-                    # If we only got one line, it may be incomplete
-                    possiblyIncomplete = True
+                    pass
                 else:
                     # Chop off the last line (it may be incomplete) and adjust the start pos
                     lines = lines[:-1]
