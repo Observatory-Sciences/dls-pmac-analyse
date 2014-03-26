@@ -1,7 +1,7 @@
 #!/bin/env dls-python
 # ------------------------------------------------------------------------------
 # pmacanalyse.py
-# 
+#
 # Author:  Jonathan Thompson
 # Created: 20 November 2009
 # Purpose: Provide a whole range of PMAC monitoring services, backups, compares, etc.
@@ -48,11 +48,11 @@ helpText = '''
       Define a PMAC.
         name = Name of the PMAC
     ts <host> <port>
-      Connect through a terminal server  
+      Connect through a terminal server
         host = Name or IP address of terminal server
         port = Host port number
     tcpip <host> <port>
-      Connect through TCP/IP  
+      Connect through TCP/IP
         host = Name or IP address of host
         port = Host port number
     backup <dir>
@@ -69,12 +69,12 @@ helpText = '''
           <type><start>..<end>
           <type><start>,<count>,<increment>
         the <type> is one of
-            i 
-            p  
-            m  
-            ms<node>,i 
+            i
+            p
+            m
+            ms<node>,i
             ms<nodeList>,i
-            &<cs>q 
+            &<cs>q
         node = macrostation node number
         nodeList = [<node>,<node>...] comma seperated list of nodes
         cs = coordinate system number
@@ -90,12 +90,12 @@ helpText = '''
           <type><start>..<end>
           <type><start>,<count>,<increment>
         the <type> is one of
-            i 
-            p  
-            m  
-            ms<node>,i 
+            i
+            p
+            m
+            ms<node>,i
             ms<nodeList>,i
-            &<cs>q 
+            &<cs>q
         node = macrostation node number
         nodeList = [<node>,<node>...] comma seperated list of nodes
         cs = coordinate system number
@@ -175,7 +175,7 @@ def numericSort(a, b):
     prefixb, suffixb = numericSplit(b)
     if prefixa < prefixb:
         result = -1
-    elif prefixa > prefixb: 
+    elif prefixa > prefixb:
         result = 1
     elif suffixa < suffixb:
         result = -1
@@ -288,7 +288,7 @@ class GlobalConfig(object):
         '''Process the command line arguments.  Returns False
            if the program is to print the help and exit.'''
         try:
-            opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh', 
+            opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh',
                 ['help', 'verbose', 'backup=', 'pmac=', 'ts=', 'tcpip=',
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
@@ -516,13 +516,13 @@ class GlobalConfig(object):
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the comparison web page
-                page = WebPage('Comparison results for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
+                page = WebPage('Comparison results for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
                     '%s/%s_compare.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 # Read the hardware (or compare with file)
                 if pmac.compareWith is None:
                     try:
-                        pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments)
+                        pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments, self.verbose)
                     except PmacReadError as pErr:
                     	import traceback
                     	traceback.print_exc()
@@ -557,7 +557,7 @@ class GlobalConfig(object):
                 else:
                     page.write()
         # Create the top level page
-        indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'), 
+        indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'),
             '%s/index.htm' % self.resultsDir,
             styleSheet='analysis.css')
         table = indexPage.table(indexPage.body())
@@ -565,19 +565,19 @@ class GlobalConfig(object):
             row = indexPage.tableRow(table)
             indexPage.tableColumn(row, '%s' % pmac.name)
             if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
-                indexPage.href(indexPage.tableColumn(row), 
+                indexPage.href(indexPage.tableColumn(row),
                     '%s_compare.htm' % pmac.name, 'Comparison results')
             elif os.path.exists('%s/%s_plcs.htm' % (self.resultsDir, pmac.name)):
                 indexPage.tableColumn(row, 'Matches')
             else:
                 indexPage.tableColumn(row, 'No results')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_ivariables.htm' % pmac.name, 'I variables')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_pvariables.htm' % pmac.name, 'P variables')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_mvariables.htm' % pmac.name, 'M variables')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_mvariablevalues.htm' % pmac.name, 'M variable values')
             if pmac.numMacroStationIcs == 0:
                 indexPage.tableColumn(row, '-')
@@ -585,38 +585,38 @@ class GlobalConfig(object):
                     not os.path.exists('%s/%s_msivariables.htm' % (self.resultsDir, pmac.name)):
                 indexPage.tableColumn(row, '-')
             else:
-                indexPage.href(indexPage.tableColumn(row), 
+                indexPage.href(indexPage.tableColumn(row),
                     '%s_msivariables.htm' % pmac.name, 'MS variables')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_coordsystems.htm' % pmac.name, 'Coordinate systems')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_plcs.htm' % pmac.name, 'PLCs')
-            indexPage.href(indexPage.tableColumn(row), 
+            indexPage.href(indexPage.tableColumn(row),
                 '%s_motionprogs.htm' % pmac.name, 'Motion programs')
         indexPage.write()
         # Dump the I variables for each pmac
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the I variables top level web page
-                page = WebPage('I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
-                    '%s/%s_ivariables.htm' % (self.resultsDir, pmac.name), 
+                page = WebPage('I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                    '%s/%s_ivariables.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 page.href(page.body(), '%s_ivars_glob.htm' % pmac.name, 'Global I variables')
                 page.lineBreak(page.body())
                 for motor in range(1, pmac.numAxes+1):
-                    page.href(page.body(), '%s_ivars_motor%s.htm' % (pmac.name, motor), 
+                    page.href(page.body(), '%s_ivars_motor%s.htm' % (pmac.name, motor),
                         'Motor %s I variables' % motor)
                     page.lineBreak(page.body())
                 page.write()
                 # Create the global I variables page
-                page = WebPage('Global I Variables for %s' % pmac.name, 
+                page = WebPage('Global I Variables for %s' % pmac.name,
                     '%s/%s_ivars_glob.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 pmac.htmlGlobalIVariables(page)
                 page.write()
                 # Create each I variables page
                 for motor in range(1, pmac.numAxes+1):
-                    page = WebPage('Motor %s I Variables for %s' % (motor, pmac.name), 
+                    page = WebPage('Motor %s I Variables for %s' % (motor, pmac.name),
                         '%s/%s_ivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
                         styleSheet='analysis.css')
                     pmac.htmlMotorIVariables(motor, page)
@@ -627,24 +627,24 @@ class GlobalConfig(object):
                 if pmac.numMacroStationIcs > 0:
                     # Create the MS,I variables top level web page
                     page = WebPage('Macrostation I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-                        '%s/%s_msivariables.htm' % (self.resultsDir, pmac.name), 
+                        '%s/%s_msivariables.htm' % (self.resultsDir, pmac.name),
                         styleSheet='analysis.css')
                     page.href(page.body(), '%s_msivars_glob.htm' % pmac.name, 'Global macrostation I variables')
                     page.lineBreak(page.body())
                     for motor in range(1, pmac.numAxes+1):
-                        page.href(page.body(), '%s_msivars_motor%s.htm' % (pmac.name, motor), 
+                        page.href(page.body(), '%s_msivars_motor%s.htm' % (pmac.name, motor),
                             'Motor %s macrostation I variables' % motor)
                         page.lineBreak(page.body())
                     page.write()
                     # Create the global macrostation I variables page
-                    page = WebPage('Global Macrostation I Variables for %s' % pmac.name, 
+                    page = WebPage('Global Macrostation I Variables for %s' % pmac.name,
                         '%s/%s_msivars_glob.htm' % (self.resultsDir, pmac.name),
                         styleSheet='analysis.css')
                     pmac.htmlGlobalMsIVariables(page)
                     page.write()
                     # Create each motor macrostation I variables page
                     for motor in range(1, pmac.numAxes+1):
-                        page = WebPage('Motor %s Macrostation I Variables for %s' % (motor, pmac.name), 
+                        page = WebPage('Motor %s Macrostation I Variables for %s' % (motor, pmac.name),
                             '%s/%s_msivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
                             styleSheet='analysis.css')
                         pmac.htmlMotorMsIVariables(motor, page)
@@ -652,8 +652,8 @@ class GlobalConfig(object):
         # Dump the M variables for each pmac
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
-                page = WebPage('M Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
-                    '%s/%s_mvariables.htm' % (self.resultsDir, pmac.name), 
+                page = WebPage('M Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                    '%s/%s_mvariables.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
                 row = None
@@ -669,8 +669,8 @@ class GlobalConfig(object):
         # Dump the M variable values for each pmac
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
-                page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
-                    '%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name), 
+                page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                    '%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
                 row = None
@@ -686,8 +686,8 @@ class GlobalConfig(object):
         # Dump the P variables for each pmac
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
-                page = WebPage('P Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
-                    '%s/%s_pvariables.htm' % (self.resultsDir, pmac.name), 
+                page = WebPage('P Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                    '%s/%s_pvariables.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
                 row = None
@@ -704,10 +704,10 @@ class GlobalConfig(object):
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the PLC top level web page
-                page = WebPage('PLCs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
+                page = WebPage('PLCs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
                     '%s/%s_plcs.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
-                table = page.table(page.body(), 
+                table = page.table(page.body(),
                     ['PLC', 'Code', 'P Variables'])
                 for id in range(32):
                     plc = pmac.hardwareState.getPlcProgramNoCreate(id)
@@ -724,14 +724,14 @@ class GlobalConfig(object):
                 for id in range(32):
                     plc = pmac.hardwareState.getPlcProgramNoCreate(id)
                     if plc is not None:
-                        page = WebPage('%s PLC%s' % (pmac.name, id), 
+                        page = WebPage('%s PLC%s' % (pmac.name, id),
                             '%s/%s_plc_%s.htm' % (self.resultsDir, pmac.name, id),
                             styleSheet='analysis.css')
                         plc.html2(page, page.body())
                         page.write()
                 # Create the P variable pages
                 for id in range(32):
-                    page = WebPage('P Variables for %s PLC %s' % (pmac.name, id), 
+                    page = WebPage('P Variables for %s PLC %s' % (pmac.name, id),
                         '%s/%s_plc%s_p.htm' % (self.resultsDir, pmac.name, id),
                         styleSheet='analysis.css')
                     table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
@@ -747,7 +747,7 @@ class GlobalConfig(object):
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the motion program top level web page
-                page = WebPage('Motion Programs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
+                page = WebPage('Motion Programs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
                     '%s/%s_motionprogs.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
                 table = page.table(page.body())
@@ -762,7 +762,7 @@ class GlobalConfig(object):
                 for id in range(256):
                     prog = pmac.hardwareState.getMotionProgramNoCreate(id)
                     if prog is not None:
-                        page = WebPage('Motion Program %s for %s' % (id, pmac.name), 
+                        page = WebPage('Motion Program %s for %s' % (id, pmac.name),
                             '%s/%s_prog_%s.htm' % (self.resultsDir, pmac.name, id),
                             styleSheet='analysis.css')
                         prog.html2(page, page.body())
@@ -771,10 +771,10 @@ class GlobalConfig(object):
         for name,pmac in self.pmacs.iteritems():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the coordinate systems top level web page
-                page = WebPage('Coordinate Systems for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')), 
+                page = WebPage('Coordinate Systems for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
                     '%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
                     styleSheet='analysis.css')
-                table = page.table(page.body(), 
+                table = page.table(page.body(),
                     ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables', '%'])
                 for id in range(1, 17):
                     row = page.tableRow(table)
@@ -801,7 +801,7 @@ class GlobalConfig(object):
                         var.html(page, col)
                 page.write()
                 for id in range(1,17):
-                    page = WebPage('Q Variables for %s CS %s' % (pmac.name, id), 
+                    page = WebPage('Q Variables for %s CS %s' % (pmac.name, id),
                         '%s/%s_cs%s_q.htm' % (self.resultsDir, pmac.name, id),
                         styleSheet='analysis.css')
                     table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
@@ -883,7 +883,7 @@ class WebPage(object):
         '''Creates a line break.'''
         parent.appendChild(self.doc.createElement('br'))
     def doc_node(self, text, desc):
-        anode = self.doc.createElement('a') 
+        anode = self.doc.createElement('a')
         anode.setAttribute('class','body_con')
         anode.setAttribute('title',desc)
         self.text(anode,text)
@@ -1036,7 +1036,7 @@ class PmacIVariable(PmacVariable):
                 useHex = self.n in self.useHexGlobal
             if useHex:
                 result = '$%x' % self.v
-            else: 
+            else:
                 result = '%s' % self.v
         return result
 
@@ -1059,7 +1059,7 @@ class PmacMVariable(PmacVariable):
             if self.width == 24:
                 result += ',24'
                 if not self.format == 'U':
-                    result += ',%s' % self.format 
+                    result += ',%s' % self.format
             else:
                 result += ',%s' % self.offset
                 if not self.width == 1 or not self.format == 'U':
@@ -1495,7 +1495,7 @@ class PmacState(object):
         41:'I-variable lockout control', 42:'Spline/PVT time control mode',
         43:'Auxiliary serial port parser disable', 44:'PMAC ladder program enable',
         45:'Foreground binary rotary buffer transfer enable',
-        46:'P&Q-variable storage location', 
+        46:'P&Q-variable storage location',
         47:'DPRAM motor data foreground reporting period',
         48:'DPRAM motor data foreground reporting enable',
         49:'DPRAM background data reporting enable', 50:'DPRAM background data reporting period',
@@ -1524,11 +1524,11 @@ class PmacState(object):
         92:'VME base address bits A31-A24',
         93:'VME mailbox base address bits A23-A16 ISA DPRAM base address bits A23-A16',
         94:'VME mailbox base address bits A15-A08 ISA DPRAM base address bits A15-A14 & control',
-        95:'VME interrupt level', 96:'VME interrupt vector', 
+        95:'VME interrupt level', 96:'VME interrupt vector',
         97:'VME DPRAM base address bits A23-A20', 98:'VME DPRAM enable',
         99:'VME address width control'}
-    motorIVariableDescriptions = {0:'Activation control', 1:'Commutation enable', 
-        2:'Command output address', 3:'Position loop feedback address', 
+    motorIVariableDescriptions = {0:'Activation control', 1:'Commutation enable',
+        2:'Command output address', 3:'Position loop feedback address',
         4:'Velocity loop feedback address', 5:'Master position address',
         6:'Position following enable and mode', 7:'Master (handwheel) scale factor',
         8:'Position scale factor', 9:'Velocity-loop scale factor',
@@ -1536,7 +1536,7 @@ class PmacState(object):
         12:'Warning following error limit', 13:'Positive software position limit',
         14:'Negative software position limit', 15:'Abort/limit deceleration rate',
         16:'Maximum program velocity', 17:'Maximum program acceleration',
-        18:'Reserved', 19:'Maximum jog/home acceleration', 
+        18:'Reserved', 19:'Maximum jog/home acceleration',
         20:'Jog/home acceleration time', 21:'Jog/home S-curve time',
         22:'Jog speed', 23:'Home speed and direction', 24:'Flag mode control',
         25:'Flag address', 26:'Home offset', 27:'Position rollover range',
@@ -1556,13 +1556,13 @@ class PmacState(object):
         60:'Servo cycle period extension period', 61:'Current-loop integral gain',
         62:'Current-loop forward-path proportional gain', 63:'Integration limit',
         64:'Deadband gain factor', 65:'Deadband size', 66:'PWM scale factor',
-        67:'Position error limit', 68:'Friction feedforward', 
+        67:'Position error limit', 68:'Friction feedforward',
         69:'Output command limit', 70:'Number of commutation cycles (N)',
         71:'Counts per N commutation cycles', 72:'Commuation phase angle',
         73:'Phase finding output value', 74:'Phase finding time',
         75:'Phase position offset', 76:'Current-loop back-path proportional gain',
         77:'Magnetization current', 78:'Slip gain', 79:'Second phase offset',
-        80:'Power-up mode', 81:'Power-on phase position address', 
+        80:'Power-up mode', 81:'Power-on phase position address',
         82:'Current-loop feedback address', 83:'Commutation position address',
         84:'Current-loop feedback mask word', 85:'Backlash take-up rate',
         86:'Backlash size', 87:'Backlash hysteresis', 88:'In-position number of scans',
@@ -1694,7 +1694,7 @@ class PmacState(object):
         995:'Macro ring configuration/status',996:'Macro node activate control',
         997:'Phase clock frequency control',998:'Servo clock frequency control',
         999:'Handwheel DAC strobe word'}
-    motorMsIVariableDescriptions = {910:'Encoder/timer decode control', 
+    motorMsIVariableDescriptions = {910:'Encoder/timer decode control',
         911:'Position compare channel select', 912:'Encoder capture control',
         913:'Capture flag select control', 914:'Encoder gated index select',
         915:'Encoder index gate state', 916:'Output mode select',
@@ -1833,22 +1833,22 @@ class PmacState(object):
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
         for i in range(0, 100):
-            page.tableRow(table, 
-                ['i%s' % i, 
+            page.tableRow(table,
+                ['i%s' % i,
                 '%s' % self.getIVariable(i).valStr(),
                 '%s' % PmacState.globalIVariableDescriptions[i]])
     def htmlMotorIVariables(self, motor, page, geobrick):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
         for n in range(0, 100):
             i = motor*100 + n
-            page.tableRow(table, 
+            page.tableRow(table,
                 ['i%s' % i,
                 '%s' % self.getIVariable(i).valStr(),
                 '%s' % PmacState.motorIVariableDescriptions[n]])
         if geobrick:
             for n in range(10):
                 i = 7000 + PmacState.axisToMn[motor] + n
-                page.tableRow(table, 
+                page.tableRow(table,
                     ['i%s' % i,
                     '%s' % self.getIVariable(i).valStr(),
                     '%s' % PmacState.motorI7000VariableDescriptions[n]])
@@ -1856,7 +1856,7 @@ class PmacState(object):
         table = page.table(page.body(), ["MS I-Variable", "Node", "Value", "Description"])
         for i,description in PmacState.globalMsIVariableDescriptions.iteritems():
             for node in [0,16,32,64]:
-                page.tableRow(table, 
+                page.tableRow(table,
                     ['i%s' % i, '%s' % node,
                     '%s' % self.getMsIVariable(0,i).valStr(),
                     '%s' % description])
@@ -1864,7 +1864,7 @@ class PmacState(object):
         table = page.table(page.body(), ["MS I-Variable", "Value", "Description"])
         node = PmacState.axisToNode[motor]
         for i,description in PmacState.motorMsIVariableDescriptions.iteritems():
-            page.tableRow(table, 
+            page.tableRow(table,
                 ['i%s' % i,
                 '%s' % self.getMsIVariable(node, i).valStr(),
                 '%s' % description])
@@ -2036,7 +2036,7 @@ class Pmac(object):
             self.noCompare.removeVar(var)
     def copyNoComparesFrom(self, otherPmac):
         self.noCompare.copyFrom(otherPmac.noCompare)
-    def readHardware(self, backupDir, checkPositions, debug, comments):
+    def readHardware(self, backupDir, checkPositions, debug, comments, verbose):
         '''Loads the current state of the PMAC.  If a backupDir is provided, the
            state is written as it is read.'''
         self.checkPositions = checkPositions
@@ -2053,9 +2053,9 @@ class Pmac(object):
             # Open either a Telnet connection to a terminal server,
             # or a direct TCP/IP connection to a PMAC
             if self.termServ:
-                self.pti = PmacTelnetInterface()
+                self.pti = PmacTelnetInterface(verbose=verbose)
             else:
-                self.pti = PmacEthernetInterface()
+                self.pti = PmacEthernetInterface(verbose=verbose)
             self.pti.setConnectionParams(self.host, self.port)
             msg = self.pti.connect()
             if msg != None:
@@ -2355,7 +2355,11 @@ class Pmac(object):
             (returnStr, status) = self.sendCommand('list %s,%s,%s' % (thing, startPos, increment))
             startPos += increment
             if not status:
-                raise PmacReadError(returnStr)
+                if returnStr.endswith('PMAC communication error'):
+                    # Can get this instead of ERR for a missing program
+                    going = False
+                else:
+                    raise PmacReadError(returnStr)
             if len(returnStr) > 1350:
                 raise PmacReadError('String too long for small buffer mode')
             if returnStr.find('ERR') >= 0:
@@ -2560,7 +2564,7 @@ class PmacParser(object):
             t = self.lexer.getToken()
     def parseDisable(self):
         t = self.lexer.getToken()
-        if t in ['PLC', 'PLCC']: 
+        if t in ['PLC', 'PLCC']:
             t = self.lexer.getToken()
             if tokenIsInt(t):
                 pass
@@ -2582,7 +2586,7 @@ class PmacParser(object):
             t = self.lexer.getToken()
             if t != 'TEMPS':
                 self.lexer.putToken(t)
-        elif t in ['BLCOMP', 'CCUBUF', 'BLCOMP', 'COMP', 'LOOKAHEAD', 'GATHER', 
+        elif t in ['BLCOMP', 'CCUBUF', 'BLCOMP', 'COMP', 'LOOKAHEAD', 'GATHER',
                 'PLCC', 'ROTARY', 'TBUF', 'TCOMP', 'TRACE']:
             pass
         else:
@@ -2997,7 +3001,7 @@ class PmacParser(object):
                 prog.add(t)
                 t = self.lexer.getToken(wantEol=True)
                 if t == '(':
-                    axes = {'A':False, 'B':False, 'C':False, 
+                    axes = {'A':False, 'B':False, 'C':False,
                             'X':False, 'Y':False, 'Z':False,
                             'U':False, 'V':False, 'W':False}
                     t = self.lexer.getToken(wantEol=True)
@@ -3119,15 +3123,15 @@ class PmacLexer(object):
         'F', 'FRAX', 'H', 'HOME', 'HOMEZ', 'I', '=', '*', '@', 'IDC', 'IDNUMBER', 'INC',
         'J', '+', '-', ':', '==', '^', 'K', 'LEARN', 'LIST', 'DEF', 'FORWARD', 'INVERSE',
         'LDS', 'LINK', 'PC', 'PE', 'PROGRAM', 'LOCK', ',', 'P', 'M', '->', 'D', 'DP', 'L', 'TWB',
-        'TWD', 'TWR', 'TWS', 'MACROASCII', 'MACROAUX', 'MACROAUXREAD', 'MACROAUXWRITE', 
+        'TWD', 'TWR', 'TWS', 'MACROASCII', 'MACROAUX', 'MACROAUXREAD', 'MACROAUXWRITE',
         'MACROMST', 'MACROMSTASCII', 'MACROMSTREAD', 'MACROMSTWRITE', 'MS', 'MSR',
         'MSW', 'MACROSTASCII', 'MFLUSH', 'MOVETIME', 'NOFRAX', 'NORMAL', 'O', 'OPEN',
         'BINARY', 'PASSWORD', 'PAUSE', 'PC', 'PE', 'PMATCH', 'PR', 'Q', 'R', 'RH', 'RESUME',
         'S', 'SAVE', 'SETPHASE', 'SID', 'SIZE', 'STN', 'TIME', 'TODAY', 'TYPE', 'UNDEFINE',
         'UNLOCK', 'UPDATE', 'VERSION', 'VID', 'ADDRESS', 'ADIS', 'AND', 'AROT', 'BLOCKSTART',
         'BLOCKSTOP', 'CALL', 'CC0', 'CC1', 'CC2', 'CC3', 'CCR', 'CIRCLE1', 'CIRCLE2',
-        'COMMAND', 'COMMANDS', 'COMMANDP', 'COMMANDR', 'COMMANDA', 'DELAY', 'DISPLAY', 
-        'DWELL', 'ELSE', 'ENDIF', 'ENDWHILE', 'F', 'FRAX', 'G', 'GOSUB', 'GOTO', 'IDIS', 
+        'COMMAND', 'COMMANDS', 'COMMANDP', 'COMMANDR', 'COMMANDA', 'DELAY', 'DISPLAY',
+        'DWELL', 'ELSE', 'ENDIF', 'ENDWHILE', 'F', 'FRAX', 'G', 'GOSUB', 'GOTO', 'IDIS',
         'IF', 'IROT', 'LINEAR', 'LOCK', 'N', 'NX', 'NY', 'NZ', 'OR', 'PRELUDE', 'PSET',
         'PVT', 'RAPID', 'RETURN', 'SENDS', 'SENDP', 'SENDR', 'SENDA', 'SETPHASE', 'SPLINE1',
         'SPLINE2', 'STOP', 'T', 'TA', 'TINIT', 'TM', 'TR', 'TS', 'TSELECT', 'TX', 'TY', 'TZ',
