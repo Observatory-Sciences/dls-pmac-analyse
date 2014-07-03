@@ -2420,13 +2420,37 @@ class Pmac(object):
             self.writeBackup('\n; Macro station I-variables\n')
             reqMacroStations = []
             if self.numMacroStationIcs >= 1:
-                reqMacroStations += [0,1,4,5,8,9,12,13]
+                (bits, status) = self.sendCommand('i6841')
+                if status and bits[0] != '\x07':
+                    bits = self.toNumber(bits[:-2])
+                    for i in range(0, 14):
+                        if bits & 1 == 1:
+                            reqMacroStations += [i]
+                        bits = bits >> 1
             if self.numMacroStationIcs >= 2:
-                reqMacroStations += [16,17,20,21,24,25,28,29]
+                (bits, status) = self.sendCommand('i6891')
+                if status and bits[0] != '\x07':
+                    bits = self.toNumber(bits[:-2])
+                    for i in range(0, 14):
+                        if bits & 1 == 1:
+                            reqMacroStations += [i + 16]
+                        bits = bits >> 1
             if self.numMacroStationIcs >= 3:
-                reqMacroStations += [32,33,36,37,40,41,44,45]
+                (bits, status) = self.sendCommand('i6941')
+                if status and bits[0] != '\x07':
+                    bits = self.toNumber(bits[:-2])
+                    for i in range(0, 14):
+                        if bits & 1 == 1:
+                            reqMacroStations += [i + 32]
+                        bits = bits >> 1
             if self.numMacroStationIcs >= 4:
-                reqMacroStations += [48,49,52,53,56,57,60,61]
+                (bits, status) = self.sendCommand('i6991')
+                if status and bits[0] != '\x07':
+                    bits = self.toNumber(bits[:-2])
+                    for i in range(0, 14):
+                        if bits & 1 == 1:
+                            reqMacroStations += [i + 48]
+                        bits = bits >> 1
             reqVars = [910,911,912,913,914,915,916,917,918,923,925,926,927,928,929]
             roVars = [921,922,924,930,938,939]
             for ms in reqMacroStations:
@@ -2472,17 +2496,13 @@ class Pmac(object):
         '''Reads the specified set of global macrostation I variables.'''
         for v in reqVars:
             (returnStr, status) = self.sendCommand('ms%s,i%s' % (ms, v))
-            if not status:
-                raise PmacReadError(returnStr)
-            if returnStr[0] != '\x07':
+            if status and returnStr[0] != '\x07':
                 var = PmacMsIVariable(ms, v, self.toNumber(returnStr[:-2]))
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
         for v in roVars:
             (returnStr, status) = self.sendCommand('ms%s,i%s' % (ms, v))
-            if not status:
-                raise PmacReadError(returnStr)
-            if returnStr[0] != '\x07':
+            if status and returnStr[0] != '\x07':
                 var = PmacMsIVariable(ms, v, self.toNumber(returnStr[:-2]), ro=True)
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
