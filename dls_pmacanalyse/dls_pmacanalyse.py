@@ -9,6 +9,12 @@
 
 import getopt, sys, re, os, datetime, os.path
 from xml.dom.minidom import *
+
+if __name__ == '__main__':
+#    from pkg_resources import require
+#    require('dls_pmaclib')
+    sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..", "..", "dls_pmaclib")))
+
 from dls_pmaclib.dls_pmcpreprocessor import *
 from dls_pmaclib.dls_pmacremote import *
 #from dls_pmcpreprocessor import *
@@ -1222,13 +1228,13 @@ class PmacProgram(PmacVariable):
         self.v.append(t)
     def clear(self):
         self.v = []
-    def valueText(self, typ=0):
+    def valueText(self, typ=0, ignore_ret=False):
         result = ''
         for t in self.v:
             if t == '\n':
                 if len(result) > 0 and not result[-1] == '\n':
                     result += str(t)
-            else:
+            elif ignore_ret == False or t != "RETURN":
                 if len(result) == 0:
                     pass
                 elif result[-1].isalpha() and str(t)[0].isalpha():
@@ -1378,7 +1384,7 @@ class PmacForwardKinematicProgram(PmacProgram):
             result = ''
             if len(self.v) > 0:
                 result = '\n&%s open forward clear\n' % self.n
-                result += self.valueText()
+                result += self.valueText(ignore_ret=True)
                 result += 'close\n'
         return result
     def copyFrom(self):
@@ -1399,7 +1405,7 @@ class PmacInverseKinematicProgram(PmacProgram):
             result = ''
             if len(self.v) > 0:
                 result = '\n&%s open inverse clear\n' % self.n
-                result += self.valueText()
+                result += self.valueText(ignore_ret=True)
                 result += 'close\n'
         return result
     def copyFrom(self):
@@ -1420,7 +1426,7 @@ class PmacMotionProgram(PmacProgram):
             result = ''
             if len(self.v) > 0:
                 result = '\nopen program %s clear\n' % self.n
-                result += self.valueText()
+                result += self.valueText(ignore_ret=True)
                 result += 'close\n'
         return result
     def copyFrom(self):
@@ -1443,7 +1449,7 @@ class PmacPlcProgram(PmacProgram):
             result = ''
             if len(self.v) > 0:
                 result = '\nopen plc %s clear\n' % self.n
-                result += self.valueText()
+                result += self.valueText(ignore_ret=True)
                 result += 'close\n'
         return result
     def copyFrom(self):
@@ -3310,8 +3316,6 @@ def main():
     return 0
 
 if __name__ == '__main__':
-    from pkg_resources import require
-    require('dls_pmaclib')
     sys.exit(main())
 
 
