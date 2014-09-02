@@ -1884,23 +1884,29 @@ class PmacState(object):
         # For each of these addresses, compare the variable
         for a in addrs:
             texta = a
+            commentargs = {}
             if texta.endswith("%0"):
                 texta = texta[:-1]
             if texta.startswith("i") and not texta.startswith("inv"):
                 i = int(texta[1:])
                 if i in range(100):
                     desc = PmacState.globalIVariableDescriptions[i]
+                    commentargs["comment"] = desc
                 elif i in range(3300):
                     desc = PmacState.motorIVariableDescriptions[i%100]
+                    commentargs["comment"] = desc    
+                elif i in range(7000, 7350):
+                    desc = PmacState.motorI7000VariableDescriptions[i%10]
+                    commentargs["comment"] = desc                             
                 else:
                     desc = "No description available"
-                texta = page.doc_node(a, desc)
+                texta = page.doc_node(a, desc)            
             if a not in other.vars:
                 if not self.vars[a].ro and not self.vars[a].isEmpty():
                     result = False
                     self.writeHtmlRow(page, table, texta, 'Missing', None, self.vars[a])
                     if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump())
+                        unfixfile.write(self.vars[a].dump(**commentargs))
             elif a not in self.vars:
                 if not other.vars[a].ro and not other.vars[a].isEmpty():
                     result = False
@@ -1915,7 +1921,7 @@ class PmacState(object):
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
                     if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump())
+                        unfixfile.write(self.vars[a].dump(**commentargs))
         # Check the running PLCs
         for n in range(32):
             plc = self.getPlcProgramNoCreate(n)
@@ -2675,7 +2681,7 @@ class PmacParser(object):
                 self.lexer.putToken(t)
                 # Report M variable values (do nothing)
         else:
-            raise ParserError('Unexpected statement: M %s' % t, t)
+            raise ParserError('Unexpected statement: M %s' % n, n)
     def parseMVariableAddress(self, start=0, count=0, increment=0, variable=None):
         type = self.lexer.getToken()
         address = 0
