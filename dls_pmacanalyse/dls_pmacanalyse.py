@@ -564,9 +564,9 @@ class GlobalConfig(object):
                     if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
                         os.remove('%s/%s_compare.htm' % (self.resultsDir, pmac.name))
                 else:
-                    if self.writeAnalysis is None:       
+                    if self.writeAnalysis is True:       
 					    page.write()
-        if self.writeAnalysis is None:
+        if self.writeAnalysis is True:
 			# Create the top level page
 			indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'),
 				'%s/index.htm' % self.resultsDir,
