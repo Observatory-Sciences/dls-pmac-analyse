@@ -2883,7 +2883,7 @@ class PmacParser(object):
             t = self.lexer.getToken()
             if t == '=':
                 val = self.parseExpression()
-                var = self.pmac.getQVariable(n)
+                var = self.pmac.getQVariable(self.curCs, n)
                 var.set(val)
             else:
                 self.lexer.putToken(t)
