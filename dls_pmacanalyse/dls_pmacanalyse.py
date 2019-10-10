@@ -8,6 +8,7 @@
 # ------------------------------------------------------------------------------
 
 import getopt, sys, re, os, datetime, os.path
+from functools import cmp_to_key
 from xml.dom.minidom import *
 
 if __name__ == '__main__':
@@ -27,7 +28,7 @@ helpText = '''
     dls-pmac-analyse.py [<options>] [<configFile>]
         where <options> is one or more of:
         -v, --verbose             Verbose output
-        -h, --help                Print the help text and exit
+        -h, --help                print(the help text and exit
         --backup=<dir>            As config file 'backup' statement (see below)
         --comments                As config file 'comments' statement (see below)
         --resultsdir=<dir>        As config file 'resultsdir' statement (see below)
@@ -175,10 +176,12 @@ def numericSplit(a):
     else:
         suffix = 0
     return (prefix, suffix)
+
 def numericSort(a, b):
     '''Used by the sort algorithm to get numeric suffixes in the right order.'''
     prefixa, suffixa = numericSplit(a)
     prefixb, suffixb = numericSplit(b)
+
     if prefixa < prefixb:
         result = -1
     elif prefixa > prefixb:
@@ -293,7 +296,7 @@ class GlobalConfig(object):
         return self.pmacs[name]
     def processArguments(self):
         '''Process the command line arguments.  Returns False
-           if the program is to print the help and exit.'''
+           if the program is to print(the help and exit.'''
         try:
             opts, args = getopt.gnu_getopt(sys.argv[1:], 'vh',
                 ['help', 'verbose', 'backup=', 'pmac=', 'ts=', 'tcpip=',
@@ -301,7 +304,7 @@ class GlobalConfig(object):
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
                 'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments',
                 'fixfile=', 'unfixfile='])
-        except getopt.GetoptError, err:
+        except getopt.GetoptError as err:
             raise ArgumentError(str(err))
         globalPmac = Pmac('global')
         curPmac = None
@@ -511,18 +514,18 @@ class GlobalConfig(object):
             # Drop a style sheet
             wFile = open('%s/analysis.css' % self.resultsDir, 'w+')
             wFile.write('''
-				p{text-align:left; color:black; font-family:arial}
-				h1{text-align:center; color:green}
-				table{border-collapse:collapse}
-				table, th, td{border:1px solid black}
-				th, td{padding:5px; vertical-align:top}
-				th{background-color:#EAf2D3; color:black}
-				em{color:red; font-style:normal; font-weight:bold}
-				#code{white-space:pre}
-				#code{font-family:courier}
-				''')
+                p{text-align:left; color:black; font-family:arial}
+                h1{text-align:center; color:green}
+                table{border-collapse:collapse}
+                table, th, td{border:1px solid black}
+                th, td{padding:5px; vertical-align:top}
+                th{background-color:#EAf2D3; color:black}
+                em{color:red; font-style:normal; font-weight:bold}
+                #code{white-space:pre}
+                #code{font-family:courier}
+                ''')
         # Analyse each pmac
-        for name,pmac in self.pmacs.iteritems():
+        for name,pmac in self.pmacs.items():
             if self.onlyPmacs is None or name in self.onlyPmacs:
                 # Create the comparison web page
                 page = WebPage('Comparison results for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
@@ -533,9 +536,9 @@ class GlobalConfig(object):
                     try:
                         pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments, self.verbose)
                     except PmacReadError as pErr:
-                    	import traceback
-                    	traceback.print_exc()
-                        print "FAILED TO CONNECT TO " + pmac.name
+                        import traceback
+                        traceback.print_exc()
+                        print("FAILED TO CONNECT TO " + pmac.name)
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -565,266 +568,266 @@ class GlobalConfig(object):
                         os.remove('%s/%s_compare.htm' % (self.resultsDir, pmac.name))
                 else:
                     if self.writeAnalysis is True:       
-					    page.write()
+                        page.write()
         if self.writeAnalysis is True:
-			# Create the top level page
-			indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'),
-				'%s/index.htm' % self.resultsDir,
-				styleSheet='analysis.css')
-			table = indexPage.table(indexPage.body())
-			for name,pmac in self.pmacs.iteritems():
-				row = indexPage.tableRow(table)
-				indexPage.tableColumn(row, '%s' % pmac.name)
-				if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
-					indexPage.href(indexPage.tableColumn(row),
-						'%s_compare.htm' % pmac.name, 'Comparison results')
-				elif os.path.exists('%s/%s_plcs.htm' % (self.resultsDir, pmac.name)):
-					indexPage.tableColumn(row, 'Matches')
-				else:
-					indexPage.tableColumn(row, 'No results')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_ivariables.htm' % pmac.name, 'I variables')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_pvariables.htm' % pmac.name, 'P variables')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_mvariables.htm' % pmac.name, 'M variables')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_mvariablevalues.htm' % pmac.name, 'M variable values')
-				if pmac.numMacroStationIcs == 0:
-					indexPage.tableColumn(row, '-')
-				elif pmac.numMacroStationIcs is None and \
-						not os.path.exists('%s/%s_msivariables.htm' % (self.resultsDir, pmac.name)):
-					indexPage.tableColumn(row, '-')
-				else:
-					indexPage.href(indexPage.tableColumn(row),
-						'%s_msivariables.htm' % pmac.name, 'MS variables')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_coordsystems.htm' % pmac.name, 'Coordinate systems')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_plcs.htm' % pmac.name, 'PLCs')
-				indexPage.href(indexPage.tableColumn(row),
-					'%s_motionprogs.htm' % pmac.name, 'Motion programs')
-			indexPage.write()
-			# Dump the I variables for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					# Create the I variables top level web page
-					page = WebPage('I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_ivariables.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					page.href(page.body(), '%s_ivars_glob.htm' % pmac.name, 'Global I variables')
-					page.lineBreak(page.body())
-					for motor in range(1, pmac.numAxes+1):
-						page.href(page.body(), '%s_ivars_motor%s.htm' % (pmac.name, motor),
-							'Motor %s I variables' % motor)
-						page.lineBreak(page.body())
-					page.write()
-					# Create the global I variables page
-					page = WebPage('Global I Variables for %s' % pmac.name,
-						'%s/%s_ivars_glob.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					pmac.htmlGlobalIVariables(page)
-					page.write()
-					# Create each I variables page
-					for motor in range(1, pmac.numAxes+1):
-						page = WebPage('Motor %s I Variables for %s' % (motor, pmac.name),
-							'%s/%s_ivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
-							styleSheet='analysis.css')
-						pmac.htmlMotorIVariables(motor, page)
-						page.write()
-			# Dump the macrostation I variables for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					if pmac.numMacroStationIcs > 0:
-						# Create the MS,I variables top level web page
-						page = WebPage('Macrostation I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-							'%s/%s_msivariables.htm' % (self.resultsDir, pmac.name),
-							styleSheet='analysis.css')
-						page.href(page.body(), '%s_msivars_glob.htm' % pmac.name, 'Global macrostation I variables')
-						page.lineBreak(page.body())
-						for motor in range(1, pmac.numAxes+1):
-							page.href(page.body(), '%s_msivars_motor%s.htm' % (pmac.name, motor),
-								'Motor %s macrostation I variables' % motor)
-							page.lineBreak(page.body())
-						page.write()
-						# Create the global macrostation I variables page
-						page = WebPage('Global Macrostation I Variables for %s' % pmac.name,
-							'%s/%s_msivars_glob.htm' % (self.resultsDir, pmac.name),
-							styleSheet='analysis.css')
-						pmac.htmlGlobalMsIVariables(page)
-						page.write()
-						# Create each motor macrostation I variables page
-						for motor in range(1, pmac.numAxes+1):
-							page = WebPage('Motor %s Macrostation I Variables for %s' % (motor, pmac.name),
-								'%s/%s_msivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
-								styleSheet='analysis.css')
-							pmac.htmlMotorMsIVariables(motor, page)
-							page.write()
-			# Dump the M variables for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					page = WebPage('M Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_mvariables.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
-					row = None
-					for m in range(8192):
-						if m % 10 == 0:
-							row = page.tableRow(table)
-							page.tableColumn(row, 'm%s->' % m)
-						var = pmac.hardwareState.getMVariable(m)
-						page.tableColumn(row, var.valStr())
-					for i in range(8):
-						page.tableColumn(row, '')
-					page.write()
-			# Dump the M variable values for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
-					row = None
-					for m in range(8192):
-						if m % 10 == 0:
-							row = page.tableRow(table)
-							page.tableColumn(row, 'm%s' % m)
-						var = pmac.hardwareState.getMVariable(m)
-						page.tableColumn(row, var.contentsStr())
-					for i in range(8):
-						page.tableColumn(row, '')
-					page.write()
-			# Dump the P variables for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					page = WebPage('P Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_pvariables.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
-					row = None
-					for m in range(8192):
-						if m % 10 == 0:
-							row = page.tableRow(table)
-							page.tableColumn(row, 'p%s' % m)
-						var = pmac.hardwareState.getPVariable(m)
-						page.tableColumn(row, var.valStr())
-					for i in range(8):
-						page.tableColumn(row, '')
-					page.write()
-			# Dump the PLCs for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					# Create the PLC top level web page
-					page = WebPage('PLCs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_plcs.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body(),
-						['PLC', 'Code', 'P Variables'])
-					for id in range(32):
-						plc = pmac.hardwareState.getPlcProgramNoCreate(id)
-						row = page.tableRow(table)
-						page.tableColumn(row, '%s' % id)
-						if plc is not None:
-							page.href(page.tableColumn(row), '%s_plc_%s.htm' % (pmac.name, id), 'Code')
-						else:
-							page.tableColumn(row, '-')
-						page.href(page.tableColumn(row), '%s_plc%s_p.htm' % (pmac.name, id),
-							'P%d..%d' % (id*100, id*100+99))
-					page.write()
-					# Create the listing pages
-					for id in range(32):
-						plc = pmac.hardwareState.getPlcProgramNoCreate(id)
-						if plc is not None:
-							page = WebPage('%s PLC%s' % (pmac.name, id),
-								'%s/%s_plc_%s.htm' % (self.resultsDir, pmac.name, id),
-								styleSheet='analysis.css')
-							plc.html2(page, page.body())
-							page.write()
-					# Create the P variable pages
-					for id in range(32):
-						page = WebPage('P Variables for %s PLC %s' % (pmac.name, id),
-							'%s/%s_plc%s_p.htm' % (self.resultsDir, pmac.name, id),
-							styleSheet='analysis.css')
-						table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
-						row = None
-						for m in range(100):
-							if m % 10 == 0:
-								row = page.tableRow(table)
-								page.tableColumn(row, 'p%s' % (m+id*100))
-							var = pmac.hardwareState.getPVariable(m+id*100)
-							page.tableColumn(row, var.valStr())
-						page.write()
-			# Dump the motion programs for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					# Create the motion program top level web page
-					page = WebPage('Motion Programs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_motionprogs.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body())
-					for id in range(256):
-						prog = pmac.hardwareState.getMotionProgramNoCreate(id)
-						if prog is not None:
-							row = page.tableRow(table)
-							page.tableColumn(row, 'prog%s' % id)
-							page.href(page.tableColumn(row), '%s_prog_%s.htm' % (pmac.name, id), 'Code')
-					page.write()
-					# Create the listing pages
-					for id in range(256):
-						prog = pmac.hardwareState.getMotionProgramNoCreate(id)
-						if prog is not None:
-							page = WebPage('Motion Program %s for %s' % (id, pmac.name),
-								'%s/%s_prog_%s.htm' % (self.resultsDir, pmac.name, id),
-								styleSheet='analysis.css')
-							prog.html2(page, page.body())
-							page.write()
-			# Dump the coordinate systems for each pmac
-			for name,pmac in self.pmacs.iteritems():
-				if self.onlyPmacs is None or name in self.onlyPmacs:
-					# Create the coordinate systems top level web page
-					page = WebPage('Coordinate Systems for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
-						'%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
-						styleSheet='analysis.css')
-					table = page.table(page.body(),
-						['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables', '%'])
-					for id in range(1, 17):
-						row = page.tableRow(table)
-						page.tableColumn(row, '%s' % id)
-						col = page.tableColumn(row)
-						for m in range(1,33):
-							var = pmac.hardwareState.getCsAxisDefNoCreate(id, m)
-							if var is not None and not var.isZero():
-								page.text(col, '#%s->' % m)
-								var.html(page, col)
-						col = page.tableColumn(row)
-						var = pmac.hardwareState.getForwardKinematicProgramNoCreate(id)
-						if var is not None:
-							var.html(page, col)
-						col = page.tableColumn(row)
-						var = pmac.hardwareState.getInverseKinematicProgramNoCreate(id)
-						if var is not None:
-							var.html(page, col)
-						page.href(page.tableColumn(row), '%s_cs%s_q.htm' % (pmac.name, id),
-							'Q Variables')
-						col = page.tableColumn(row)
-						var = pmac.hardwareState.getFeedrateOverrideNoCreate(id)
-						if var is not None:
-							var.html(page, col)
-					page.write()
-					for id in range(1,17):
-						page = WebPage('Q Variables for %s CS %s' % (pmac.name, id),
-							'%s/%s_cs%s_q.htm' % (self.resultsDir, pmac.name, id),
-							styleSheet='analysis.css')
-						table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
-						row = None
-						for m in range(100):
-							if m % 10 == 0:
-								row = page.tableRow(table)
-								page.tableColumn(row, 'q%s' % m)
-							var = pmac.hardwareState.getQVariable(id, m)
-							page.tableColumn(row, var.valStr())
-						page.write()
-			self.hudsonXmlReport()
+            # Create the top level page
+            indexPage = WebPage('PMAC analysis (%s)' % datetime.datetime.today().strftime('%x %X'),
+                '%s/index.htm' % self.resultsDir,
+                styleSheet='analysis.css')
+            table = indexPage.table(indexPage.body())
+            for name,pmac in self.pmacs.items():
+                row = indexPage.tableRow(table)
+                indexPage.tableColumn(row, '%s' % pmac.name)
+                if os.path.exists('%s/%s_compare.htm' % (self.resultsDir, pmac.name)):
+                    indexPage.href(indexPage.tableColumn(row),
+                        '%s_compare.htm' % pmac.name, 'Comparison results')
+                elif os.path.exists('%s/%s_plcs.htm' % (self.resultsDir, pmac.name)):
+                    indexPage.tableColumn(row, 'Matches')
+                else:
+                    indexPage.tableColumn(row, 'No results')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_ivariables.htm' % pmac.name, 'I variables')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_pvariables.htm' % pmac.name, 'P variables')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_mvariables.htm' % pmac.name, 'M variables')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_mvariablevalues.htm' % pmac.name, 'M variable values')
+                if pmac.numMacroStationIcs == 0:
+                    indexPage.tableColumn(row, '-')
+                elif pmac.numMacroStationIcs is None and \
+                        not os.path.exists('%s/%s_msivariables.htm' % (self.resultsDir, pmac.name)):
+                    indexPage.tableColumn(row, '-')
+                else:
+                    indexPage.href(indexPage.tableColumn(row),
+                        '%s_msivariables.htm' % pmac.name, 'MS variables')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_coordsystems.htm' % pmac.name, 'Coordinate systems')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_plcs.htm' % pmac.name, 'PLCs')
+                indexPage.href(indexPage.tableColumn(row),
+                    '%s_motionprogs.htm' % pmac.name, 'Motion programs')
+            indexPage.write()
+            # Dump the I variables for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    # Create the I variables top level web page
+                    page = WebPage('I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_ivariables.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    page.href(page.body(), '%s_ivars_glob.htm' % pmac.name, 'Global I variables')
+                    page.lineBreak(page.body())
+                    for motor in range(1, pmac.numAxes+1):
+                        page.href(page.body(), '%s_ivars_motor%s.htm' % (pmac.name, motor),
+                            'Motor %s I variables' % motor)
+                        page.lineBreak(page.body())
+                    page.write()
+                    # Create the global I variables page
+                    page = WebPage('Global I Variables for %s' % pmac.name,
+                        '%s/%s_ivars_glob.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    pmac.htmlGlobalIVariables(page)
+                    page.write()
+                    # Create each I variables page
+                    for motor in range(1, pmac.numAxes+1):
+                        page = WebPage('Motor %s I Variables for %s' % (motor, pmac.name),
+                            '%s/%s_ivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
+                            styleSheet='analysis.css')
+                        pmac.htmlMotorIVariables(motor, page)
+                        page.write()
+            # Dump the macrostation I variables for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    if pmac.numMacroStationIcs > 0:
+                        # Create the MS,I variables top level web page
+                        page = WebPage('Macrostation I Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                            '%s/%s_msivariables.htm' % (self.resultsDir, pmac.name),
+                            styleSheet='analysis.css')
+                        page.href(page.body(), '%s_msivars_glob.htm' % pmac.name, 'Global macrostation I variables')
+                        page.lineBreak(page.body())
+                        for motor in range(1, pmac.numAxes+1):
+                            page.href(page.body(), '%s_msivars_motor%s.htm' % (pmac.name, motor),
+                                'Motor %s macrostation I variables' % motor)
+                            page.lineBreak(page.body())
+                        page.write()
+                        # Create the global macrostation I variables page
+                        page = WebPage('Global Macrostation I Variables for %s' % pmac.name,
+                            '%s/%s_msivars_glob.htm' % (self.resultsDir, pmac.name),
+                            styleSheet='analysis.css')
+                        pmac.htmlGlobalMsIVariables(page)
+                        page.write()
+                        # Create each motor macrostation I variables page
+                        for motor in range(1, pmac.numAxes+1):
+                            page = WebPage('Motor %s Macrostation I Variables for %s' % (motor, pmac.name),
+                                '%s/%s_msivars_motor%s.htm' % (self.resultsDir, pmac.name, motor),
+                                styleSheet='analysis.css')
+                            pmac.htmlMotorMsIVariables(motor, page)
+                            page.write()
+            # Dump the M variables for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    page = WebPage('M Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_mvariables.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                    row = None
+                    for m in range(8192):
+                        if m % 10 == 0:
+                            row = page.tableRow(table)
+                            page.tableColumn(row, 'm%s->' % m)
+                        var = pmac.hardwareState.getMVariable(m)
+                        page.tableColumn(row, var.valStr())
+                    for i in range(8):
+                        page.tableColumn(row, '')
+                    page.write()
+            # Dump the M variable values for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    page = WebPage('M Variable values for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_mvariablevalues.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                    row = None
+                    for m in range(8192):
+                        if m % 10 == 0:
+                            row = page.tableRow(table)
+                            page.tableColumn(row, 'm%s' % m)
+                        var = pmac.hardwareState.getMVariable(m)
+                        page.tableColumn(row, var.contentsStr())
+                    for i in range(8):
+                        page.tableColumn(row, '')
+                    page.write()
+            # Dump the P variables for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    page = WebPage('P Variables for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_pvariables.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                    row = None
+                    for m in range(8192):
+                        if m % 10 == 0:
+                            row = page.tableRow(table)
+                            page.tableColumn(row, 'p%s' % m)
+                        var = pmac.hardwareState.getPVariable(m)
+                        page.tableColumn(row, var.valStr())
+                    for i in range(8):
+                        page.tableColumn(row, '')
+                    page.write()
+            # Dump the PLCs for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    # Create the PLC top level web page
+                    page = WebPage('PLCs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_plcs.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body(),
+                        ['PLC', 'Code', 'P Variables'])
+                    for id in range(32):
+                        plc = pmac.hardwareState.getPlcProgramNoCreate(id)
+                        row = page.tableRow(table)
+                        page.tableColumn(row, '%s' % id)
+                        if plc is not None:
+                            page.href(page.tableColumn(row), '%s_plc_%s.htm' % (pmac.name, id), 'Code')
+                        else:
+                            page.tableColumn(row, '-')
+                        page.href(page.tableColumn(row), '%s_plc%s_p.htm' % (pmac.name, id),
+                            'P%d..%d' % (id*100, id*100+99))
+                    page.write()
+                    # Create the listing pages
+                    for id in range(32):
+                        plc = pmac.hardwareState.getPlcProgramNoCreate(id)
+                        if plc is not None:
+                            page = WebPage('%s PLC%s' % (pmac.name, id),
+                                '%s/%s_plc_%s.htm' % (self.resultsDir, pmac.name, id),
+                                styleSheet='analysis.css')
+                            plc.html2(page, page.body())
+                            page.write()
+                    # Create the P variable pages
+                    for id in range(32):
+                        page = WebPage('P Variables for %s PLC %s' % (pmac.name, id),
+                            '%s/%s_plc%s_p.htm' % (self.resultsDir, pmac.name, id),
+                            styleSheet='analysis.css')
+                        table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                        row = None
+                        for m in range(100):
+                            if m % 10 == 0:
+                                row = page.tableRow(table)
+                                page.tableColumn(row, 'p%s' % (m+id*100))
+                            var = pmac.hardwareState.getPVariable(m+id*100)
+                            page.tableColumn(row, var.valStr())
+                        page.write()
+            # Dump the motion programs for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    # Create the motion program top level web page
+                    page = WebPage('Motion Programs for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_motionprogs.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body())
+                    for id in range(256):
+                        prog = pmac.hardwareState.getMotionProgramNoCreate(id)
+                        if prog is not None:
+                            row = page.tableRow(table)
+                            page.tableColumn(row, 'prog%s' % id)
+                            page.href(page.tableColumn(row), '%s_prog_%s.htm' % (pmac.name, id), 'Code')
+                    page.write()
+                    # Create the listing pages
+                    for id in range(256):
+                        prog = pmac.hardwareState.getMotionProgramNoCreate(id)
+                        if prog is not None:
+                            page = WebPage('Motion Program %s for %s' % (id, pmac.name),
+                                '%s/%s_prog_%s.htm' % (self.resultsDir, pmac.name, id),
+                                styleSheet='analysis.css')
+                            prog.html2(page, page.body())
+                            page.write()
+            # Dump the coordinate systems for each pmac
+            for name,pmac in self.pmacs.items():
+                if self.onlyPmacs is None or name in self.onlyPmacs:
+                    # Create the coordinate systems top level web page
+                    page = WebPage('Coordinate Systems for %s (%s)' % (pmac.name, datetime.datetime.today().strftime('%x %X')),
+                        '%s/%s_coordsystems.htm' % (self.resultsDir, pmac.name),
+                        styleSheet='analysis.css')
+                    table = page.table(page.body(),
+                        ['CS', 'Axis def', 'Forward Kinematic', 'Inverse Kinematic', 'Q Variables', '%'])
+                    for id in range(1, 17):
+                        row = page.tableRow(table)
+                        page.tableColumn(row, '%s' % id)
+                        col = page.tableColumn(row)
+                        for m in range(1,33):
+                            var = pmac.hardwareState.getCsAxisDefNoCreate(id, m)
+                            if var is not None and not var.isZero():
+                                page.text(col, '#%s->' % m)
+                                var.html(page, col)
+                        col = page.tableColumn(row)
+                        var = pmac.hardwareState.getForwardKinematicProgramNoCreate(id)
+                        if var is not None:
+                            var.html(page, col)
+                        col = page.tableColumn(row)
+                        var = pmac.hardwareState.getInverseKinematicProgramNoCreate(id)
+                        if var is not None:
+                            var.html(page, col)
+                        page.href(page.tableColumn(row), '%s_cs%s_q.htm' % (pmac.name, id),
+                            'Q Variables')
+                        col = page.tableColumn(row)
+                        var = pmac.hardwareState.getFeedrateOverrideNoCreate(id)
+                        if var is not None:
+                            var.html(page, col)
+                    page.write()
+                    for id in range(1,17):
+                        page = WebPage('Q Variables for %s CS %s' % (pmac.name, id),
+                            '%s/%s_cs%s_q.htm' % (self.resultsDir, pmac.name, id),
+                            styleSheet='analysis.css')
+                        table = page.table(page.body(), ['','0','1','2','3','4','5','6','7','8','9'])
+                        row = None
+                        for m in range(100):
+                            if m % 10 == 0:
+                                row = page.tableRow(table)
+                                page.tableColumn(row, 'q%s' % m)
+                            var = pmac.hardwareState.getQVariable(id, m)
+                            page.tableColumn(row, var.valStr())
+                        page.write()
+            self.hudsonXmlReport()
     def loadFactorySettings(self, pmac, fileName, includeFiles):
         for i in range(8192):
             pmac.getIVariable(i)
@@ -845,7 +848,7 @@ class GlobalConfig(object):
         xmlTop.setAttribute("tests", str(len(self.pmacs)))
         xmlTop.setAttribute("time", "0")
         xmlTop.setAttribute("timestamp", "0")
-        for name,pmac in self.pmacs.iteritems():
+        for name,pmac in self.pmacs.items():
             element = xmlDoc.createElement("testcase")
             xmlTop.appendChild(element)
             element.setAttribute("classname", "pmac")
@@ -1229,7 +1232,7 @@ class PmacProgram(PmacVariable):
         self.lines = lines
     def add(self, t):
         if not isinstance(t, PmacToken):
-            print 'PmacProgram: %s is not a token' % repr(t)
+            print('PmacProgram: %s is not a token' % repr(t))
         self.v.append(t)
     def clear(self):
         self.v = []
@@ -1748,7 +1751,7 @@ class PmacState(object):
         if var.addr() in self.vars:
             del self.vars[var.addr()]
     def copyFrom(self, other):
-        for k,v in other.vars.iteritems():
+        for k,v in other.vars.items():
             self.vars[k] = v.copyFrom()
     def getVar(self, t, n):
         addr = '%s%s' % (t,n)
@@ -1838,7 +1841,7 @@ class PmacState(object):
         return self.getVarNoCreate2('&', cs, '#', m)
     def dump(self):
         result = ''
-        for a,v in self.vars.iteritems():
+        for a,v in self.vars.items():
             result += v.dump()
         return result
     def htmlGlobalIVariables(self, page):
@@ -1865,7 +1868,7 @@ class PmacState(object):
                     '%s' % PmacState.motorI7000VariableDescriptions[n]])
     def htmlGlobalMsIVariables(self, page):
         table = page.table(page.body(), ["MS I-Variable", "Node", "Value", "Description"])
-        for i,description in PmacState.globalMsIVariableDescriptions.iteritems():
+        for i,description in PmacState.globalMsIVariableDescriptions.items():
             for node in [0,16,32,64]:
                 page.tableRow(table,
                     ['i%s' % i, '%s' % node,
@@ -1874,7 +1877,7 @@ class PmacState(object):
     def htmlMotorMsIVariables(self, motor, page):
         table = page.table(page.body(), ["MS I-Variable", "Value", "Description"])
         node = PmacState.axisToNode[motor]
-        for i,description in PmacState.motorMsIVariableDescriptions.iteritems():
+        for i,description in PmacState.motorMsIVariableDescriptions.items():
             page.tableRow(table,
                 ['i%s' % i,
                 '%s' % self.getMsIVariable(node, i).valStr(),
@@ -1885,7 +1888,7 @@ class PmacState(object):
         table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
         # Build the list of variable addresses to test
         addrs = sorted((set(self.vars.keys()) | set(other.vars.keys())) - \
-            set(noCompare.vars.keys()), numericSort)
+            set(noCompare.vars.keys()),  key=cmp_to_key(numericSort))
         # For each of these addresses, compare the variable
         for a in addrs:
             texta = a
@@ -1932,7 +1935,7 @@ class PmacState(object):
             plc = self.getPlcProgramNoCreate(n)
             if plc is not None:
                 plc.setShouldBeRunning()
-                #print "PLC%s, isRunning=%s, shouldBeRunning=%s" % (n, plc.isRunning, plc.shouldBeRunning)
+                #print("PLC%s, isRunning=%s, shouldBeRunning=%s" % (n, plc.isRunning, plc.shouldBeRunning)
                 if plc.shouldBeRunning and not plc.isRunning:
                     result = False
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Not running', None, None)
@@ -1971,16 +1974,16 @@ class PmacState(object):
         file = open(fileName, 'r')
         if file is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
-        print 'Loading PMC file %s...' % fileName
+        print('Loading PMC file %s...' % fileName)
         parser = PmacParser(file, self)
         parser.onLine()
     def loadPmcFileWithPreprocess(self, fileName, includePaths):
         '''Loads a PMC file into this PMAC state having expanded includes and defines.'''
         if includePaths is not None:
-            p = clsPmacParser(includePaths = includePaths.split(':'))
+            p = ClsPmacParser(includePaths = includePaths.split(':'))
         else:
-            p = clsPmacParser()
-        print 'Loading PMC file %s...' % fileName
+            p = ClsPmacParser()
+        print('Loading PMC file %s...' % fileName)
         converted = p.parse(fileName, debug=True)
         if converted is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
@@ -2014,7 +2017,7 @@ class Pmac(object):
             (returnStr, status) = self.sendCommand('#%sP' % (axis+1))
             self.initialPositions[axis+1] = returnStr
             text += '%s ' % returnStr[:-2]
-        print text
+        print(text)
     def htmlMotorIVariables(self, motor, page):
         self.hardwareState.htmlMotorIVariables(motor, page, self.geobrick)
     def htmlGlobalIVariables(self, page):
@@ -2024,12 +2027,12 @@ class Pmac(object):
     def htmlGlobalMsIVariables(self, page):
         self.hardwareState.htmlGlobalMsIVariables(page)
     def compare(self, page, fixfile, unfixfile):
-        print 'Comparing...'
+        print('Comparing...')
         self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile, unfixfile)
         if self.compareResult:
-            print 'Hardware matches reference'
+            print('Hardware matches reference')
         else:
-            print 'Hardware to reference mismatch detected'
+            print('Hardware to reference mismatch detected')
         return self.compareResult
     def setProtocol(self, host, port, termServ):
         self.host = host
@@ -2063,9 +2066,9 @@ class Pmac(object):
             # Open the backup file if required
             if backupDir is not None:
                 fileName = '%s/%s.pmc' % (backupDir, self.name)
-                print "Opening backup file %s" % fileName
+                print("Opening backup file %s" % fileName)
                 self.backupFile = open(fileName, 'w')
-                if file is None:
+                if self.backupFile is None:
                     raise AnalyseError('Could not open backup file: %s' % fileName)
             # Open either a Telnet connection to a terminal server,
             # or a direct TCP/IP connection to a PMAC
@@ -2077,14 +2080,14 @@ class Pmac(object):
             msg = self.pti.connect()
             if msg != None:
                 raise PmacReadError(msg)
-            print 'Connected to a PMAC via "%s" using port %s.' % (self.host, self.port)
+            print('Connected to a PMAC via "%s" using port %s.' % (self.host, self.port))
             # Work out what kind of PMAC we have, if necessary
             self.determinePmacType()
             self.determineNumAxes()
             self.determineNumCoordSystems()
             # Read the axis current positions
             self.positionsBefore = self.readCurrentPositions()
-            #print 'Current positions: %s' % self.positionsBefore
+            #print('Current positions: %s' % self.positionsBefore
             # Read the data
             self.readCoordinateSystemDefinitions()
             self.readMotionPrograms()
@@ -2104,10 +2107,10 @@ class Pmac(object):
         finally:
             # Disconnect from the PMAC
             if self.pti is not None:
-                print 'Disconnecting from PMAC...'
+                print('Disconnecting from PMAC...')
                 msg = self.pti.disconnect()
                 self.pti = None
-                print 'Connection to the PMAC closed.'
+                print('Connection to the PMAC closed.')
             # Close the backup file
             if self.backupFile is not None:
                 self.backupFile.close()
@@ -2123,15 +2126,15 @@ class Pmac(object):
                 else:
                     match = False
             if match:
-                print 'No axes moved during hardware readout'
+                print('No axes moved during hardware readout')
             else:
-                print 'One or more axes have moved:'
-                print '  Before: %s' % positions
-                print '  Now:    %s' % now
+                print('One or more axes have moved:')
+                print('  Before: %s' % positions)
+                print('  Now:    %s' % now)
     def sendCommand(self, text):
         (returnStr, status) = self.pti.sendCommand(text)
         if self.debug:
-            print '%s --> %s' % (repr(text), repr(returnStr))
+            print('%s --> %s' % (repr(text), repr(returnStr)))
         return (returnStr, status)
     def readCurrentPositions(self):
         ''' Returns the current position as a list.'''
@@ -2153,7 +2156,7 @@ class Pmac(object):
                 self.geobrick = True
             else:
                 self.geobrick = False
-            print 'Geobrick= %s' % self.geobrick
+            print('Geobrick= %s' % self.geobrick)
     def determineNumAxes(self):
         '''Determines the number of axes the PMAC has by determining the
            number of macro station ICs.'''
@@ -2169,7 +2172,7 @@ class Pmac(object):
         self.numAxes = self.numMacroStationIcs * 8
         if self.geobrick:
             self.numAxes += 8
-        print 'Num axes= %s' % self.numAxes
+        print('Num axes= %s' % self.numAxes)
     def determineNumCoordSystems(self):
         '''Determines the number of coordinate systems that are active by
            reading i68.'''
@@ -2183,9 +2186,9 @@ class Pmac(object):
             self.backupFile.write(text)
     def readIvars(self):
         '''Reads the I variables.'''
-        print 'Reading I-variables...'
+        print('Reading I-variables...')
         self.writeBackup('\n; I-variables\n')
-        roVars = set([3,4,6,9,20,21,22,23,24,41,58]+range(4900,5000)+
+        roVars = set([3,4,6,9,20,21,22,23,24,41,58]+list(range(4900,5000))+
             [5111,5112,5211,5212,5311,5312,5411,5412,5511,5512,5611,5612,5711,
             5712,5811,5812,5911,5912,6011,6012,6111,6112,6211,6212,6311,6312,
             6411,6412,6511,6512,6611,6612])
@@ -2228,7 +2231,7 @@ class Pmac(object):
                 plc.setIsRunning(runningState)
     def readPvars(self):
         '''Reads the P variables.'''
-        print 'Reading P-variables...'
+        print('Reading P-variables...')
         self.writeBackup('\n; P-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2247,7 +2250,7 @@ class Pmac(object):
             i += varsPerBlock
     def readQvars(self):
         '''Reads the Q variables of a coordinate system.'''
-        print 'Reading Q-variables...'
+        print('Reading Q-variables...')
         for cs in range(1,self.numCoordSystems+1):
             self.writeBackup('\n; &%s Q-variables\n' % cs)
             (returnStr, status) = self.sendCommand('&%sq1..199' % cs)
@@ -2260,7 +2263,7 @@ class Pmac(object):
                 self.writeBackup(var.dump())
     def readFeedrateOverrides(self):
         '''Reads the feedrate overrides of the coordinate systems.'''
-        print 'Reading feedrate overrides...'
+        print('Reading feedrate overrides...')
         self.writeBackup('\n; Feedrate overrides\n')
         for cs in range(1,self.numCoordSystems+1):
             (returnStr, status) = self.sendCommand('&%s%%' % cs)
@@ -2272,7 +2275,7 @@ class Pmac(object):
             self.writeBackup(var.dump())
     def readMvarDefinitions(self):
         '''Reads the M variable definitions.'''
-        print 'Reading M-variable definitions...'
+        print('Reading M-variable definitions...')
         self.writeBackup('\n; M-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2293,7 +2296,7 @@ class Pmac(object):
             i += varsPerBlock
     def readMvarValues(self):
         '''Reads the M variable values.'''
-        print 'Reading M-variable values...'
+        print('Reading M-variable values...')
         varsPerBlock = 100
         i = 0
         while i < 8192:
@@ -2308,11 +2311,11 @@ class Pmac(object):
                 var = self.hardwareState.getMVariable(i+o)
                 var.setValue(self.toNumber(x))
                 #if (i+o) == 99:
-                #    print "m99 ->%s, =%s, x=%s" % (var.valStr(), var.contentsStr(), x)
+                #    print("m99 ->%s, =%s, x=%s" % (var.valStr(), var.contentsStr(), x)
             i += varsPerBlock
     def readCoordinateSystemDefinitions(self):
         '''Reads the coordinate system definitions.'''
-        print 'Reading coordinate system definitions...'
+        print('Reading coordinate system definitions...')
         self.writeBackup('\n; Coordinate system definitions\n')
         self.writeBackup('undefine all\n')
         for cs in range(1,self.numCoordSystems+1):
@@ -2331,7 +2334,7 @@ class Pmac(object):
         '''Reads the kinematic programs.  Note that this
            function will fail if a program exceeds 1350 characters and small buffers
            are required.'''
-        print 'Reading kinematic programs...'
+        print('Reading kinematic programs...')
         self.writeBackup('\n; Kinematic programs\n')
         for cs in range(1,self.numCoordSystems+1):
             (returnStr, status) = self.sendCommand('&%s list forward' % cs)
@@ -2394,7 +2397,7 @@ class Pmac(object):
                         lines.append(line)
                         offsets.append(parts[0])
                     else:
-                        print "Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m))
+                        print("Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m)))
                         #raise PmacReadError("Warning: could not split line into offset and text")
                 if len(more) < 2:
                     pass
@@ -2406,7 +2409,7 @@ class Pmac(object):
         return (lines, offsets)
     def readPlcPrograms(self):
         '''Reads the PLC programs'''
-        print 'Reading PLC programs...'
+        print('Reading PLC programs...')
         self.writeBackup('\n; PLC programs\n')
         for plc in range(32):
             (lines, offsets) = self.getListingLines('plc %s' % plc)
@@ -2418,7 +2421,7 @@ class Pmac(object):
     def readMotionPrograms(self):
         '''Reads the motion programs. Note
            that only the first 256 programs are read, there are actually 32768.'''
-        print 'Reading motion programs...'
+        print('Reading motion programs...')
         self.writeBackup('\n; Motion programs\n')
         for prog in range(1,256):
             (lines, offsets) = self.getListingLines('program %s' % prog)
@@ -2433,7 +2436,7 @@ class Pmac(object):
     def readMsIvars(self):
         '''Reads the macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print 'Reading macro station I-variables'
+            print('Reading macro station I-variables')
             self.writeBackup('\n; Macro station I-variables\n')
             reqMacroStations = []
             if self.numMacroStationIcs >= 1:
@@ -2475,7 +2478,7 @@ class Pmac(object):
     def readGlobalMsIvars(self):
         '''Reads the global macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print 'Reading global macrostation I-variables'
+            print('Reading global macrostation I-variables')
             self.writeBackup('\n; Macro station global I-variables\n')
             if self.numMacroStationIcs in [1,2]:
                 reqMacroStations = [0]
@@ -3045,7 +3048,7 @@ class PmacParser(object):
                     self.lexer.putToken(t)
                     self.lexer.getToken(')')
                     allTrue = True
-                    for x,t in axes.iteritems():
+                    for x,t in axes.items():
                         if not t:
                             allTrue = False
                     if not allTrue:
@@ -3282,13 +3285,13 @@ class PmacLexer(object):
                 if len(t) > len(bestToken) and text.startswith(t):
                     bestToken = t
             # Try the tokens in the short dictionary
-            for t,f in PmacLexer.shortTokens.iteritems():
+            for t,f in PmacLexer.shortTokens.items():
                 if len(t) > len(bestToken) and text.startswith(t):
                     bestToken = t
         if len(bestToken) == 0:
             raise LexerError(text, self.fileName, self.line)
         if self.debug:
-            print '{%s from %s}' % (bestToken, text)
+            print('{%s from %s}' % (bestToken, text))
         return bestToken
     def expandToken(self, token):
         '''If the token is a short form, it is expanded to the full form.'''
@@ -3310,7 +3313,7 @@ class PmacLexer(object):
         # Is it the expected one
         if shouldBe is not None and not shouldBe == result:
             raise ParserError('Expected %s, got %s' % (shouldBe, result), result)
-        #print "{%s:%s}" % (repr(result), self.line)
+        #print("{%s:%s}" % (repr(result), self.line))
         return result
     def putToken(self, token):
         '''Puts a token at the head of the list.'''
@@ -3323,7 +3326,7 @@ def main():
         config.processConfigFile()
         config.analyse()
     else:
-        print helpText
+        print(helpText)
     return 0
 
 if __name__ == '__main__':
