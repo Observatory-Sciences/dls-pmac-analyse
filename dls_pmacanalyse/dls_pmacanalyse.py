@@ -8,18 +8,15 @@
 # ------------------------------------------------------------------------------
 
 import getopt, sys, re, os, datetime, os.path
+import logging
 from functools import cmp_to_key
+from logging import getLogger
 from xml.dom.minidom import *
-
-if __name__ == '__main__':
-#    from pkg_resources import require
-#    require('dls_pmaclib')
-    sys.path.append(os.path.abspath(os.path.join(__file__, "..", "..", "..", "dls_pmaclib")))
 
 from dls_pmaclib.dls_pmcpreprocessor import *
 from dls_pmaclib.dls_pmacremote import *
-#from dls_pmcpreprocessor import *
-#from dls_pmacremote import *
+
+log = getLogger(__name__)
 
 helpText = '''
   Analyse or backup a group of Delta-Tau PMAC motor controllers.
@@ -47,6 +44,7 @@ helpText = '''
         --debug                   Turns on extra debug output
         --fixfile=<file>          Generate a fix file that can be loaded to the PMAC
         --unfixfile=<file>        Generate a file that can be used to correct the reference
+        --loglevel=<level>        set logging to error warning info or debug
 
   Config file syntax:
     resultsdir <dir>
@@ -290,6 +288,7 @@ class GlobalConfig(object):
         self.debug = False
         self.fixfile = None
         self.unfixfile = None
+
     def createOrGetPmac(self, name):
         if name not in self.pmacs:
             self.pmacs[name] = Pmac(name)
@@ -303,7 +302,7 @@ class GlobalConfig(object):
                 'geobrick', 'vmepmac', 'reference=', 'comparewith=',
                 'resultsdir=', 'nocompare=', 'only=', 'include=',
                 'nofactorydefs', 'macroics=', 'checkpositions', 'debug', 'comments',
-                'fixfile=', 'unfixfile='])
+                'fixfile=', 'unfixfile=', 'loglevel='])
         except getopt.GetoptError as err:
             raise ArgumentError(str(err))
         globalPmac = Pmac('global')
@@ -404,6 +403,9 @@ class GlobalConfig(object):
                     curPmac.setNumMacroStationIcs(int(a))
             elif o == '--checkpositions':
                 self.checkPositions = True
+            elif o == '--loglevel':
+                numeric_level = getattr(logging, str(a).upper(), None)
+                log.setLevel(numeric_level)
         if len(args) > 1:
             raise ArgumentError('Too many arguments.')
         if len(args) == 1:
@@ -536,9 +538,7 @@ class GlobalConfig(object):
                     try:
                         pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments, self.verbose)
                     except PmacReadError as pErr:
-                        import traceback
-                        traceback.print_exc()
-                        print("FAILED TO CONNECT TO " + pmac.name)
+                        log.exception("FAILED TO CONNECT TO " + pmac.name)
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -1232,7 +1232,7 @@ class PmacProgram(PmacVariable):
         self.lines = lines
     def add(self, t):
         if not isinstance(t, PmacToken):
-            print('PmacProgram: %s is not a token' % repr(t))
+            log.warning('PmacProgram: %s is not a token' % repr(t))
         self.v.append(t)
     def clear(self):
         self.v = []
@@ -1935,7 +1935,8 @@ class PmacState(object):
             plc = self.getPlcProgramNoCreate(n)
             if plc is not None:
                 plc.setShouldBeRunning()
-                #print("PLC%s, isRunning=%s, shouldBeRunning=%s" % (n, plc.isRunning, plc.shouldBeRunning)
+                log.debug("PLC%s, isRunning=%s, shouldBeRunning=%s",
+                          n, plc.isRunning, plc.shouldBeRunning)
                 if plc.shouldBeRunning and not plc.isRunning:
                     result = False
                     self.writeHtmlRow(page, table, 'plc%s'%n, 'Not running', None, None)
@@ -1974,7 +1975,7 @@ class PmacState(object):
         file = open(fileName, 'r')
         if file is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
-        print('Loading PMC file %s...' % fileName)
+        log.info('Loading PMC file %s...', fileName)
         parser = PmacParser(file, self)
         parser.onLine()
     def loadPmcFileWithPreprocess(self, fileName, includePaths):
@@ -1983,7 +1984,7 @@ class PmacState(object):
             p = ClsPmacParser(includePaths = includePaths.split(':'))
         else:
             p = ClsPmacParser()
-        print('Loading PMC file %s...' % fileName)
+        log.info('Loading PMC file %s...', fileName)
         converted = p.parse(fileName, debug=True)
         if converted is None:
             raise AnalyseError('Could not open reference file: %s' % fileName)
@@ -2013,11 +2014,12 @@ class Pmac(object):
         self.positionsAfter = []
     def readCurrentPositions(self):
         '''Read the current motor positions of the PMAC.'''
+        text=''
         for axis in range(self.numAxes):
             (returnStr, status) = self.sendCommand('#%sP' % (axis+1))
             self.initialPositions[axis+1] = returnStr
             text += '%s ' % returnStr[:-2]
-        print(text)
+        log.info(text)
     def htmlMotorIVariables(self, motor, page):
         self.hardwareState.htmlMotorIVariables(motor, page, self.geobrick)
     def htmlGlobalIVariables(self, page):
@@ -2027,12 +2029,12 @@ class Pmac(object):
     def htmlGlobalMsIVariables(self, page):
         self.hardwareState.htmlGlobalMsIVariables(page)
     def compare(self, page, fixfile, unfixfile):
-        print('Comparing...')
+        log.info('Comparing...')
         self.compareResult = self.hardwareState.compare(self.referenceState, self.noCompare, self.name, page, fixfile, unfixfile)
         if self.compareResult:
-            print('Hardware matches reference')
+            log.warning('Hardware matches reference')
         else:
-            print('Hardware to reference mismatch detected')
+            log.warning('Hardware to reference mismatch detected')
         return self.compareResult
     def setProtocol(self, host, port, termServ):
         self.host = host
@@ -2066,7 +2068,7 @@ class Pmac(object):
             # Open the backup file if required
             if backupDir is not None:
                 fileName = '%s/%s.pmc' % (backupDir, self.name)
-                print("Opening backup file %s" % fileName)
+                log.info("Opening backup file %s" % fileName)
                 self.backupFile = open(fileName, 'w')
                 if self.backupFile is None:
                     raise AnalyseError('Could not open backup file: %s' % fileName)
@@ -2080,14 +2082,15 @@ class Pmac(object):
             msg = self.pti.connect()
             if msg != None:
                 raise PmacReadError(msg)
-            print('Connected to a PMAC via "%s" using port %s.' % (self.host, self.port))
+            log.warning('Connected to a PMAC via "%s" using port %s.',
+                        self.host, self.port)
             # Work out what kind of PMAC we have, if necessary
             self.determinePmacType()
             self.determineNumAxes()
             self.determineNumCoordSystems()
             # Read the axis current positions
             self.positionsBefore = self.readCurrentPositions()
-            #print('Current positions: %s' % self.positionsBefore
+            log.debug('Current positions: %s', self.positionsBefore)
             # Read the data
             self.readCoordinateSystemDefinitions()
             self.readMotionPrograms()
@@ -2107,10 +2110,10 @@ class Pmac(object):
         finally:
             # Disconnect from the PMAC
             if self.pti is not None:
-                print('Disconnecting from PMAC...')
+                log.info('Disconnecting from PMAC...')
                 msg = self.pti.disconnect()
                 self.pti = None
-                print('Connection to the PMAC closed.')
+                log.info('Connection to the PMAC closed.')
             # Close the backup file
             if self.backupFile is not None:
                 self.backupFile.close()
@@ -2126,15 +2129,14 @@ class Pmac(object):
                 else:
                     match = False
             if match:
-                print('No axes moved during hardware readout')
+                log.warning('No axes moved during hardware readout')
             else:
-                print('One or more axes have moved:')
-                print('  Before: %s' % positions)
-                print('  Now:    %s' % now)
+                log.warning('One or more axes have moved:')
+                log.warning('  Before: %s' % positions)
+                log.warning('  Now:    %s' % now)
     def sendCommand(self, text):
         (returnStr, status) = self.pti.sendCommand(text)
-        if self.debug:
-            print('%s --> %s' % (repr(text), repr(returnStr)))
+        log.debug('%s --> %s', repr(text), repr(returnStr))
         return (returnStr, status)
     def readCurrentPositions(self):
         ''' Returns the current position as a list.'''
@@ -2156,7 +2158,7 @@ class Pmac(object):
                 self.geobrick = True
             else:
                 self.geobrick = False
-            print('Geobrick= %s' % self.geobrick)
+            log.warning('Geobrick= %s' % self.geobrick)
     def determineNumAxes(self):
         '''Determines the number of axes the PMAC has by determining the
            number of macro station ICs.'''
@@ -2172,7 +2174,7 @@ class Pmac(object):
         self.numAxes = self.numMacroStationIcs * 8
         if self.geobrick:
             self.numAxes += 8
-        print('Num axes= %s' % self.numAxes)
+        log.info('Num axes= %s' % self.numAxes)
     def determineNumCoordSystems(self):
         '''Determines the number of coordinate systems that are active by
            reading i68.'''
@@ -2186,7 +2188,7 @@ class Pmac(object):
             self.backupFile.write(text)
     def readIvars(self):
         '''Reads the I variables.'''
-        print('Reading I-variables...')
+        log.info('Reading I-variables...')
         self.writeBackup('\n; I-variables\n')
         roVars = set([3,4,6,9,20,21,22,23,24,41,58]+list(range(4900,5000))+
             [5111,5112,5211,5212,5311,5312,5411,5412,5511,5512,5611,5612,5711,
@@ -2231,7 +2233,7 @@ class Pmac(object):
                 plc.setIsRunning(runningState)
     def readPvars(self):
         '''Reads the P variables.'''
-        print('Reading P-variables...')
+        log.info('Reading P-variables...')
         self.writeBackup('\n; P-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2250,7 +2252,7 @@ class Pmac(object):
             i += varsPerBlock
     def readQvars(self):
         '''Reads the Q variables of a coordinate system.'''
-        print('Reading Q-variables...')
+        log.info('Reading Q-variables...')
         for cs in range(1,self.numCoordSystems+1):
             self.writeBackup('\n; &%s Q-variables\n' % cs)
             (returnStr, status) = self.sendCommand('&%sq1..199' % cs)
@@ -2263,7 +2265,7 @@ class Pmac(object):
                 self.writeBackup(var.dump())
     def readFeedrateOverrides(self):
         '''Reads the feedrate overrides of the coordinate systems.'''
-        print('Reading feedrate overrides...')
+        log.info('Reading feedrate overrides...')
         self.writeBackup('\n; Feedrate overrides\n')
         for cs in range(1,self.numCoordSystems+1):
             (returnStr, status) = self.sendCommand('&%s%%' % cs)
@@ -2275,7 +2277,7 @@ class Pmac(object):
             self.writeBackup(var.dump())
     def readMvarDefinitions(self):
         '''Reads the M variable definitions.'''
-        print('Reading M-variable definitions...')
+        log.info('Reading M-variable definitions...')
         self.writeBackup('\n; M-variables\n')
         varsPerBlock = 100
         i = 0
@@ -2296,7 +2298,7 @@ class Pmac(object):
             i += varsPerBlock
     def readMvarValues(self):
         '''Reads the M variable values.'''
-        print('Reading M-variable values...')
+        log.info('Reading M-variable values...')
         varsPerBlock = 100
         i = 0
         while i < 8192:
@@ -2315,7 +2317,7 @@ class Pmac(object):
             i += varsPerBlock
     def readCoordinateSystemDefinitions(self):
         '''Reads the coordinate system definitions.'''
-        print('Reading coordinate system definitions...')
+        log.info('Reading coordinate system definitions...')
         self.writeBackup('\n; Coordinate system definitions\n')
         self.writeBackup('undefine all\n')
         for cs in range(1,self.numCoordSystems+1):
@@ -2334,7 +2336,7 @@ class Pmac(object):
         '''Reads the kinematic programs.  Note that this
            function will fail if a program exceeds 1350 characters and small buffers
            are required.'''
-        print('Reading kinematic programs...')
+        log.info('Reading kinematic programs...')
         self.writeBackup('\n; Kinematic programs\n')
         for cs in range(1,self.numCoordSystems+1):
             (returnStr, status) = self.sendCommand('&%s list forward' % cs)
@@ -2397,7 +2399,7 @@ class Pmac(object):
                         lines.append(line)
                         offsets.append(parts[0])
                     else:
-                        print("Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m)))
+                        log.error("Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m)))
                         #raise PmacReadError("Warning: could not split line into offset and text")
                 if len(more) < 2:
                     pass
@@ -2409,7 +2411,7 @@ class Pmac(object):
         return (lines, offsets)
     def readPlcPrograms(self):
         '''Reads the PLC programs'''
-        print('Reading PLC programs...')
+        log.info('Reading PLC programs...')
         self.writeBackup('\n; PLC programs\n')
         for plc in range(32):
             (lines, offsets) = self.getListingLines('plc %s' % plc)
@@ -2421,7 +2423,7 @@ class Pmac(object):
     def readMotionPrograms(self):
         '''Reads the motion programs. Note
            that only the first 256 programs are read, there are actually 32768.'''
-        print('Reading motion programs...')
+        log.info('Reading motion programs...')
         self.writeBackup('\n; Motion programs\n')
         for prog in range(1,256):
             (lines, offsets) = self.getListingLines('program %s' % prog)
@@ -2436,7 +2438,7 @@ class Pmac(object):
     def readMsIvars(self):
         '''Reads the macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print('Reading macro station I-variables')
+            log.info('Reading macro station I-variables')
             self.writeBackup('\n; Macro station I-variables\n')
             reqMacroStations = []
             if self.numMacroStationIcs >= 1:
@@ -2478,7 +2480,7 @@ class Pmac(object):
     def readGlobalMsIvars(self):
         '''Reads the global macrostation I variables.'''
         if self.numMacroStationIcs > 0:
-            print('Reading global macrostation I-variables')
+            log.info('Reading global macrostation I-variables')
             self.writeBackup('\n; Macro station global I-variables\n')
             if self.numMacroStationIcs in [1,2]:
                 reqMacroStations = [0]
@@ -3290,8 +3292,7 @@ class PmacLexer(object):
                     bestToken = t
         if len(bestToken) == 0:
             raise LexerError(text, self.fileName, self.line)
-        if self.debug:
-            print('{%s from %s}' % (bestToken, text))
+        log.debug('{%s from %s}' % (bestToken, text))
         return bestToken
     def expandToken(self, token):
         '''If the token is a short form, it is expanded to the full form.'''
@@ -3313,7 +3314,7 @@ class PmacLexer(object):
         # Is it the expected one
         if shouldBe is not None and not shouldBe == result:
             raise ParserError('Expected %s, got %s' % (shouldBe, result), result)
-        #print("{%s:%s}" % (repr(result), self.line))
+        log.debug("{%s:%s}", repr(result), self.line)
         return result
     def putToken(self, token):
         '''Puts a token at the head of the list.'''
@@ -3321,12 +3322,21 @@ class PmacLexer(object):
 
 def main():
     '''Main entry point of the script.'''
+
     config = GlobalConfig()
+
+    # interactive launch - setup logger appropriately
+    config.console = logging.StreamHandler()
+    config.console.setLevel(logging.INFO)
+    # add the handler to the root logger
+    log.addHandler(config.console)
+    log.setLevel(logging.INFO)
+
     if config.processArguments():
         config.processConfigFile()
         config.analyse()
     else:
-        print(helpText)
+        log.error(helpText)
     return 0
 
 if __name__ == '__main__':

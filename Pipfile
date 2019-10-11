@@ -6,4 +6,4 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-dls-pmaclib = "*"
+dls-pmaclib = {editable = true,path = "./../dls_pmaclib"}

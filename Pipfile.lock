@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6fefd5f9a151bae700e20cfa05f8894f357fb8ea71b279e4160bba25dbff331a"
+            "sha256": "d9a76b7f6d7c6a8bbe080ac9057f1c229eb9725775bc37d8b26c77cba34d064f"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -15,12 +15,8 @@
     },
     "default": {
         "dls-pmaclib": {
-            "hashes": [
-                "sha256:24be6aae6129f382f3070f485ffd13abda68b74cab15868a22fde8d8a2a0240f",
-                "sha256:815faa3aeee584fd42067fae7defc00aaec5ac4abb302b8d3f382591f1774f78"
-            ],
-            "index": "pypi",
-            "version": "==2.0.1"
+            "editable": true,
+            "path": "./../dls_pmaclib"
         },
         "pyserial": {
             "hashes": [
