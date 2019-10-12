@@ -538,7 +538,9 @@ class GlobalConfig(object):
                     try:
                         pmac.readHardware(self.backupDir, self.checkPositions, self.debug, self.comments, self.verbose)
                     except PmacReadError as pErr:
-                        log.exception("FAILED TO CONNECT TO " + pmac.name)
+                        msg = "FAILED TO CONNECT TO " + pmac.name
+                        log.debug(msg, exc_info=True)
+                        log.error(msg)
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -2136,7 +2138,7 @@ class Pmac(object):
                 log.warning('  Now:    %s' % now)
     def sendCommand(self, text):
         (returnStr, status) = self.pti.sendCommand(text)
-        log.debug('%s --> %s', repr(text), repr(returnStr))
+        # log.debug('%s --> %s', repr(text), repr(returnStr))
         return (returnStr, status)
     def readCurrentPositions(self):
         ''' Returns the current position as a list.'''
@@ -2502,7 +2504,7 @@ class Pmac(object):
             roVars = [4,5,12,13,209,974]
             for ms in reqMacroStations:
                 self.doMsIvars(ms, reqVars, roVars)
-            reqVars = range(16,100)
+            reqVars = list(range(16,100))
             reqVars += range(101,109)
             reqVars += range(111,119)
             reqVars += range(120,154)
@@ -3292,7 +3294,7 @@ class PmacLexer(object):
                     bestToken = t
         if len(bestToken) == 0:
             raise LexerError(text, self.fileName, self.line)
-        log.debug('{%s from %s}' % (bestToken, text))
+        # log.debug('{%s from %s}' % (bestToken, text))
         return bestToken
     def expandToken(self, token):
         '''If the token is a short form, it is expanded to the full form.'''
@@ -3314,7 +3316,6 @@ class PmacLexer(object):
         # Is it the expected one
         if shouldBe is not None and not shouldBe == result:
             raise ParserError('Expected %s, got %s' % (shouldBe, result), result)
-        log.debug("{%s:%s}", repr(result), self.line)
         return result
     def putToken(self, token):
         '''Puts a token at the head of the list.'''
