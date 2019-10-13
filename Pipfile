@@ -7,5 +7,5 @@ verify_ssl = true
 ipython = "*"
 
 [packages]
-dls-pmaclib = {editable = true,path = "./../dls_pmaclib"}
+dls-pmaclib = "==2.1.0"
 
