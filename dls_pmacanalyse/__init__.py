@@ -1,7 +1,7 @@
 import os
 import sys
 from dls_pmacanalyse.dls_pmacanalyse import (
-    GlobalConfig, WebPage, ConfigError
+    GlobalConfig, WebPage, ConfigError, Pmac
 )
 
 

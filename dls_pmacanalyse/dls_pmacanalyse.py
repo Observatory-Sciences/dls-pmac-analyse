@@ -2340,30 +2340,21 @@ class Pmac(object):
            are required.'''
         log.info('Reading kinematic programs...')
         self.writeBackup('\n; Kinematic programs\n')
-        for cs in range(1,self.numCoordSystems+1):
-            (returnStr, status) = self.sendCommand('&%s list forward' % cs)
-            if not status:
-                raise PmacReadError(returnStr)
-            if not self.termServ and len(returnStr) > 1350:
-                raise PmacReadError('Possibly incomplete program')
-            lines = returnStr.split('\r')[:-1]
+        for cs in range(1, self.numCoordSystems+1):
+            lines, _ = self.getListingLines('forward', f"&{cs}")
             if len(lines) > 0:
                 parser = PmacParser(lines, self)
                 var = PmacForwardKinematicProgram(cs, parser.tokens())
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
-            (returnStr, status) = self.sendCommand('&%s list inverse' % cs)
-            if not status:
-                raise PmacReadError(returnStr)
-            if not self.termServ and len(returnStr) > 1350:
-                raise PmacReadError('Possibly incomplete program')
-            lines = returnStr.split('\r')[:-1]
+
+            lines, _ = self.getListingLines('inverse', f"&{cs}")
             if len(lines) > 0:
                 parser = PmacParser(lines, self)
                 var = PmacInverseKinematicProgram(cs, parser.tokens())
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
-    def getListingLines(self, thing):
+    def getListingLines(self, thing, pre_thing=''):
         '''Returns the listing of a motion program or PLC using
            small blocks.  It uses the start and length parameters
            of the list command to slowly build up the listing.  Note
@@ -2375,7 +2366,8 @@ class Pmac(object):
         increment = 80
         going = True
         while going:
-            (returnStr, status) = self.sendCommand('list %s,%s,%s' % (thing, startPos, increment))
+            (returnStr, status) = self.sendCommand(
+                f'{pre_thing}list {thing},{startPos},{increment}')
             startPos += increment
             if not status:
                 if returnStr.endswith('PMAC communication error'):
