@@ -2380,6 +2380,9 @@ class Pmac(object):
             if returnStr.find('ERR') >= 0:
                 going = False
             else:
+                if not re.match(r'\d+:', returnStr):
+                    log.error("Warning: first line not starting with offset for %s", repr(returnStr))
+                    return (lines, offsets)
                 # Separate into offset and line
                 more = re.split(r'\r(\d+):', f'\r{returnStr}')[1:]
                 if not more or len(more) % 2 == 1:
