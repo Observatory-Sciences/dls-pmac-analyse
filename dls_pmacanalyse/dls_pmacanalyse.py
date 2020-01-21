@@ -2380,28 +2380,19 @@ class Pmac(object):
             if returnStr.find('ERR') >= 0:
                 going = False
             else:
-                # Seperate into lines
-                more = returnStr.split('\r')[:-1]
-                # Add the lines to the current set of lines, removing the
-                # word number that is on the beginning of each line.
-                lastStartPos = 0
-                for m in more:
-                    parts = m.split(':', 1)
-                    if len(parts) == 2:
-                        lastStartPos = int(parts[0])
-                        line = parts[1]
-                        lines.append(line)
-                        offsets.append(parts[0])
-                    else:
-                        log.error("Warning: could not split line into offset and text for %s, got %s" % (thing, repr(m)))
-                        #raise PmacReadError("Warning: could not split line into offset and text")
-                if len(more) < 2:
-                    pass
-                else:
-                    # Chop off the last line (it may be incomplete) and adjust the start pos
-                    lines = lines[:-1]
-                    offsets = offsets[:-1]
-                    startPos = lastStartPos
+                if not re.match(r'\d+:', returnStr):
+                    log.error("Warning: first line not starting with offset for %s", repr(returnStr))
+                    return (lines, offsets)
+                # Separate into offset and line
+                more = re.split(r'\r(\d+):', f'\r{returnStr}')[1:]
+                if not more or len(more) % 2 == 1:
+                    log.error("Warning: could not split lines into offset and text for %s", repr(returnStr))
+                    return (lines, offsets)
+                for index in range(0, len(more), 2):
+                    offsets.append(more[index])
+                    lines.append(more[index + 1])
+                # get rid of ending \r\x06
+                lines[-1] = lines[-1][:-2]
         return (lines, offsets)
     def readPlcPrograms(self):
         '''Reads the PLC programs'''
