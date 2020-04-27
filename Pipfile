@@ -4,8 +4,21 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-ipython = "*"
+pytest-cov = "*"
+pytest-black = "*"
+pytest-flake8 = "*"
+flake8-isort = "*"
+pytest-mypy = "*"
+sphinx-rtd-theme = "*"
+doc8 = "*"
 
 [packages]
-dls-pmaclib = "==2.1.0"
+dls-pmaclib = {editable = true,path = "./../dls_pmaclib"}
 
+[scripts]
+# Put coverage here so we don't interfere with debugging in the IDE
+tests = "python -m pytest --cov-fail-under=90 --cov=test_python --cov-report term"
+docs = "sphinx-build -E -b html docs build/html"
+
+[pipenv]
+allow_prereleases = true
