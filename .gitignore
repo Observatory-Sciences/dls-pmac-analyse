@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.class
+.mypy_cache
 
 # C extensions
 *.so
@@ -41,3 +42,4 @@ ENV/
 *~
 .svn*
 .idea
+.history

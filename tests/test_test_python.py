@@ -1,4 +1,4 @@
-from dls_pmacanalyse.dls_pmacanalyse import PmacToken
+from dls_pmacanalyse.pmacvariables import PmacToken
 
 # todo need some tests for this module
 
