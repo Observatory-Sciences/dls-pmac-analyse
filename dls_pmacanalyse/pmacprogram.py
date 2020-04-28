@@ -1,7 +1,7 @@
 from logging import getLogger
 
 from dls_pmacanalyse.pmacparser import PmacParser
-from dls_pmacanalyse.pmacvariables import PmacVariable, PmacToken
+from dls_pmacanalyse.pmacvariables import PmacToken, PmacVariable
 from dls_pmacanalyse.utils import (
     compareFloats,
     isNumber,

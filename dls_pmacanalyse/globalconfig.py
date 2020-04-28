@@ -1,17 +1,14 @@
-from datetime import datetime
 import getopt
 import logging
-import sys
 import os
+import sys
 import xml.dom.minidom as minidom
+from datetime import datetime
 
-from dls_pmacanalyse.errors import (
-    ConfigError,
-    PmacReadError,
-    ArgumentError,
-)
+from dls_pmacanalyse.errors import ArgumentError, ConfigError, PmacReadError
 from dls_pmacanalyse.pmac import Pmac
 from dls_pmacanalyse.pmacparser import PmacParser
+from dls_pmacanalyse.pmacstate import PmacState
 from dls_pmacanalyse.pmacvariables import (
     PmacIVariable,
     PmacMsIVariable,
@@ -19,7 +16,6 @@ from dls_pmacanalyse.pmacvariables import (
     PmacPVariable,
     PmacQVariable,
 )
-from dls_pmacanalyse.pmacstate import PmacState
 from dls_pmacanalyse.webpage import WebPage
 
 log = logging.getLogger(__name__)
