@@ -1,6 +1,8 @@
 from functools import cmp_to_key
 from logging import getLogger
 
+from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
+
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
     PmacCsAxisDef,
@@ -17,7 +19,6 @@ from dls_pmacanalyse.pmacvariables import (
     PmacPVariable,
     PmacQVariable,
 )
-from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
 from .errors import AnalyseError, GeneralError
 from .utils import numericSort

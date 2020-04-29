@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+flake8 = "==3.7.9"
 pytest-cov = "*"
 pytest-black = "*"
 pytest-flake8 = "*"
@@ -13,7 +14,7 @@ sphinx-rtd-theme = "*"
 doc8 = "*"
 
 [packages]
-dls-pmaclib = {editable = true,path = "./../dls_pmaclib"}
+dls-pmaclib = "==2.1.0"
 
 [scripts]
 # Put coverage here so we don't interfere with debugging in the IDE

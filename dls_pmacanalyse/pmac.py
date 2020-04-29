@@ -1,6 +1,8 @@
 import logging
 import re
 
+from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
+
 from dls_pmacanalyse.errors import AnalyseError, PmacReadError
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
@@ -19,7 +21,6 @@ from dls_pmacanalyse.pmacvariables import (
     PmacPVariable,
     PmacQVariable,
 )
-from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
 
 log = logging.getLogger(__name__)
 

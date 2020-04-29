@@ -8,6 +8,6 @@
   "python.testing.nosetestsEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.formatting.provider": "black",
-  "python.jediEnabled": false,
+  "python.jediEnabled": true,
   "restructuredtext.confPath": "${workspaceFolder}/docs"
 }
