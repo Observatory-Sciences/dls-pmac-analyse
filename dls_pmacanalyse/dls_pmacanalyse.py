@@ -10,6 +10,7 @@
 import logging
 import sys
 
+from dls_pmacanalyse.analyse import Analyse
 from dls_pmacanalyse.globalconfig import GlobalConfig
 
 log = logging.getLogger(__name__)
@@ -136,7 +137,8 @@ def main():
 
     if config.processArguments():
         config.processConfigFile()
-        config.analyse()
+        analyse = Analyse(config)
+        analyse.analyse()
     else:
         log.error(helpText)
     return 0

@@ -31,15 +31,6 @@
       "problemMatcher": []
     },
     {
-      "type": "shell",
-      "label": "Flake8 entire project",
-      "command": "pipenv run flake8",
-      "options": {
-        "cwd": "${workspaceRoot}"
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "Pre-commit",
       "dependsOrder": "sequence",
       "dependsOn": [
