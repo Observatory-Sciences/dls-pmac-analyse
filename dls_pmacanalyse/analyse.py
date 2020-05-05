@@ -6,6 +6,7 @@ from datetime import datetime
 from dls_pmacanalyse.errors import ConfigError, PmacReadError
 from dls_pmacanalyse.globalconfig import GlobalConfig
 from dls_pmacanalyse.pmacstate import PmacState
+from dls_pmacanalyse.pmacvariables import PmacMVariable
 from dls_pmacanalyse.webpage import WebPage
 
 log = logging.getLogger(__name__)
@@ -328,8 +329,8 @@ class Analyse:
                         if m % 10 == 0:
                             row = page.tableRow(table)
                             page.tableColumn(row, "m%s" % m)
-                        var = pmac.hardwareState.getMVariable(m)
-                        page.tableColumn(row, var.contentsStr())
+                        mvar = PmacMVariable(pmac.hardwareState.getMVariable(m))
+                        page.tableColumn(row, mvar.contentsStr())
                     for i in range(8):
                         page.tableColumn(row, "")
                     page.write()

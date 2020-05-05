@@ -1,5 +1,6 @@
 from functools import cmp_to_key
 from logging import getLogger
+from typing import Dict, Type, Union, cast
 
 from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
@@ -18,12 +19,28 @@ from dls_pmacanalyse.pmacvariables import (
     PmacMVariable,
     PmacPVariable,
     PmacQVariable,
+    PmacVariable,
 )
 
 from .errors import AnalyseError, GeneralError
 from .utils import numericSort
 
 log = getLogger(__name__)
+
+PmacVariableResult = Union[None, PmacVariable]
+Vars1Param = Type[
+    Union[
+        PmacMotionProgram,
+        PmacPlcProgram,
+        PmacForwardKinematicProgram,
+        PmacInverseKinematicProgram,
+        PmacPVariable,
+        PmacIVariable,
+        PmacMVariable,
+    ]
+]
+
+Vars2Param = Union[PmacQVariable, PmacMsIVariable, PmacCsAxisDef, PmacFeedrateOverride]
 
 
 class PmacState(object):
@@ -572,7 +589,22 @@ class PmacState(object):
     }
 
     def __init__(self, descr):
-        self.vars = {}
+        self.vars: Dict[
+            str,
+            Union[
+                PmacMotionProgram,
+                PmacPlcProgram,
+                PmacForwardKinematicProgram,
+                PmacInverseKinematicProgram,
+                PmacPVariable,
+                PmacIVariable,
+                PmacMVariable,
+                PmacQVariable,
+                PmacMsIVariable,
+                PmacCsAxisDef,
+                PmacFeedrateOverride,
+            ],
+        ] = {}
         self.descr = descr
         self.inlineExpressionResolutionState = None
 
@@ -602,7 +634,7 @@ class PmacState(object):
         for k, v in other.vars.items():
             self.vars[k] = v.copyFrom()
 
-    def getVar(self, t, n):
+    def getVar(self, t: str, n: int) -> PmacVariable:
         addr = "%s%s" % (t, n)
         if addr in self.vars:
             result = self.vars[addr]
@@ -626,7 +658,7 @@ class PmacState(object):
             self.vars[addr] = result
         return result
 
-    def getVar2(self, t1, n1, t2, n2):
+    def getVar2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariable:
         addr = "%s%s%s%s" % (t1, n1, t2, n2)
         if addr in self.vars:
             result = self.vars[addr]
@@ -644,14 +676,14 @@ class PmacState(object):
             self.vars[addr] = result
         return result
 
-    def getVarNoCreate(self, t, n):
+    def getVarNoCreate(self, t: str, n: int) -> PmacVariableResult:
         addr = "%s%s" % (t, n)
         result = None
         if addr in self.vars:
             result = self.vars[addr]
         return result
 
-    def getVarNoCreate2(self, t1, n1, t2, n2):
+    def getVarNoCreate2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariableResult:
         addr = "%s%s%s%s" % (t1, n1, t2, n2)
         result = None
         if addr in self.vars:
@@ -659,16 +691,16 @@ class PmacState(object):
         return result
 
     def getMotionProgram(self, n):
-        return self.getVar("prog", n)
+        return cast(PmacMotionProgram, self.getVar("prog", n))
 
     def getMotionProgramNoCreate(self, n):
-        return self.getVarNoCreate("prog", n)
+        return cast(PmacMotionProgram, self.getVarNoCreate("prog", n))
 
     def getPlcProgram(self, n):
-        return self.getVar("plc", n)
+        return cast(PmacPlcProgram, self.getVar("plc", n))
 
     def getPlcProgramNoCreate(self, n):
-        return self.getVarNoCreate("plc", n)
+        return cast(PmacPlcProgram, self.getVarNoCreate("plc", n))
 
     def getForwardKinematicProgram(self, n):
         return self.getVar("fwd", n)
@@ -689,7 +721,7 @@ class PmacState(object):
         return self.getVar("i", n)
 
     def getMVariable(self, n):
-        return self.getVar("m", n)
+        return cast(PmacMVariable, self.getVar("m", n))
 
     def getQVariable(self, cs, n):
         return self.getVar2("&", cs, "q", n)
@@ -701,13 +733,13 @@ class PmacState(object):
         return self.getVarNoCreate2("&", cs, "%", 0)
 
     def getMsIVariable(self, ms, n):
-        return self.getVar2("ms", ms, "i", n)
+        return cast(PmacMsIVariable, self.getVar2("ms", ms, "i", n))
 
     def getCsAxisDef(self, cs, m):
-        return self.getVar2("&", cs, "#", m)
+        return cast(PmacCsAxisDef, self.getVar2("&", cs, "#", m))
 
     def getCsAxisDefNoCreate(self, cs, m):
-        return self.getVarNoCreate2("&", cs, "#", m)
+        return cast(PmacCsAxisDef, self.getVarNoCreate2("&", cs, "#", m))
 
     def dump(self):
         result = ""

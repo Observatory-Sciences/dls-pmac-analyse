@@ -177,7 +177,7 @@ class PmacMVariable(PmacVariable):
         self.width = width
         self.format = format
 
-    def setVal(self, v):
+    def setValue(self, v):
         self.v = v
 
     def copyFrom(self):

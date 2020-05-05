@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import List
 
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacvariables import PmacToken, PmacVariable
@@ -18,7 +19,7 @@ class PmacProgram(PmacVariable):
     def __init__(self, prefix, n, v, lines=None, offsets=None):
         PmacVariable.__init__(self, prefix, n, v)
         self.offsets = offsets
-        self.lines = lines
+        self.lines: List[str] = lines or []
 
     def add(self, t):
         if not isinstance(t, PmacToken):

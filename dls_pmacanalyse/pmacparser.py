@@ -119,6 +119,7 @@ class PmacParser(object):
                 var.add(PmacToken("0"))
 
     def parseMs(self):
+        t = None
         ms = self.lexer.getToken()
         if tokenIsInt(ms):
             ms = tokenToInt(ms)
@@ -271,7 +272,7 @@ class PmacParser(object):
                 while t == ",":
                     nodeList.append(tokenToInt(self.lexer.getToken()))
                     t = self.lexer.getToken()
-                    self.lexer.putToken()
+                    self.lexer.putToken(t)
                 self.lexer.getToken("]")
             else:
                 nodeList.append(tokenToInt(t))

@@ -129,10 +129,10 @@ def main():
     config = GlobalConfig()
 
     # interactive launch - setup logger appropriately
-    config.console = logging.StreamHandler()
-    config.console.setLevel(logging.INFO)
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
     # add the handler to the root logger
-    log.addHandler(config.console)
+    log.addHandler(console)
     log.setLevel(logging.INFO)
 
     if config.processArguments():
