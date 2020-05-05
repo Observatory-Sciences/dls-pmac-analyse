@@ -1,11 +1,11 @@
-import xml.dom.minidom as minidom
+from xml.dom.minidom import getDOMImplementation
 
 
 class WebPage(object):
     def __init__(self, title, fileName, styleSheet=None):
         """Initialises a web page, creating all the necessary header stuff"""
         self.fileName = fileName
-        self.doc = minidom.getDOMImplementation().createDocument(None, "html", None)
+        self.doc = getDOMImplementation().createDocument(None, "html", None)
         self.topElement = self.doc.documentElement
         h = self.doc.createElement("head")
         self.topElement.appendChild(h)

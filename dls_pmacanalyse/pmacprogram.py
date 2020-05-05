@@ -31,11 +31,12 @@ class PmacProgram(PmacVariable):
 
     def valueText(self, typ=0, ignore_ret=False):
         result = ""
-        for t in self.v:
+        last_line = len(self.v) - 1
+        for i, t in enumerate(self.v):
             if t == "\n":
                 if len(result) > 0 and not result[-1] == "\n":
                     result += str(t)
-            elif not ignore_ret or t != "RETURN":
+            elif not ignore_ret or t != "RETURN" or i < last_line:
                 if len(result) == 0:
                     pass
                 elif result[-1].isalpha() and str(t)[0].isalpha():

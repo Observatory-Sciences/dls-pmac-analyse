@@ -13,7 +13,8 @@ import sys
 from dls_pmacanalyse.analyse import Analyse
 from dls_pmacanalyse.globalconfig import GlobalConfig
 
-log = logging.getLogger(__name__)
+# get the root logger to control application wide log levels
+log = logging.getLogger()
 
 
 helpText = """
