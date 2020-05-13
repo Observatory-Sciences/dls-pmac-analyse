@@ -1,4 +1,4 @@
-from typing import Any, Dict, IO, List, Optional
+from typing import IO, Any, Dict, List, Optional
 
 
 class Difference:
@@ -17,4 +17,3 @@ class Difference:
 
     def make_unfix_file(self, unfixfile: Optional[IO[Any]]):
         pass
-

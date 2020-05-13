@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from typing import cast
 from xml.dom.minidom import getDOMImplementation
+import pickle
 
 from dls_pmacanalyse.errors import ConfigError, PmacReadError
 from dls_pmacanalyse.globalconfig import GlobalConfig
@@ -521,6 +522,10 @@ class Analyse:
                             page.tableColumn(row, var.valStr())
                         page.write()
             self.hudsonXmlReport()
+
+            pickle_out = open("config.pickle", "wb")
+            pickle.dump(self.config, pickle_out)
+            pickle_out.close()
 
     def loadFactorySettings(self, pmac, fileName, includeFiles):
         for i in range(8192):

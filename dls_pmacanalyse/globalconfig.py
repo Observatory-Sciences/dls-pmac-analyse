@@ -22,6 +22,7 @@ class GlobalConfig(object):
 
     def __init__(self):
         """Constructor."""
+        self.test = False
         self.verbose = False
         self.backupDir = None
         self.writeAnalysis = True
@@ -49,6 +50,7 @@ class GlobalConfig(object):
                 sys.argv[1:],
                 "vh",
                 [
+                    "test",
                     "help",
                     "verbose",
                     "backup=",
@@ -78,6 +80,8 @@ class GlobalConfig(object):
         globalPmac = Pmac("global")
         curPmac = None
         for o, a in opts:
+            if o in ("--test"):
+                self.test = True
             if o in ("-h", "--help"):
                 return False
             elif o in ("-v", "--verbose"):

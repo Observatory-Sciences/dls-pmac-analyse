@@ -15,6 +15,7 @@ doc8 = "*"
 
 [packages]
 dls-pmaclib = "==2.1.0"
+jinja2 = "*"
 
 [scripts]
 # Put coverage here so we don't interfere with debugging in the IDE

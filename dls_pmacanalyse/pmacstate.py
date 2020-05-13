@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from functools import cmp_to_key
 from logging import getLogger
-from typing import Dict, Type, Union, cast
+from typing import Dict, List, Union, cast
 
 from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
@@ -28,24 +29,370 @@ from .utils import numericSort
 log = getLogger(__name__)
 
 PmacVariableResult = Union[None, PmacVariable]
-Vars1Param = Type[
-    Union[
-        PmacMotionProgram,
-        PmacPlcProgram,
-        PmacForwardKinematicProgram,
-        PmacInverseKinematicProgram,
-        PmacPVariable,
-        PmacIVariable,
-        PmacMVariable,
-    ]
-]
 
-Vars2Param = Union[PmacQVariable, PmacMsIVariable, PmacCsAxisDef, PmacFeedrateOverride]
+
+@dataclass
+class VariableInfo:
+    name: str
+    value: str
+    comment: str
 
 
 class PmacState(object):
     """Represents the internal state of a PMAC."""
 
+    def __init__(self, descr):
+        self.vars: Dict[
+            str,
+            Union[
+                PmacMotionProgram,
+                PmacPlcProgram,
+                PmacForwardKinematicProgram,
+                PmacInverseKinematicProgram,
+                PmacPVariable,
+                PmacIVariable,
+                PmacMVariable,
+                PmacQVariable,
+                PmacMsIVariable,
+                PmacCsAxisDef,
+                PmacFeedrateOverride,
+            ],
+        ] = {}
+        self.descr = descr
+        self.inlineExpressionResolutionState = None
+
+    def setInlineExpressionResolutionState(self, state):
+        self.inlineExpressionResolutionState = state
+
+    def getInlineExpressionIValue(self, n):
+        return self.inlineExpressionResolutionState.getIVariable(n).getFloatValue()
+
+    def getInlineExpressionPValue(self, n):
+        return self.inlineExpressionResolutionState.getPVariable(n).getFloatValue()
+
+    def getInlineExpressionQValue(self, cs, n):
+        return self.inlineExpressionResolutionState.getQVariable(cs, n).getFloatValue()
+
+    def getInlineExpressionMValue(self, n):
+        return self.inlineExpressionResolutionState.getMVariable(n).getFloatValue()
+
+    def addVar(self, var):
+        self.vars[var.addr()] = var
+
+    def removeVar(self, var):
+        if var.addr() in self.vars:
+            del self.vars[var.addr()]
+
+    def copyFrom(self, other):
+        for k, v in other.vars.items():
+            self.vars[k] = v.copyFrom()
+
+    def getVar(self, t: str, n: int) -> PmacVariable:
+        addr = "%s%s" % (t, n)
+        if addr in self.vars:
+            result = self.vars[addr]
+        else:
+            if t == "prog":
+                result = PmacMotionProgram(n)
+            elif t == "plc":
+                result = PmacPlcProgram(n)
+            elif t == "fwd":
+                result = PmacForwardKinematicProgram(n)
+            elif t == "inv":
+                result = PmacInverseKinematicProgram(n)
+            elif t == "p":
+                result = PmacPVariable(n)
+            elif t == "i":
+                result = PmacIVariable(n)
+            elif t == "m":
+                result = PmacMVariable(n)
+            else:
+                raise GeneralError("Illegal program type: %s" % t)
+            self.vars[addr] = result
+        return result
+
+    def getVar2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariable:
+        addr = "%s%s%s%s" % (t1, n1, t2, n2)
+        if addr in self.vars:
+            result = self.vars[addr]
+        else:
+            if t2 == "q":
+                result = PmacQVariable(n1, n2)
+            elif t2 == "i":
+                result = PmacMsIVariable(n1, n2)
+            elif t2 == "#":
+                result = PmacCsAxisDef(n1, n2)
+            elif t2 == "%":
+                result = PmacFeedrateOverride(n1)
+            else:
+                raise GeneralError("Illegal program type: %sx%s" % (t1, t2))
+            self.vars[addr] = result
+        return result
+
+    def getVarNoCreate(self, t: str, n: int) -> PmacVariableResult:
+        addr = "%s%s" % (t, n)
+        result = None
+        if addr in self.vars:
+            result = self.vars[addr]
+        return result
+
+    def getVarNoCreate2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariableResult:
+        addr = "%s%s%s%s" % (t1, n1, t2, n2)
+        result = None
+        if addr in self.vars:
+            result = self.vars[addr]
+        return result
+
+    def getMotionProgram(self, n):
+        return cast(PmacMotionProgram, self.getVar("prog", n))
+
+    def getMotionProgramNoCreate(self, n):
+        return cast(PmacMotionProgram, self.getVarNoCreate("prog", n))
+
+    def getPlcProgram(self, n):
+        return cast(PmacPlcProgram, self.getVar("plc", n))
+
+    def getPlcProgramNoCreate(self, n):
+        return cast(PmacPlcProgram, self.getVarNoCreate("plc", n))
+
+    def getForwardKinematicProgram(self, n):
+        return self.getVar("fwd", n)
+
+    def getInverseKinematicProgram(self, n):
+        return self.getVar("inv", n)
+
+    def getForwardKinematicProgramNoCreate(self, n):
+        return self.getVarNoCreate("fwd", n)
+
+    def getInverseKinematicProgramNoCreate(self, n):
+        return self.getVarNoCreate("inv", n)
+
+    def getPVariable(self, n):
+        return self.getVar("p", n)
+
+    def getIVariable(self, n):
+        return self.getVar("i", n)
+
+    def getMVariable(self, n):
+        return cast(PmacMVariable, self.getVar("m", n))
+
+    def getQVariable(self, cs, n):
+        return self.getVar2("&", cs, "q", n)
+
+    def getFeedrateOverride(self, cs):
+        return self.getVar2("&", cs, "%", 0)
+
+    def getFeedrateOverrideNoCreate(self, cs):
+        return self.getVarNoCreate2("&", cs, "%", 0)
+
+    def getMsIVariable(self, ms, n):
+        return cast(PmacMsIVariable, self.getVar2("ms", ms, "i", n))
+
+    def getCsAxisDef(self, cs, m):
+        return cast(PmacCsAxisDef, self.getVar2("&", cs, "#", m))
+
+    def getCsAxisDefNoCreate(self, cs, m):
+        return cast(PmacCsAxisDef, self.getVarNoCreate2("&", cs, "#", m))
+
+    def dump(self):
+        result = ""
+        for a, v in self.vars.items():
+            result += v.dump()
+        return result
+
+    #############################################################################
+    # functions to extract descriptive logical groupings of brick variables
+    #############################################################################
+    def get_ivariables(self, start: int, count: int) -> List[VariableInfo]:
+        return [
+            VariableInfo(
+                f"i{i}",
+                self.getIVariable(i).valStr(),
+                PmacState.globalIVariableDescriptions[i],
+            )
+            for i in range(start, start + count)
+        ]
+
+    def get_global_ivariables(self) -> List[VariableInfo]:
+        return self.get_ivariables(0, 100)
+
+    def get_motor_ivariables(self, motor: int) -> List[VariableInfo]:
+        return self.get_ivariables(motor * 100, motor * 100 + 100)
+
+    def htmlGlobalIVariables(self, page):
+        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
+        for i in range(0, 100):
+            page.tableRow(
+                table,
+                [
+                    "i%s" % i,
+                    "%s" % self.getIVariable(i).valStr(),
+                    "%s" % PmacState.globalIVariableDescriptions[i],
+                ],
+            )
+
+    def htmlMotorIVariables(self, motor, page, geobrick):
+        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
+        for n in range(0, 100):
+            i = motor * 100 + n
+            page.tableRow(
+                table,
+                [
+                    "i%s" % i,
+                    "%s" % self.getIVariable(i).valStr(),
+                    "%s" % PmacState.motorIVariableDescriptions[n],
+                ],
+            )
+        if geobrick:
+            for n in range(10):
+                i = 7000 + PmacState.axisToMn[motor] + n
+                page.tableRow(
+                    table,
+                    [
+                        "i%s" % i,
+                        "%s" % self.getIVariable(i).valStr(),
+                        "%s" % PmacState.motorI7000VariableDescriptions[n],
+                    ],
+                )
+
+    def htmlGlobalMsIVariables(self, page):
+        table = page.table(
+            page.body(), ["MS I-Variable", "Node", "Value", "Description"]
+        )
+        for i, description in PmacState.globalMsIVariableDescriptions.items():
+            for node in [0, 16, 32, 64]:
+                page.tableRow(
+                    table,
+                    [
+                        "i%s" % i,
+                        "%s" % node,
+                        "%s" % self.getMsIVariable(0, i).valStr(),
+                        "%s" % description,
+                    ],
+                )
+
+    def htmlMotorMsIVariables(self, motor, page):
+        table = page.table(page.body(), ["MS I-Variable", "Value", "Description"])
+        node = PmacState.axisToNode[motor]
+        for i, description in PmacState.motorMsIVariableDescriptions.items():
+            page.tableRow(
+                table,
+                [
+                    "i%s" % i,
+                    "%s" % self.getMsIVariable(node, i).valStr(),
+                    "%s" % description,
+                ],
+            )
+
+    #############################################################################
+    # end of functions to extract logical grouping of brick variables
+    #############################################################################
+
+    def compare(self, other, noCompare, pmacName, page, fixfile, unfixfile):
+        """Compares the state of this PMAC with the other."""
+        result = True
+        table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
+        # Build the list of variable addresses to test
+        addrs = sorted(
+            (set(self.vars.keys()) | set(other.vars.keys()))
+            - set(noCompare.vars.keys()),
+            key=cmp_to_key(numericSort),
+        )
+        # For each of these addresses, compare the variable
+        for a in addrs:
+            texta = a
+            commentargs = {}
+            if texta.endswith("%0"):
+                texta = texta[:-1]
+            if texta.startswith("i") and not texta.startswith("inv"):
+                i = int(texta[1:])
+                if i in range(100):
+                    desc = PmacState.globalIVariableDescriptions[i]
+                    commentargs["comment"] = desc
+                elif i in range(3300):
+                    desc = PmacState.motorIVariableDescriptions[i % 100]
+                    commentargs["comment"] = desc
+                elif i in range(7000, 7350):
+                    desc = PmacState.motorI7000VariableDescriptions[i % 10]
+                    commentargs["comment"] = desc
+                else:
+                    desc = "No description available"
+                texta = page.doc_node(a, desc)
+            if a not in other.vars:
+                if not self.vars[a].ro and not self.vars[a].isEmpty():
+                    result = False
+                    self.writeHtmlRow(page, table, texta, "Missing", None, self.vars[a])
+                    if unfixfile is not None:
+                        unfixfile.write(self.vars[a].dump(**commentargs))
+            elif a not in self.vars:
+                if not other.vars[a].ro and not other.vars[a].isEmpty():
+                    result = False
+                    self.writeHtmlRow(
+                        page, table, texta, "Missing", other.vars[a], None
+                    )
+                    if fixfile is not None:
+                        fixfile.write(other.vars[a].dump())
+            elif not self.vars[a].compare(other.vars[a]):
+                if not other.vars[a].ro and not self.vars[a].ro:
+                    result = False
+                    self.writeHtmlRow(
+                        page, table, texta, "Mismatch", other.vars[a], self.vars[a]
+                    )
+                    if fixfile is not None:
+                        fixfile.write(other.vars[a].dump())
+                    if unfixfile is not None:
+                        unfixfile.write(self.vars[a].dump(**commentargs))
+        # Check the running PLCs
+        for n in range(32):
+            plc = self.getPlcProgramNoCreate(n)
+            if plc is not None:
+                plc.setShouldBeRunning()
+                log.debug(
+                    "PLC%s, isRunning=%s, shouldBeRunning=%s",
+                    n,
+                    plc.isRunning,
+                    plc.shouldBeRunning,
+                )
+                if plc.shouldBeRunning and not plc.isRunning:
+                    result = False
+                    self.writeHtmlRow(
+                        page, table, "plc%s" % n, "Not running", None, None
+                    )
+                    if fixfile is not None:
+                        fixfile.write("enable plc %s\n" % n)
+                    if unfixfile is not None:
+                        unfixfile.write("disable plc %s\n" % n)
+                elif not plc.shouldBeRunning and plc.isRunning:
+                    result = False
+                    self.writeHtmlRow(page, table, "plc%s" % n, "Running", None, None)
+                    if fixfile is not None:
+                        fixfile.write("disable plc %s\n" % n)
+                    if unfixfile is not None:
+                        unfixfile.write("enable plc %s\n" % n)
+        return result
+
+    def writeHtmlRow(self, page, parent, addr, reason, referenceVar, hardwareVar):
+        row = page.tableRow(parent)
+        # The address column
+        col = page.tableColumn(row, addr)
+        # The reason column
+        col = page.tableColumn(row, reason)
+        # The reference column
+        col = page.tableColumn(row)
+        if referenceVar is None:
+            page.text(col, "-")
+        else:
+            referenceVar.htmlCompare(page, col, hardwareVar)
+        # The hardware column
+        col = page.tableColumn(row)
+        if hardwareVar is None:
+            page.text(col, "-")
+        else:
+            hardwareVar.htmlCompare(page, col, referenceVar)
+
+    #############################################################################
+    # Dictionaries that detail variable semantics
+    #############################################################################
     globalIVariableDescriptions = {
         0: "Serial card number",
         1: "Serial card mode",
@@ -587,353 +934,3 @@ class PmacState(object):
         15: 330,
         16: 340,
     }
-
-    def __init__(self, descr):
-        self.vars: Dict[
-            str,
-            Union[
-                PmacMotionProgram,
-                PmacPlcProgram,
-                PmacForwardKinematicProgram,
-                PmacInverseKinematicProgram,
-                PmacPVariable,
-                PmacIVariable,
-                PmacMVariable,
-                PmacQVariable,
-                PmacMsIVariable,
-                PmacCsAxisDef,
-                PmacFeedrateOverride,
-            ],
-        ] = {}
-        self.descr = descr
-        self.inlineExpressionResolutionState = None
-
-    def setInlineExpressionResolutionState(self, state):
-        self.inlineExpressionResolutionState = state
-
-    def getInlineExpressionIValue(self, n):
-        return self.inlineExpressionResolutionState.getIVariable(n).getFloatValue()
-
-    def getInlineExpressionPValue(self, n):
-        return self.inlineExpressionResolutionState.getPVariable(n).getFloatValue()
-
-    def getInlineExpressionQValue(self, cs, n):
-        return self.inlineExpressionResolutionState.getQVariable(cs, n).getFloatValue()
-
-    def getInlineExpressionMValue(self, n):
-        return self.inlineExpressionResolutionState.getMVariable(n).getFloatValue()
-
-    def addVar(self, var):
-        self.vars[var.addr()] = var
-
-    def removeVar(self, var):
-        if var.addr() in self.vars:
-            del self.vars[var.addr()]
-
-    def copyFrom(self, other):
-        for k, v in other.vars.items():
-            self.vars[k] = v.copyFrom()
-
-    def getVar(self, t: str, n: int) -> PmacVariable:
-        addr = "%s%s" % (t, n)
-        if addr in self.vars:
-            result = self.vars[addr]
-        else:
-            if t == "prog":
-                result = PmacMotionProgram(n)
-            elif t == "plc":
-                result = PmacPlcProgram(n)
-            elif t == "fwd":
-                result = PmacForwardKinematicProgram(n)
-            elif t == "inv":
-                result = PmacInverseKinematicProgram(n)
-            elif t == "p":
-                result = PmacPVariable(n)
-            elif t == "i":
-                result = PmacIVariable(n)
-            elif t == "m":
-                result = PmacMVariable(n)
-            else:
-                raise GeneralError("Illegal program type: %s" % t)
-            self.vars[addr] = result
-        return result
-
-    def getVar2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariable:
-        addr = "%s%s%s%s" % (t1, n1, t2, n2)
-        if addr in self.vars:
-            result = self.vars[addr]
-        else:
-            if t2 == "q":
-                result = PmacQVariable(n1, n2)
-            elif t2 == "i":
-                result = PmacMsIVariable(n1, n2)
-            elif t2 == "#":
-                result = PmacCsAxisDef(n1, n2)
-            elif t2 == "%":
-                result = PmacFeedrateOverride(n1)
-            else:
-                raise GeneralError("Illegal program type: %sx%s" % (t1, t2))
-            self.vars[addr] = result
-        return result
-
-    def getVarNoCreate(self, t: str, n: int) -> PmacVariableResult:
-        addr = "%s%s" % (t, n)
-        result = None
-        if addr in self.vars:
-            result = self.vars[addr]
-        return result
-
-    def getVarNoCreate2(self, t1: str, n1: int, t2: str, n2: int) -> PmacVariableResult:
-        addr = "%s%s%s%s" % (t1, n1, t2, n2)
-        result = None
-        if addr in self.vars:
-            result = self.vars[addr]
-        return result
-
-    def getMotionProgram(self, n):
-        return cast(PmacMotionProgram, self.getVar("prog", n))
-
-    def getMotionProgramNoCreate(self, n):
-        return cast(PmacMotionProgram, self.getVarNoCreate("prog", n))
-
-    def getPlcProgram(self, n):
-        return cast(PmacPlcProgram, self.getVar("plc", n))
-
-    def getPlcProgramNoCreate(self, n):
-        return cast(PmacPlcProgram, self.getVarNoCreate("plc", n))
-
-    def getForwardKinematicProgram(self, n):
-        return self.getVar("fwd", n)
-
-    def getInverseKinematicProgram(self, n):
-        return self.getVar("inv", n)
-
-    def getForwardKinematicProgramNoCreate(self, n):
-        return self.getVarNoCreate("fwd", n)
-
-    def getInverseKinematicProgramNoCreate(self, n):
-        return self.getVarNoCreate("inv", n)
-
-    def getPVariable(self, n):
-        return self.getVar("p", n)
-
-    def getIVariable(self, n):
-        return self.getVar("i", n)
-
-    def getMVariable(self, n):
-        return cast(PmacMVariable, self.getVar("m", n))
-
-    def getQVariable(self, cs, n):
-        return self.getVar2("&", cs, "q", n)
-
-    def getFeedrateOverride(self, cs):
-        return self.getVar2("&", cs, "%", 0)
-
-    def getFeedrateOverrideNoCreate(self, cs):
-        return self.getVarNoCreate2("&", cs, "%", 0)
-
-    def getMsIVariable(self, ms, n):
-        return cast(PmacMsIVariable, self.getVar2("ms", ms, "i", n))
-
-    def getCsAxisDef(self, cs, m):
-        return cast(PmacCsAxisDef, self.getVar2("&", cs, "#", m))
-
-    def getCsAxisDefNoCreate(self, cs, m):
-        return cast(PmacCsAxisDef, self.getVarNoCreate2("&", cs, "#", m))
-
-    def dump(self):
-        result = ""
-        for a, v in self.vars.items():
-            result += v.dump()
-        return result
-
-    def htmlGlobalIVariables(self, page):
-        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for i in range(0, 100):
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getIVariable(i).valStr(),
-                    "%s" % PmacState.globalIVariableDescriptions[i],
-                ],
-            )
-
-    def htmlMotorIVariables(self, motor, page, geobrick):
-        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for n in range(0, 100):
-            i = motor * 100 + n
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getIVariable(i).valStr(),
-                    "%s" % PmacState.motorIVariableDescriptions[n],
-                ],
-            )
-        if geobrick:
-            for n in range(10):
-                i = 7000 + PmacState.axisToMn[motor] + n
-                page.tableRow(
-                    table,
-                    [
-                        "i%s" % i,
-                        "%s" % self.getIVariable(i).valStr(),
-                        "%s" % PmacState.motorI7000VariableDescriptions[n],
-                    ],
-                )
-
-    def htmlGlobalMsIVariables(self, page):
-        table = page.table(
-            page.body(), ["MS I-Variable", "Node", "Value", "Description"]
-        )
-        for i, description in PmacState.globalMsIVariableDescriptions.items():
-            for node in [0, 16, 32, 64]:
-                page.tableRow(
-                    table,
-                    [
-                        "i%s" % i,
-                        "%s" % node,
-                        "%s" % self.getMsIVariable(0, i).valStr(),
-                        "%s" % description,
-                    ],
-                )
-
-    def htmlMotorMsIVariables(self, motor, page):
-        table = page.table(page.body(), ["MS I-Variable", "Value", "Description"])
-        node = PmacState.axisToNode[motor]
-        for i, description in PmacState.motorMsIVariableDescriptions.items():
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getMsIVariable(node, i).valStr(),
-                    "%s" % description,
-                ],
-            )
-
-    def compare(self, other, noCompare, pmacName, page, fixfile, unfixfile):
-        """Compares the state of this PMAC with the other."""
-        result = True
-        table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
-        # Build the list of variable addresses to test
-        addrs = sorted(
-            (set(self.vars.keys()) | set(other.vars.keys()))
-            - set(noCompare.vars.keys()),
-            key=cmp_to_key(numericSort),
-        )
-        # For each of these addresses, compare the variable
-        for a in addrs:
-            texta = a
-            commentargs = {}
-            if texta.endswith("%0"):
-                texta = texta[:-1]
-            if texta.startswith("i") and not texta.startswith("inv"):
-                i = int(texta[1:])
-                if i in range(100):
-                    desc = PmacState.globalIVariableDescriptions[i]
-                    commentargs["comment"] = desc
-                elif i in range(3300):
-                    desc = PmacState.motorIVariableDescriptions[i % 100]
-                    commentargs["comment"] = desc
-                elif i in range(7000, 7350):
-                    desc = PmacState.motorI7000VariableDescriptions[i % 10]
-                    commentargs["comment"] = desc
-                else:
-                    desc = "No description available"
-                texta = page.doc_node(a, desc)
-            if a not in other.vars:
-                if not self.vars[a].ro and not self.vars[a].isEmpty():
-                    result = False
-                    self.writeHtmlRow(page, table, texta, "Missing", None, self.vars[a])
-                    if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump(**commentargs))
-            elif a not in self.vars:
-                if not other.vars[a].ro and not other.vars[a].isEmpty():
-                    result = False
-                    self.writeHtmlRow(
-                        page, table, texta, "Missing", other.vars[a], None
-                    )
-                    if fixfile is not None:
-                        fixfile.write(other.vars[a].dump())
-            elif not self.vars[a].compare(other.vars[a]):
-                if not other.vars[a].ro and not self.vars[a].ro:
-                    result = False
-                    self.writeHtmlRow(
-                        page, table, texta, "Mismatch", other.vars[a], self.vars[a]
-                    )
-                    if fixfile is not None:
-                        fixfile.write(other.vars[a].dump())
-                    if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump(**commentargs))
-        # Check the running PLCs
-        for n in range(32):
-            plc = self.getPlcProgramNoCreate(n)
-            if plc is not None:
-                plc.setShouldBeRunning()
-                log.debug(
-                    "PLC%s, isRunning=%s, shouldBeRunning=%s",
-                    n,
-                    plc.isRunning,
-                    plc.shouldBeRunning,
-                )
-                if plc.shouldBeRunning and not plc.isRunning:
-                    result = False
-                    self.writeHtmlRow(
-                        page, table, "plc%s" % n, "Not running", None, None
-                    )
-                    if fixfile is not None:
-                        fixfile.write("enable plc %s\n" % n)
-                    if unfixfile is not None:
-                        unfixfile.write("disable plc %s\n" % n)
-                elif not plc.shouldBeRunning and plc.isRunning:
-                    result = False
-                    self.writeHtmlRow(page, table, "plc%s" % n, "Running", None, None)
-                    if fixfile is not None:
-                        fixfile.write("disable plc %s\n" % n)
-                    if unfixfile is not None:
-                        unfixfile.write("enable plc %s\n" % n)
-        return result
-
-    def writeHtmlRow(self, page, parent, addr, reason, referenceVar, hardwareVar):
-        row = page.tableRow(parent)
-        # The address column
-        col = page.tableColumn(row, addr)
-        # The reason column
-        col = page.tableColumn(row, reason)
-        # The reference column
-        col = page.tableColumn(row)
-        if referenceVar is None:
-            page.text(col, "-")
-        else:
-            referenceVar.htmlCompare(page, col, hardwareVar)
-        # The hardware column
-        col = page.tableColumn(row)
-        if hardwareVar is None:
-            page.text(col, "-")
-        else:
-            hardwareVar.htmlCompare(page, col, referenceVar)
-
-    def loadPmcFile(self, fileName):
-        """Loads a PMC file into this PMAC state."""
-        file = open(fileName, "r")
-        if file is None:
-            raise AnalyseError("Could not open reference file: %s" % fileName)
-        log.info("Loading PMC file %s...", fileName)
-        parser = PmacParser(file, self)
-        parser.onLine()
-
-    def loadPmcFileWithPreprocess(self, fileName, includePaths):
-        """
-        Loads a PMC file into this PMAC state having expanded includes and defines.
-        """
-        if includePaths is not None:
-            p = ClsPmacParser(includePaths=includePaths.split(":"))
-        else:
-            p = ClsPmacParser()
-        log.info("Loading PMC file %s...", fileName)
-        converted = p.parse(fileName, debug=True)
-        if converted is None:
-            raise AnalyseError("Could not open reference file: %s" % fileName)
-        parser = PmacParser(p.output, self)
-        parser.onLine()

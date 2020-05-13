@@ -7,8 +7,11 @@
 # Purpose: Provide a whole range of PMAC monitoring services, backups, compares, etc.
 # ------------------------------------------------------------------------------
 
+from dls_pmacanalyse.report import Report
 import logging
+import pickle
 import sys
+from pathlib import Path
 
 from dls_pmacanalyse.analyse import Analyse
 from dls_pmacanalyse.globalconfig import GlobalConfig
@@ -138,8 +141,15 @@ def main():
 
     if config.processArguments():
         config.processConfigFile()
-        analyse = Analyse(config)
-        analyse.analyse()
+        if config.test:
+            config_pickle = Path(__file__).parent / "../tests/config.pickle"
+            with open(config_pickle, "rb") as pickle_in:
+                config: GlobalConfig = pickle.load(pickle_in)
+                report = Report(Path("/tmp"))
+                report.pmacs_to_html(config.pmacs)
+        else:
+            analyse = Analyse(config)
+            analyse.analyse()
     else:
         log.error(helpText)
     return 0
