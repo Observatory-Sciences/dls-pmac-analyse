@@ -96,6 +96,7 @@ class Analyse:
                         msg = "FAILED TO CONNECT TO " + pmac.name
                         log.debug(msg, exc_info=True)
                         log.error(msg)
+                        continue
                 else:
                     pmac.loadCompareWith()
                 # Load the reference
@@ -246,7 +247,10 @@ class Analyse:
             # Dump the macrostation I variables for each pmac
             for name, pmac in self.config.pmacs.items():
                 if self.config.onlyPmacs is None or name in self.config.onlyPmacs:
-                    if pmac.numMacroStationIcs > 0:
+                    if (
+                        pmac.numMacroStationIcs is not None
+                        and pmac.numMacroStationIcs > 0
+                    ):
                         # Create the MS,I variables top level web page
                         page = WebPage(
                             "Macrostation I Variables for %s (%s)"
@@ -543,9 +547,7 @@ class Analyse:
 
     def hudsonXmlReport(self):
         # Write out an XML report for Hudson
-        xmlDoc = getDOMImplementation().createDocument(
-            None, "testsuite", None
-        )  # noqa
+        xmlDoc = getDOMImplementation().createDocument(None, "testsuite", None)  # noqa
         xmlTop = xmlDoc.documentElement
         xmlTop.setAttribute("tests", str(len(self.config.pmacs)))
         xmlTop.setAttribute("time", "0")

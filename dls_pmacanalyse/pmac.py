@@ -693,6 +693,10 @@ class Pmac(object):
         if factorySettings is not None:
             self.referenceState.copyFrom(factorySettings)
         if self.reference is not None:
+            # when interpreting inline expressions, the actual current value of
+            # variables in the hardware is used. Otherwise we would always only
+            # be comparing against the initial state immediately after reference
+            # had been uploaded.
             self.referenceState.setInlineExpressionResolutionState(self.hardwareState)
             self.referenceState.loadPmcFileWithPreprocess(self.reference, includePaths)
 

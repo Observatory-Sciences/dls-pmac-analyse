@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>{{ title }}</title>
+
+<body>
+    <h1>{{ title }}</h1>
+    <table>
+        <tr>
+            <th>CS</th>
+            <th>Axis def</th>
+            <th>Forward Kinematic</th>
+            <th>Inverse Kinematic</th>
+            <th>Q Variables</th>
+            <th>%</th>
+        </tr>
+        {% for cs in cs_list %}
+            <tr>
+                <td>{{ cs.num }}</td>
+                <td>{{ cs.axis_defs }}</td>
+                <td>{{ cs.forward }}</td>
+                <td>{{ cs.inverse }}</td>
+                <td><a href="{{ pmac }}_cs{{ cs.num }}_q.htm">Q Variables</a></td>
+                <td>{{ cs.feedrate }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

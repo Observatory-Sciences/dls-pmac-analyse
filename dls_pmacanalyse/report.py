@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 from shutil import copy
 from typing import Dict, List, Optional
-from dataclasses import dataclass
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -72,6 +72,18 @@ class Report:
         with path.open(mode="w") as stream:
             stream.write(html)
 
+    def _render_cs(self, pmac, cs_list):
+        title = f"Coordinte Systems for {pmac} {datetime.now().ctime()}"
+        cs_template = self.environment.get_template("coordsystems.htm.jinja")
+        html = cs_template.render(
+            title=title, cs_list=cs_list
+        )
+        path = self.root_dir / f"{pmac}_coordsystems.htm"
+        log.info(f"writing {path}")
+        with path.open(mode="w") as stream:
+            stream.write(html)
+
+
     def pmacs_to_html(self, pmacs: Dict[str, Pmac]):
         index: List[PmacIndexInfo] = [
             PmacIndexInfo(
@@ -123,3 +135,7 @@ class Report:
                 path=self.root_dir / f"{pmac.name}_mvariablevalues.htm",
                 with_comments=False,
             )
+
+            # Coordinate Systems
+            cs_list = pmac.hardwareState.get_coord_systems()
+            self._render_cs(pmac.name, cs_list)

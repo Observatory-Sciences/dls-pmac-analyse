@@ -1,5 +1,17 @@
+from dataclasses import dataclass
+from typing import Optional
+
 from dls_pmacanalyse.errors import GeneralError
 from dls_pmacanalyse.utils import tokenIsFloat, tokenToFloat
+
+
+@dataclass
+class VariableInfo:
+    """A basic representation of a pmac variable for representation to a user"""
+
+    name: str
+    value: str
+    comment: Optional[str] = None
 
 
 class PmacToken(object):
@@ -41,6 +53,12 @@ class PmacVariable(object):
         self.n = n
         self.v = v
         self.ro = False
+
+    def info(self, comment: Optional[str] = None) -> VariableInfo:
+        raise NotImplementedError
+
+    def dump(self):
+        raise NotImplementedError
 
     def addr(self):
         return self.typeStr
@@ -91,6 +109,9 @@ class PmacIVariable(PmacVariable):
         PmacVariable.__init__(self, "i", n, v)
         self.ro = ro
 
+    def info(self, comment: Optional[str] = None):
+        return VariableInfo(name=f"i{self.n}", value=self.valStr(), comment=comment)
+
     def dump(self, typ=0, comment=""):
         result = ""
         if typ == 1:
@@ -135,6 +156,10 @@ class PmacMVariable(PmacVariable):
     def __init__(self, n, type="*", address=0, offset=0, width=0, format="U"):
         PmacVariable.__init__(self, "m", n, 0)
         self.set(type, address, offset, width, format)
+
+    def info(self, comment: Optional[str] = None, content: bool = False):
+        value = self.contentsStr() if content else self.valStr()
+        return VariableInfo(name=f"m{self.n}", value=value, comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:
@@ -207,6 +232,9 @@ class PmacMVariable(PmacVariable):
 class PmacPVariable(PmacVariable):
     def __init__(self, n, v=0):
         PmacVariable.__init__(self, "p", n, v)
+
+    def info(self, comment: Optional[str] = None):
+        return VariableInfo(name=f"p{self.n}", value=self.valStr(), comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:

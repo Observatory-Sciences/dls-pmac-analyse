@@ -16,11 +16,12 @@ from dls_pmacanalyse.pmacprogram import (
 from dls_pmacanalyse.pmacvariables import (
     PmacFeedrateOverride,
     PmacIVariable,
-    PmacMVariable,
     PmacMsIVariable,
+    PmacMVariable,
     PmacPVariable,
     PmacQVariable,
     PmacVariable,
+    VariableInfo,
 )
 
 from .errors import AnalyseError, GeneralError
@@ -28,18 +29,29 @@ from .utils import numericSort
 
 log = getLogger(__name__)
 
-PmacVariableResult = Union[None, PmacVariable]
+PmacVariableResult = Optional[PmacVariable]
 
 
 @dataclass
-class VariableInfo:
-    name: str
-    value: str
-    comment: Optional[str]
+class CoordinateSysInfo:
+    """A basic representation of a coordinate system for representation to a user"""
+
+    num: int
+    axis_defs: str
+    forward: str
+    inverse: str
+    feedrate: int
 
 
 class PmacState(object):
-    """Represents the internal state of a PMAC."""
+    """
+    Represents the internal state of a PMAC.
+
+    Provides a function to compare two PmacState.
+
+    Provides functions to extract views of logical groupings of
+    state variables for representation to a user.
+    """
 
     def __init__(self, descr):
         self.geobrick: Optional[bool] = None
@@ -162,11 +174,24 @@ class PmacState(object):
     def getInverseKinematicProgram(self, n):
         return self.getVar("inv", n)
 
-    def getForwardKinematicProgramNoCreate(self, n):
-        return self.getVarNoCreate("fwd", n)
+    def getForwardKinematicProgramNoCreate(self, n: int):
+        return cast(PmacForwardKinematicProgram, self.getVarNoCreate("fwd", n))
 
-    def getInverseKinematicProgramNoCreate(self, n):
-        return self.getVarNoCreate("inv", n)
+    # TODO these should return list of lines instead of text
+    def getForwardKinematicProgramText(self, n: int):
+        result = self.getForwardKinematicProgramNoCreate(n)
+        if result:
+            result = result.valueText()
+        return result
+
+    def getInverseKinematicProgramNoCreate(self, n: int):
+        return cast(PmacInverseKinematicProgram, self.getVarNoCreate("inv", n))
+
+    def getInverseKinematicProgramText(self, n: int):
+        result = self.getInverseKinematicProgramNoCreate(n)
+        if result:
+            result = result.valueText()
+        return result
 
     def getPVariable(self, n):
         return self.getVar("p", n)
@@ -185,6 +210,14 @@ class PmacState(object):
 
     def getFeedrateOverrideNoCreate(self, cs):
         return self.getVarNoCreate2("&", cs, "%", 0)
+
+    def getFeedRateOverrideValue(self, cs: int) -> int:
+        rate = self.getFeedrateOverrideNoCreate(cs)
+        if rate:
+            result = int(rate.valStr())
+        else:
+            result = 100
+        return result
 
     def getMsIVariable(self, ms, n):
         return cast(PmacMsIVariable, self.getVar2("ms", ms, "i", n))
@@ -208,10 +241,7 @@ class PmacState(object):
         self, start: int, count: int, descriptions: Dict[int, str]
     ) -> List[VariableInfo]:
         return [
-            VariableInfo(
-                f"i{i + start}", self.getIVariable(i + start).valStr(), descriptions[i],
-            )
-            for i in range(count)
+            self.getIVariable(i + start).info(descriptions[i]) for i in range(count)
         ]
 
     def get_global_ivariables(self) -> List[VariableInfo]:
@@ -227,21 +257,31 @@ class PmacState(object):
         return vars
 
     def get_pvariables(self) -> List[VariableInfo]:
-        return [
-            VariableInfo(
-                f"p{p}", self.getPVariable(p).valStr(), None,
-            )
-            for p in range(8192)
-        ]
+        return [self.getPVariable(p).info() for p in range(8192)]
 
     def get_mvariables(self, content: bool = False):
-        func = PmacMVariable.contentsStr if content else PmacMVariable.valStr
-        return [
-            VariableInfo(
-                f"m{p}", func(self.getMVariable(p)), None,
+        return [self.getMVariable(m).info(content=content) for m in range(8192)]
+
+    def get_coord_systems(self):
+        cs_list = []
+        for cs in range(1, 17):
+            # combine axis defs into a space separated list (TODO maybe rethink this)
+            axis_defs = ""
+            for motor in range(1, 33):
+                var = self.getCsAxisDefNoCreate(cs, motor)
+                if var is not None and not var.isZero():
+                    axis_defs += f"{var.dump()} "
+
+            cs_list.append(
+                CoordinateSysInfo(
+                    num=cs,
+                    axis_defs=axis_defs,
+                    forward=self.getForwardKinematicProgramText(cs),
+                    inverse=self.getInverseKinematicProgramText(cs),
+                    feedrate=self.getFeedRateOverrideValue(cs),
+                )
             )
-            for p in range(8192)
-        ]
+        return cs_list
 
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
