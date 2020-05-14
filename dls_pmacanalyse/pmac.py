@@ -36,7 +36,6 @@ class Pmac(object):
         self.host = ""
         self.port = 1
         self.termServ = False
-        self.geobrick = None
         self.numMacroStationIcs = None
         self.pti = None
         self.backupFile = None
@@ -58,7 +57,7 @@ class Pmac(object):
     #     log.info(text)
 
     def htmlMotorIVariables(self, motor, page):
-        self.hardwareState.htmlMotorIVariables(motor, page, self.geobrick)
+        self.hardwareState.htmlMotorIVariables(motor, page, self.hardwareState.geobrick)
 
     def htmlGlobalIVariables(self, page):
         self.hardwareState.htmlGlobalIVariables(page)
@@ -86,7 +85,7 @@ class Pmac(object):
         self.termServ = termServ
 
     def setGeobrick(self, g):
-        self.geobrick = g
+        self.hardwareState.geobrick = g
 
     def setNumMacroStationIcs(self, n):
         self.numMacroStationIcs = n
@@ -209,18 +208,18 @@ class Pmac(object):
 
     def determinePmacType(self):
         """Discovers whether the PMAC is a Geobrick or a VME style PMAC"""
-        if self.geobrick is None:
+        if self.hardwareState.geobrick is None:
             (returnStr, status) = self.sendCommand("cid")
             if not status:
                 raise PmacReadError(returnStr)
             id = returnStr[:-2]
             if id == "602413":
-                self.geobrick = False
+                self.hardwareState.geobrick = False
             elif id == "603382":
-                self.geobrick = True
+                self.hardwareState.geobrick = True
             else:
-                self.geobrick = False
-            log.warning("Geobrick= %s" % self.geobrick)
+                self.hardwareState.geobrick = False
+            log.warning("Geobrick= %s" % self.hardwareState.geobrick)
 
     def determineNumAxes(self):
         """Determines the number of axes the PMAC has by determining the
@@ -235,7 +234,7 @@ class Pmac(object):
                 if macroIcAddresses[i] != "$0":
                     self.numMacroStationIcs += 1
         self.numAxes = self.numMacroStationIcs * 8
-        if self.geobrick:
+        if self.hardwareState.geobrick:
             self.numAxes += 8
         log.info("Num axes= %s" % self.numAxes)
 

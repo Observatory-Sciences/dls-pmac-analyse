@@ -1,0 +1,18 @@
+<html>
+
+    <head>
+        <link rel="stylesheet" type="text/css" href="analysis.css" />
+    </head>
+    <title>{{ title }}</title>
+
+    <body>
+        <h1>{{ title }}</h1>
+    <p id="code">
+        {% for line in lines %}
+        {{loop.index}}: {{line}}
+        {% endfor %}
+    </p>
+</body>
+
+</html><?xml version="1.0" ?>
+<html>

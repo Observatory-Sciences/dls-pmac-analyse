@@ -1,0 +1,110 @@
+from datetime import datetime
+from logging import getLogger
+from pathlib import Path
+from shutil import copy
+from typing import Dict, List, Optional
+from dataclasses import dataclass
+
+from jinja2 import Environment, FileSystemLoader
+
+from dls_pmacanalyse.pmac import Pmac
+from dls_pmacanalyse.pmacstate import VariableInfo
+
+log = getLogger(__name__)
+
+
+@dataclass
+class PmacIndexInfo:
+    name: str
+    macro_stations: bool
+    motors: int
+    results: str
+
+
+class Report:
+    def __init__(self, target_dir: Optional[Path]) -> None:
+        this_path = Path(__file__).parent
+        jinja_path = this_path.parent / "jinja"
+        self.templateLoader = FileSystemLoader(searchpath=jinja_path)
+        self.environment = Environment(loader=self.templateLoader, autoescape=True)
+
+        if target_dir is None:
+            target_dir = Path.cwd()
+        self.root_dir = target_dir / "pmacAnalysis"
+        self.root_dir.mkdir(exist_ok=True)
+
+        css = jinja_path / "analysis.css"
+        copy(css, self.root_dir)
+
+    def _render_indexes(self, pmacs_index):
+        template = self.environment.get_template("index.htm.jinja")
+        title = f"PMAC Analysis {datetime.now().ctime()}"
+        html = template.render(title=title, pmacs=pmacs_index)
+        path = self.root_dir / "index.htm"
+        log.info(f"writing {path}")
+
+        with path.open(mode="w") as stream:
+            stream.write(html)
+
+        template = self.environment.get_template("subindex.htm.jinja")
+        for pmac in pmacs_index:
+            html = template.render(pmac=pmac)
+            path = self.root_dir / f"{pmac.name}_ivariables.htm"
+            log.info(f"writing {path}")
+
+            with path.open(mode="w") as stream:
+                stream.write(html)
+
+    def _render_variables(
+        self,
+        title: str,
+        variables: List[VariableInfo],
+        path: Path,
+        with_comments: bool = True,
+    ):
+        vars_template = self.environment.get_template("variables.htm.jinja")
+
+        html = vars_template.render(
+            title=title, variables=variables, with_comments=with_comments
+        )
+
+        log.info(f"writing {path}")
+        with path.open(mode="w") as stream:
+            stream.write(html)
+
+    def pmacs_to_html(self, pmacs: Dict[str, Pmac]):
+        index: List[PmacIndexInfo] = [
+            PmacIndexInfo(
+                name=name,
+                macro_stations=pmac.numMacroStationIcs is not None
+                and pmac.numMacroStationIcs > 0,
+                motors=pmac.numAxes,
+                results="todo",
+            )
+            for name, pmac in pmacs.items()
+        ]
+        self._render_indexes(index)
+
+        for pmac in pmacs.values():
+            # global i variables
+            self._render_variables(
+                title=f"Global I Variables for {pmac.name}",
+                variables=pmac.hardwareState.get_global_ivariables(),
+                path=self.root_dir / f"{pmac.name}_ivars_glob.htm",
+            )
+
+            # motor i variables
+            for motor in range(1, pmac.numAxes + 1):
+                self._render_variables(
+                    title=f"motor {motor} I Variables for {pmac.name}",
+                    variables=pmac.hardwareState.get_motor_ivariables(motor),
+                    path=self.root_dir / f"{pmac.name}_ivars_motor{motor}.htm",
+                )
+
+            # P variables
+            self._render_variables(
+                title=f"P Variables for {pmac.name}",
+                variables=pmac.hardwareState.get_pvariables(),
+                path=self.root_dir / f"{pmac.name}_pvariables.htm",
+                with_comments=False
+            )

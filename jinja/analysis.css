@@ -1,0 +1,11 @@
+
+                p{text-align:left; color:black; font-family:arial}
+                h1{text-align:center; color:green}
+                table{border-collapse:collapse}
+                table, th, td{border:1px solid black}
+                th, td{padding:5px; vertical-align:top}
+                th{background-color:#EAf2D3; color:black}
+                em{color:red; font-style:normal; font-weight:bold}
+                #code{white-space:pre}
+                #code{font-family:courier}
+                

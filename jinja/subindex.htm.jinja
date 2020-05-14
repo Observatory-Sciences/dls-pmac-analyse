@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>I Variables for {{ pmac.name }}</title>
+
+<body>
+    <h1>I Variables for {{ pmac.name }}</h1>
+        <a
+        href="{{ pmac.name }}_ivars_glob.htm">Global Ivariables</a><br />
+        {% for i in range(1, pmac.motors+1) %}
+        <a href="{{ pmac.name }}_ivars_motor{{ i }}.htm">Motor {{ i }} I variables</a><br />
+        {% endfor %}
+</body>
+
+</html>

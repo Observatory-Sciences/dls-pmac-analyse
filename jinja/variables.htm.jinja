@@ -1,0 +1,45 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>{{ title }}</title>
+
+<body>
+    <h1>{{ title }}</h1>
+    <table>
+        {% if with_comments %}
+            <tr>
+                <th>Variable</th>
+                <th>Value</th>
+                <th>Description</th>
+            </tr>
+            {% for variable in variables %}
+                <tr>
+                    <td>{{ variable.name }}</td>
+                    <td>{{ variable.value }}</td>
+                    <td>{{ variable.comment }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <th></th>
+                {% for i in range(10) %}
+                    <th>{{ i }}</th>
+                {% endfor %}
+            </tr>
+            {% for i in range(0, variables|length, 10) %}
+                <tr>
+                    <td>{{ variables[i].name[:-1] }}</td>
+                    {% for col in range(10) %}
+                        {% if i+col < variables|length %}
+                            <td>{{ variables[i+col].value }}</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        {% endif %}
+    </table>
+</body>
+
+</html>

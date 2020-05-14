@@ -1,0 +1,32 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>{{ title }}</title>
+
+<body>
+    <h1>{{ title }}</h1>
+    <table>
+        {% for pmac in pmacs %}
+        <tr>
+            <td>{{ pmac.name }}</td>
+            <td>{{ pmac.results }}</td>
+            <td><a href="{{ pmac.name }}_ivariables.htm">I variables</a></td>
+            <td><a href="{{ pmac.name }}_pvariables.htm">P variables</a></td>
+            <td><a href="{{ pmac.name }}_mvariables.htm">M variables</a></td>
+            <td><a href="{{ pmac.name }}_mvariablevalues.htm">M variable values</a></td>
+            {% if pmac.macro_stations %}
+            <td><a href="{{ pmac.name }}_msivariables.htm">MSI variables</a></td>
+            {% else %}
+            <td>-</td>
+            {% endif %}
+            <td><a href="{{ pmac.name }}_coordsystems.htm">Coordinate systems</a></td>
+            <td><a href="{{ pmac.name }}_plcs.htm">PLCs</a></td>
+            <td><a href="{{ pmac.name }}_motionprogs.htm">Motion programs</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

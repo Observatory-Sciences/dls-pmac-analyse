@@ -101,7 +101,7 @@ class Analyse:
                 # Load the reference
                 factoryDefs = None
                 if pmac.useFactoryDefs:
-                    if pmac.geobrick:
+                    if pmac.hardwareState.geobrick:
                         factoryDefs = self.geobrickFactorySettings
                     else:
                         factoryDefs = self.pmacFactorySettings

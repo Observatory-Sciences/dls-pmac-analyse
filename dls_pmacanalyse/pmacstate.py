@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import cmp_to_key
 from logging import getLogger
-from typing import Dict, List, Union, cast
+from typing import Dict, List, Optional, Union, cast
 
 from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
@@ -16,8 +16,8 @@ from dls_pmacanalyse.pmacprogram import (
 from dls_pmacanalyse.pmacvariables import (
     PmacFeedrateOverride,
     PmacIVariable,
-    PmacMsIVariable,
     PmacMVariable,
+    PmacMsIVariable,
     PmacPVariable,
     PmacQVariable,
     PmacVariable,
@@ -35,13 +35,14 @@ PmacVariableResult = Union[None, PmacVariable]
 class VariableInfo:
     name: str
     value: str
-    comment: str
+    comment: Optional[str]
 
 
 class PmacState(object):
     """Represents the internal state of a PMAC."""
 
     def __init__(self, descr):
+        self.geobrick: Optional[bool] = None
         self.vars: Dict[
             str,
             Union[
@@ -203,21 +204,35 @@ class PmacState(object):
     #############################################################################
     # functions to extract descriptive logical groupings of brick variables
     #############################################################################
-    def get_ivariables(self, start: int, count: int) -> List[VariableInfo]:
+    def get_ivariables(
+        self, start: int, count: int, descriptions: Dict[int, str]
+    ) -> List[VariableInfo]:
         return [
             VariableInfo(
-                f"i{i}",
-                self.getIVariable(i).valStr(),
-                PmacState.globalIVariableDescriptions[i],
+                f"i{i + start}", self.getIVariable(i + start).valStr(), descriptions[i],
             )
-            for i in range(start, start + count)
+            for i in range(count)
         ]
 
     def get_global_ivariables(self) -> List[VariableInfo]:
-        return self.get_ivariables(0, 100)
+        return self.get_ivariables(0, 100, PmacState.globalIVariableDescriptions)
 
     def get_motor_ivariables(self, motor: int) -> List[VariableInfo]:
-        return self.get_ivariables(motor * 100, motor * 100 + 100)
+        vars = self.get_ivariables(
+            motor * 100, 100, PmacState.motorIVariableDescriptions
+        )
+        if self.geobrick:
+            i = 7000 + PmacState.axisToMn[motor] + motor
+            vars += self.get_ivariables(i, 10, PmacState.motorIVariableDescriptions)
+        return vars
+
+    def get_pvariables(self) -> List[VariableInfo]:
+        return [
+            VariableInfo(
+                f"p{p}", self.getPVariable(p).valStr(), None,
+            )
+            for p in range(8192)
+        ]
 
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
@@ -389,6 +404,30 @@ class PmacState(object):
             page.text(col, "-")
         else:
             hardwareVar.htmlCompare(page, col, referenceVar)
+
+    def loadPmcFile(self, fileName):
+        """Loads a PMC file into this PMAC state."""
+        file = open(fileName, "r")
+        if file is None:
+            raise AnalyseError("Could not open reference file: %s" % fileName)
+        log.info("Loading PMC file %s...", fileName)
+        parser = PmacParser(file, self)
+        parser.onLine()
+
+    def loadPmcFileWithPreprocess(self, fileName, includePaths):
+        """
+        Loads a PMC file into this PMAC state having expanded includes and defines.
+        """
+        if includePaths is not None:
+            p = ClsPmacParser(includePaths=includePaths.split(":"))
+        else:
+            p = ClsPmacParser()
+        log.info("Loading PMC file %s...", fileName)
+        converted = p.parse(fileName, debug=True)
+        if converted is None:
+            raise AnalyseError("Could not open reference file: %s" % fileName)
+        parser = PmacParser(p.output, self)
+        parser.onLine()
 
     #############################################################################
     # Dictionaries that detail variable semantics
