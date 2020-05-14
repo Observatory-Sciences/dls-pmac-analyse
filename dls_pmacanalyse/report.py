@@ -63,7 +63,7 @@ class Report:
         with_comments: bool = True,
     ):
         vars_template = self.environment.get_template("variables.htm.jinja")
-
+        title += f" {datetime.now().ctime()}"
         html = vars_template.render(
             title=title, variables=variables, with_comments=with_comments
         )
@@ -106,5 +106,20 @@ class Report:
                 title=f"P Variables for {pmac.name}",
                 variables=pmac.hardwareState.get_pvariables(),
                 path=self.root_dir / f"{pmac.name}_pvariables.htm",
-                with_comments=False
+                with_comments=False,
+            )
+
+            # M variable addresses
+            self._render_variables(
+                title=f"M Variable Mappings for {pmac.name}",
+                variables=pmac.hardwareState.get_mvariables(),
+                path=self.root_dir / f"{pmac.name}_mvariables.htm",
+                with_comments=False,
+            )
+            # M variable values
+            self._render_variables(
+                title=f"M Variable Values for {pmac.name}",
+                variables=pmac.hardwareState.get_mvariables(content=True),
+                path=self.root_dir / f"{pmac.name}_mvariablevalues.htm",
+                with_comments=False,
             )

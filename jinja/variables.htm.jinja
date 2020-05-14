@@ -30,7 +30,7 @@
             </tr>
             {% for i in range(0, variables|length, 10) %}
                 <tr>
-                    <td>{{ variables[i].name[:-1] }}</td>
+                    <td>{{ variables[i].name[:-1] }}0</td>
                     {% for col in range(10) %}
                         {% if i+col < variables|length %}
                             <td>{{ variables[i+col].value }}</td>

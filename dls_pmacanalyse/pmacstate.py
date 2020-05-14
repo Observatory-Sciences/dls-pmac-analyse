@@ -234,6 +234,15 @@ class PmacState(object):
             for p in range(8192)
         ]
 
+    def get_mvariables(self, content: bool = False):
+        func = PmacMVariable.contentsStr if content else PmacMVariable.valStr
+        return [
+            VariableInfo(
+                f"m{p}", func(self.getMVariable(p)), None,
+            )
+            for p in range(8192)
+        ]
+
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
         for i in range(0, 100):
