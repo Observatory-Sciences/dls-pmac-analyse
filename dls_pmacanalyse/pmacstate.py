@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dls_pmacanalyse.constants import Constants
 from functools import cmp_to_key
 from logging import getLogger
 from typing import Dict, List, Optional, Union, cast
@@ -237,24 +238,20 @@ class PmacState(object):
     #############################################################################
     # functions to extract descriptive logical groupings of brick variables
     #############################################################################
-    def get_ivariables(
-        self, start: int, count: int, descriptions: Dict[int, str]
-    ) -> List[VariableInfo]:
+    def get_global_ivariables(self) -> List[VariableInfo]:
         return [
-            self.getIVariable(i + start).info(descriptions[i]) for i in range(count)
+            self.getIVariable(ivar).info(PmacState.globalIVariableDescriptions[n])
+            for n, ivar in enumerate(Constants.i_variable_global_numbers)
         ]
 
-    def get_global_ivariables(self) -> List[VariableInfo]:
-        return self.get_ivariables(0, 100, PmacState.globalIVariableDescriptions)
-
     def get_motor_ivariables(self, motor: int) -> List[VariableInfo]:
-        vars = self.get_ivariables(
-            motor * 100, 100, PmacState.motorIVariableDescriptions
-        )
-        if self.geobrick:
-            i = 7000 + PmacState.axisToMn[motor] + motor
-            vars += self.get_ivariables(i, 10, PmacState.motorIVariableDescriptions)
-        return vars
+        return [
+            self.getIVariable(ivar).info(PmacState.motorIVariableDescriptions[n])
+            for n, ivar in enumerate(Constants.i_variable_global_numbers)
+        ] + [
+            self.getIVariable(ivar).info(PmacState.motorI7000VariableDescriptions[n])
+            for n, ivar in enumerate(Constants.i_variable_motor7000_numbers)
+        ]
 
     def get_msivariables(
         self, start: int, count: int, descriptions: Dict[int, str]
@@ -266,7 +263,7 @@ class PmacState(object):
     def get_global_msivariables(self) -> List[VariableInfo]:
         result: List[VariableInfo] = []
         for i, description in PmacState.globalMsIVariableDescriptions.items():
-            for node in [0, 16, 32, 64]:
+            for node in Constants.macro_station_nodes:
                 result.append(self.getMsIVariable(node, i).info(description))
         return result
 
@@ -278,20 +275,23 @@ class PmacState(object):
         return result
 
     def get_pvariables(self) -> List[VariableInfo]:
-        return [self.getPVariable(p).info() for p in range(8192)]
+        return [self.getPVariable(p).info() for p in Constants.p_variable_numbers]
 
     def get_mvariables(self, content: bool = False) -> List[VariableInfo]:
-        return [self.getMVariable(m).info(content=content) for m in range(8192)]
+        return [
+            self.getMVariable(m).info(content=content)
+            for m in Constants.m_variable_numbers
+        ]
 
     def get_qvariables(self, cs: int) -> List[VariableInfo]:
-        return [self.getQVariable(cs, q).info() for q in range(100)]
+        return [self.getQVariable(cs, q).info() for q in Constants.q_variable_numbers]
 
     def get_coord_systems(self):
         cs_list = []
-        for cs in range(1, 17):
+        for cs in Constants.coord_sys_numbers:
             # TODO maybe rethink this - combine axis defs into a space separated list
             axis_defs = ""
-            for motor in range(1, 33):
+            for motor in Constants.motor_numbers:
                 var = self.getCsAxisDefNoCreate(cs, motor)
                 if var is not None and not var.isZero():
                     axis_defs += f"{var.dump()} "
@@ -309,7 +309,7 @@ class PmacState(object):
 
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for i in range(0, 100):
+        for i in Constants.i_variable_global_numbers:
             page.tableRow(
                 table,
                 [
@@ -321,7 +321,7 @@ class PmacState(object):
 
     def htmlMotorIVariables(self, motor, page, geobrick):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for n in range(0, 100):
+        for n in Constants.i_variable_motor_numbers:
             i = motor * 100 + n
             page.tableRow(
                 table,

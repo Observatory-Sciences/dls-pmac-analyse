@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from dls_pmacanalyse.constants import Constants
 from logging import getLogger
 from pathlib import Path
 from shutil import copy
@@ -66,11 +67,15 @@ class Report:
         variables: List[VariableInfo],
         path: Path,
         with_comments: bool = True,
+        with_node: bool = False,
     ):
         vars_template = self.environment.get_template("variables.htm.jinja")
         title += f" {datetime.now().ctime()}"
         html = vars_template.render(
-            title=title, variables=variables, with_comments=with_comments
+            title=title,
+            variables=variables,
+            with_comments=with_comments,
+            with_node=with_node,
         )
 
         log.info(f"writing {path}")
@@ -80,9 +85,7 @@ class Report:
     def _render_cs(self, pmac, cs_list):
         title = f"Coordinte Systems for {pmac} {datetime.now().ctime()}"
         cs_template = self.environment.get_template("coordsystems.htm.jinja")
-        html = cs_template.render(
-            title=title, pmac=pmac, cs_list=cs_list
-        )
+        html = cs_template.render(title=title, pmac=pmac, cs_list=cs_list)
         path = self.root_dir / f"{pmac}_coordsystems.htm"
         log.info(f"writing {path}")
         with path.open(mode="w") as stream:
@@ -146,12 +149,12 @@ class Report:
             self._render_cs(pmac.name, cs_list)
 
             # Q Variables
-            for cs in range(1, 17):
+            for cs in Constants.coord_sys_numbers:
                 self._render_variables(
                     title=f"CS {cs} Q Variables for {pmac.name}",
                     variables=pmac.hardwareState.get_qvariables(cs),
                     path=self.root_dir / f"{pmac.name}_cs{cs}_q.htm",
-                    with_comments=False
+                    with_comments=False,
                 )
 
             if pmac.numMacroStationIcs is not None and pmac.numMacroStationIcs > 0:
@@ -160,6 +163,7 @@ class Report:
                     title=f"Global MSI Variables for {pmac.name}",
                     variables=pmac.hardwareState.get_global_msivariables(),
                     path=self.root_dir / f"{pmac.name}_msivars_glob.htm",
+                    with_node=True,
                 )
 
                 # motor msi variables

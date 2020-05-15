@@ -12,12 +12,18 @@
         {# with comments displays a table with one row per variable #}
             <tr>
                 <th>Variable</th>
+                {% if with_node %}
+                  <th>Node</th>
+                {% endif %}
                 <th>Value</th>
                 <th>Description</th>
             </tr>
             {% for variable in variables %}
                 <tr>
                     <td>{{ variable.name }}</td>
+                        {% if with_node %}
+                        <td>{{ variable.node }}</td>
+                        {% endif %}
                     <td>{{ variable.value }}</td>
                     <td>{{ variable.comment }}</td>
                 </tr>

@@ -14,6 +14,7 @@ class VariableInfo:
     name: str
     value: str
     comment: Optional[str] = None
+    node: Optional[int] = None
 
 
 class PmacToken(object):
@@ -300,7 +301,9 @@ class PmacMsIVariable(PmacVariable):
         self.ro = ro
 
     def info(self, comment: Optional[str] = None):
-        return VariableInfo(name=f"i{self.n}", value=self.valStr(), comment=comment)
+        return VariableInfo(
+            name=f"i{self.n}", value=self.valStr(), comment=comment, node=self.ms
+        )
 
     def dump(self, typ=0):
         if typ == 1:

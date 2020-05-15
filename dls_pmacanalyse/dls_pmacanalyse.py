@@ -145,11 +145,12 @@ def main():
             config_pickle = Path(__file__).parent / "../tests/config.pickle"
             with open(config_pickle, "rb") as pickle_in:
                 config: GlobalConfig = pickle.load(pickle_in)
-                report = Report(Path("/tmp"))
-                report.pmacs_to_html(config.pmacs)
         else:
             analyse = Analyse(config)
             analyse.analyse()
+        # TODO this is for testing - will use correct path when old HTML code is removed
+        report = Report(Path("/tmp"))
+        report.pmacs_to_html(config.pmacs)
     else:
         log.error(helpText)
     return 0

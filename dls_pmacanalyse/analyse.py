@@ -1,9 +1,9 @@
 import logging
 import os
-import pickle
 from datetime import datetime
 from typing import cast
 from xml.dom.minidom import getDOMImplementation
+import pickle
 
 from dls_pmacanalyse.errors import ConfigError, PmacReadError
 from dls_pmacanalyse.globalconfig import GlobalConfig
@@ -131,6 +131,12 @@ class Analyse:
                 else:
                     if self.config.writeAnalysis is True:
                         page.write()
+
+
+        pickle_out = open("config.pickle", "wb")
+        pickle.dump(self.config, pickle_out)
+        pickle_out.close()
+
         if self.config.writeAnalysis is True:
             # Create the top level page
             indexPage = WebPage(
