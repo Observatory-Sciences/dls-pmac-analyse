@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Optional
 
-from dls_pmacanalyse.errors import GeneralError
 from dls_pmacanalyse.utils import tokenIsFloat, tokenToFloat
+
+log = getLogger(__name__)
 
 
 @dataclass
@@ -189,7 +191,7 @@ class PmacMVariable(PmacVariable):
         elif self.type in ["TWS", "TWR", "TWD", "TWB"]:
             result += "%s:$%x" % (self.type, self.address)
         else:
-            raise GeneralError("Unsupported")
+            log.error(f"Unsupported type {self.type} in mvar {self.address}")
         return result
 
     def contentsStr(self):

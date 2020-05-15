@@ -1,9 +1,9 @@
 import logging
 import os
+import pickle
 from datetime import datetime
 from typing import cast
 from xml.dom.minidom import getDOMImplementation
-import pickle
 
 from dls_pmacanalyse.errors import ConfigError, PmacReadError
 from dls_pmacanalyse.globalconfig import GlobalConfig

@@ -83,7 +83,6 @@ class Report:
         with path.open(mode="w") as stream:
             stream.write(html)
 
-
     def pmacs_to_html(self, pmacs: Dict[str, Pmac]):
         index: List[PmacIndexInfo] = [
             PmacIndexInfo(
