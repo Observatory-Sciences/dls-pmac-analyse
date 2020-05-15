@@ -9,6 +9,7 @@
     <h1>{{ title }}</h1>
     <table>
         {% if with_comments %}
+        {# with comments displays a table with one row per variable #}
             <tr>
                 <th>Variable</th>
                 <th>Value</th>
@@ -22,6 +23,7 @@
                 </tr>
             {% endfor %}
         {% else %}
+        {# without comments displays variable values only in 10 columns #}
             <tr>
                 <th></th>
                 {% for i in range(10) %}

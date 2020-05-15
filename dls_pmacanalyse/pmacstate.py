@@ -256,16 +256,40 @@ class PmacState(object):
             vars += self.get_ivariables(i, 10, PmacState.motorIVariableDescriptions)
         return vars
 
+    def get_msivariables(
+        self, start: int, count: int, descriptions: Dict[int, str]
+    ) -> List[VariableInfo]:
+        return [
+            self.getIVariable(i + start).info(descriptions[i]) for i in range(count)
+        ]
+
+    def get_global_msivariables(self) -> List[VariableInfo]:
+        result: List[VariableInfo] = []
+        for i, description in PmacState.globalMsIVariableDescriptions.items():
+            for node in [0, 16, 32, 64]:
+                result.append(self.getMsIVariable(node, i).info(description))
+        return result
+
+    def get_motor_msivariables(self, motor: int) -> List[VariableInfo]:
+        result: List[VariableInfo] = []
+        for i, description in PmacState.motorMsIVariableDescriptions.items():
+            node = PmacState.axisToNode[motor]
+            result.append(self.getMsIVariable(node, i).info(description))
+        return result
+
     def get_pvariables(self) -> List[VariableInfo]:
         return [self.getPVariable(p).info() for p in range(8192)]
 
-    def get_mvariables(self, content: bool = False):
+    def get_mvariables(self, content: bool = False) -> List[VariableInfo]:
         return [self.getMVariable(m).info(content=content) for m in range(8192)]
+
+    def get_qvariables(self, cs: int) -> List[VariableInfo]:
+        return [self.getQVariable(cs, q).info() for q in range(100)]
 
     def get_coord_systems(self):
         cs_list = []
         for cs in range(1, 17):
-            # combine axis defs into a space separated list (TODO maybe rethink this)
+            # TODO maybe rethink this - combine axis defs into a space separated list
             axis_defs = ""
             for motor in range(1, 33):
                 var = self.getCsAxisDefNoCreate(cs, motor)

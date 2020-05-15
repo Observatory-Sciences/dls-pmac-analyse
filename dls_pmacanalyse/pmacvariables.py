@@ -257,6 +257,9 @@ class PmacQVariable(PmacVariable):
         PmacVariable.__init__(self, "&%sq" % cs, n, v)
         self.cs = cs
 
+    def info(self, comment: Optional[str] = None):
+        return VariableInfo(name=f"q{self.n}", value=self.valStr(), comment=comment)
+
     def dump(self, typ=0):
         if typ == 1:
             result = "%s" % self.valStr()
@@ -295,6 +298,9 @@ class PmacMsIVariable(PmacVariable):
         PmacVariable.__init__(self, "ms%si" % ms, n, v)
         self.ms = ms
         self.ro = ro
+
+    def info(self, comment: Optional[str] = None):
+        return VariableInfo(name=f"i{self.n}", value=self.valStr(), comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:

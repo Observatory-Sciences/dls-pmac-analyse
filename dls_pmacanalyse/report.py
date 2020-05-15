@@ -46,14 +46,19 @@ class Report:
         with path.open(mode="w") as stream:
             stream.write(html)
 
-        template = self.environment.get_template("subindex.htm.jinja")
         for pmac in pmacs_index:
-            html = template.render(pmac=pmac)
-            path = self.root_dir / f"{pmac.name}_ivariables.htm"
-            log.info(f"writing {path}")
+            sub_indexes = ["ivariables.htm"]
+            if pmac.macro_stations:
+                sub_indexes.append("msivariables.htm")
 
-            with path.open(mode="w") as stream:
-                stream.write(html)
+            for name in sub_indexes:
+                template = self.environment.get_template(f"{name}.jinja")
+                html = template.render(pmac=pmac)
+                path = self.root_dir / f"{pmac.name}_{name}"
+                log.info(f"writing {path}")
+
+                with path.open(mode="w") as stream:
+                    stream.write(html)
 
     def _render_variables(
         self,
@@ -76,7 +81,7 @@ class Report:
         title = f"Coordinte Systems for {pmac} {datetime.now().ctime()}"
         cs_template = self.environment.get_template("coordsystems.htm.jinja")
         html = cs_template.render(
-            title=title, cs_list=cs_list
+            title=title, pmac=pmac, cs_list=cs_list
         )
         path = self.root_dir / f"{pmac}_coordsystems.htm"
         log.info(f"writing {path}")
@@ -127,6 +132,7 @@ class Report:
                 path=self.root_dir / f"{pmac.name}_mvariables.htm",
                 with_comments=False,
             )
+
             # M variable values
             self._render_variables(
                 title=f"M Variable Values for {pmac.name}",
@@ -138,3 +144,28 @@ class Report:
             # Coordinate Systems
             cs_list = pmac.hardwareState.get_coord_systems()
             self._render_cs(pmac.name, cs_list)
+
+            # Q Variables
+            for cs in range(1, 17):
+                self._render_variables(
+                    title=f"CS {cs} Q Variables for {pmac.name}",
+                    variables=pmac.hardwareState.get_qvariables(cs),
+                    path=self.root_dir / f"{pmac.name}_cs{cs}_q.htm",
+                    with_comments=False
+                )
+
+            if pmac.numMacroStationIcs is not None and pmac.numMacroStationIcs > 0:
+                # global msi variables
+                self._render_variables(
+                    title=f"Global MSI Variables for {pmac.name}",
+                    variables=pmac.hardwareState.get_global_msivariables(),
+                    path=self.root_dir / f"{pmac.name}_msivars_glob.htm",
+                )
+
+                # motor msi variables
+                for motor in range(1, pmac.numAxes + 1):
+                    self._render_variables(
+                        title=f"motor {motor} MSI Variables for {pmac.name}",
+                        variables=pmac.hardwareState.get_motor_msivariables(motor),
+                        path=self.root_dir / f"{pmac.name}_msivars_motor{motor}.htm",
+                    )
