@@ -132,7 +132,8 @@ class Analyse:
                     if self.config.writeAnalysis is True:
                         page.write()
 
-
+        # TODO this is a temporary mechanism for generating test data without
+        # connecting to all pmacs every time
         pickle_out = open("config.pickle", "wb")
         pickle.dump(self.config, pickle_out)
         pickle_out.close()

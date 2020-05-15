@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from dls_pmacanalyse.pmacprogram import ProgInfo, PlcInfo
 from dls_pmacanalyse.constants import Constants
 from logging import getLogger
 from pathlib import Path
@@ -54,10 +55,11 @@ class Report:
 
             for name in sub_indexes:
                 template = self.environment.get_template(f"{name}.jinja")
+
                 html = template.render(pmac=pmac)
+
                 path = self.root_dir / f"{pmac.name}_{name}"
                 log.info(f"writing {path}")
-
                 with path.open(mode="w") as stream:
                     stream.write(html)
 
@@ -71,6 +73,7 @@ class Report:
     ):
         vars_template = self.environment.get_template("variables.htm.jinja")
         title += f" {datetime.now().ctime()}"
+
         html = vars_template.render(
             title=title,
             variables=variables,
@@ -85,8 +88,27 @@ class Report:
     def _render_cs(self, pmac, cs_list):
         title = f"Coordinte Systems for {pmac} {datetime.now().ctime()}"
         cs_template = self.environment.get_template("coordsystems.htm.jinja")
+
         html = cs_template.render(title=title, pmac=pmac, cs_list=cs_list)
+
         path = self.root_dir / f"{pmac}_coordsystems.htm"
+        log.info(f"writing {path}")
+        with path.open(mode="w") as stream:
+            stream.write(html)
+
+    def _render_programs(
+        self,
+        title: str,
+        plcs: List[PlcInfo],
+        path: Path,
+        pmac: str,
+        with_variables: bool,
+    ):
+        cs_template = self.environment.get_template("plcs.htm.jinja")
+        title += f" {datetime.now().ctime()}"
+
+        html = cs_template.render(title=title, pmac=pmac, plcs=plcs)
+
         log.info(f"writing {path}")
         with path.open(mode="w") as stream:
             stream.write(html)
@@ -173,3 +195,12 @@ class Report:
                         variables=pmac.hardwareState.get_motor_msivariables(motor),
                         path=self.root_dir / f"{pmac.name}_msivars_motor{motor}.htm",
                     )
+
+            # PLCs
+            self._render_programs(
+                title=f"PLCs for {pmac.name}",
+                plcs=pmac.hardwareState.get_plcs(),
+                path=self.root_dir / f"{pmac.name}_plcs.htm",
+                pmac=pmac.name,
+                with_variables=True,
+            )

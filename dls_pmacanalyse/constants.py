@@ -10,3 +10,4 @@ class Constants:
     i_variable_motor_numbers = range(100)
     i_variable_motor7000_numbers = range(7000, 7010)
     motor_numbers = range(1, 33)
+    plc_numbers = range(32)

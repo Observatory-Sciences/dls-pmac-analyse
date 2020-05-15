@@ -8,7 +8,7 @@ from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
-    PmacCsAxisDef,
+    PlcInfo, PmacCsAxisDef,
     PmacForwardKinematicProgram,
     PmacInverseKinematicProgram,
     PmacMotionProgram,
@@ -306,6 +306,14 @@ class PmacState(object):
                 )
             )
         return cs_list
+
+    def get_plcs(self) -> List[PlcInfo]:
+        plcs = []
+        for plc_num in Constants.plc_numbers:
+            plc = self.getPlcProgramNoCreate(plc_num)
+            if plc:
+                plcs.append(plc.info())
+        return plcs
 
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])

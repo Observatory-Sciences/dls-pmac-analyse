@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacvariables import PmacToken, PmacVariable
@@ -13,6 +14,21 @@ from dls_pmacanalyse.utils import (
 )
 
 log = getLogger(__name__)
+
+
+@dataclass
+class PlcInfo:
+    num: int
+    exists: bool
+    code: Optional[List[str]]
+    p_low: int
+    p_high: int
+
+
+@dataclass
+class ProgInfo:
+    num: int
+    code: Optional[List[str]]
 
 
 class PmacProgram(PmacVariable):
@@ -157,6 +173,15 @@ class PmacPlcProgram(PmacProgram):
         PmacProgram.__init__(self, "plc", n, v, lines, offsets)
         self.isRunning = False
         self.shouldBeRunning = False
+
+    def info(self, comment: Optional[str] = None):
+        return PlcInfo(
+            num=self.n,
+            exists=self.lines is not None,
+            code=self.lines,
+            p_low=self.n * 100,
+            p_high=self.n * 100 + 99,
+        )
 
     def dump(self, typ=0):
         if typ == 1:
