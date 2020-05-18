@@ -1,0 +1,30 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>{{ title }}</title>
+
+<body>
+    <h1>{{ title }}</h1>
+    <table>
+        <tr>
+            <th>Number</th>
+            <th>Code</th>
+            {% if with_variables==True %}
+            <th>P Variables</th>
+            {% endif %}
+        </tr>
+        {% for program in programs %}
+        <tr>
+            <td>{{ program.num }}</td>
+            <td><a href="{{ pmac }}_{{ prog_type }}_{{ program.num }}.htm">Code</a></td>
+            {% if with_variables %}
+                <td><a href="{{ pmac }}_{{ prog_type }}_{{ program.num }}_p.htm">P{{ program.p_range.start}}..{{ program.p_range.stop-1}}</a></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

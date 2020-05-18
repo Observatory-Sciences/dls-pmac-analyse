@@ -8,7 +8,8 @@ from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
-    PlcInfo, PmacCsAxisDef,
+    ProgInfo,
+    PmacCsAxisDef,
     PmacForwardKinematicProgram,
     PmacInverseKinematicProgram,
     PmacMotionProgram,
@@ -274,8 +275,12 @@ class PmacState(object):
             result.append(self.getMsIVariable(node, i).info(description))
         return result
 
-    def get_pvariables(self) -> List[VariableInfo]:
-        return [self.getPVariable(p).info() for p in Constants.p_variable_numbers]
+    def get_pvariables(self, plc: Optional[int] = None) -> List[VariableInfo]:
+        if plc is None:
+            result = [self.getPVariable(p).info() for p in Constants.p_variable_numbers]
+        else:
+            result = [self.getPVariable(p).info() for p in range(plc, plc + 100)]
+        return result
 
     def get_mvariables(self, content: bool = False) -> List[VariableInfo]:
         return [
@@ -307,13 +312,21 @@ class PmacState(object):
             )
         return cs_list
 
-    def get_plcs(self) -> List[PlcInfo]:
+    def get_plcs(self) -> List[ProgInfo]:
         plcs = []
         for plc_num in Constants.plc_numbers:
             plc = self.getPlcProgramNoCreate(plc_num)
             if plc:
                 plcs.append(plc.info())
         return plcs
+
+    def get_progs(self) -> List[ProgInfo]:
+        progs = []
+        for prog_number in Constants.prog_numbers:
+            prog = self.getMotionProgramNoCreate(prog_number)
+            if prog:
+                progs.append(prog.info())
+        return progs
 
     def htmlGlobalIVariables(self, page):
         table = page.table(page.body(), ["I-Variable", "Value", "Description"])

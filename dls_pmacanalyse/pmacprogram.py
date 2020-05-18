@@ -17,18 +17,11 @@ log = getLogger(__name__)
 
 
 @dataclass
-class PlcInfo:
+class ProgInfo:
     num: int
     exists: bool
     code: Optional[List[str]]
-    p_low: int
-    p_high: int
-
-
-@dataclass
-class ProgInfo:
-    num: int
-    code: Optional[List[str]]
+    p_range: Optional[range] = None
 
 
 class PmacProgram(PmacVariable):
@@ -175,12 +168,11 @@ class PmacPlcProgram(PmacProgram):
         self.shouldBeRunning = False
 
     def info(self, comment: Optional[str] = None):
-        return PlcInfo(
+        return ProgInfo(
             num=self.n,
             exists=self.lines is not None,
             code=self.lines,
-            p_low=self.n * 100,
-            p_high=self.n * 100 + 99,
+            p_range=range(self.n * 100, self.n * 100 + 100),
         )
 
     def dump(self, typ=0):
@@ -313,6 +305,9 @@ class PmacInverseKinematicProgram(PmacProgram):
 class PmacMotionProgram(PmacProgram):
     def __init__(self, n, v=[], lines=None, offsets=None):
         PmacProgram.__init__(self, "prog", n, v, lines, offsets)
+
+    def info(self, comment: Optional[str] = None):
+        return ProgInfo(num=self.n, exists=self.lines is not None, code=self.lines)
 
     def dump(self, typ=0):
         if typ == 1:

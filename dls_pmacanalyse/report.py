@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from dls_pmacanalyse.pmacprogram import ProgInfo, PlcInfo
-from dls_pmacanalyse.constants import Constants
 from logging import getLogger
 from pathlib import Path
 from shutil import copy
@@ -9,7 +7,9 @@ from typing import Dict, List, Optional
 
 from jinja2 import Environment, FileSystemLoader
 
+from dls_pmacanalyse.constants import Constants
 from dls_pmacanalyse.pmac import Pmac
+from dls_pmacanalyse.pmacprogram import ProgInfo
 from dls_pmacanalyse.pmacstate import VariableInfo
 
 log = getLogger(__name__)
@@ -38,15 +38,29 @@ class Report:
         css = jinja_path / "analysis.css"
         copy(css, self.root_dir)
 
-    def _render_indexes(self, pmacs_index):
-        template = self.environment.get_template("index.htm.jinja")
-        title = f"PMAC Analysis {datetime.now().ctime()}"
-        html = template.render(title=title, pmacs=pmacs_index)
-        path = self.root_dir / "index.htm"
+    def _write_html(self, html, path):
         log.info(f"writing {path}")
-
         with path.open(mode="w") as stream:
             stream.write(html)
+
+    def _render(self, template_name: str, filename: str, **args):
+        path = self.root_dir / filename
+        template = self.environment.get_template(template_name)
+        if "title" in args:
+            args["title"] += f" {datetime.now().strftime('(%Y/%m/%d %H:%M:%S)')}"
+        html = template.render(**args)
+
+        log.info(f"writing {path}")
+        with path.open(mode="w") as stream:
+            stream.write(html)
+
+    def _render_indexes(self, pmacs_index):
+        self._render(
+            template_name="index.htm.jinja",
+            filename="index.htm",
+            title="PMAC Analysis",
+            pmacs=pmacs_index,
+        )
 
         for pmac in pmacs_index:
             sub_indexes = ["ivariables.htm"]
@@ -54,36 +68,29 @@ class Report:
                 sub_indexes.append("msivariables.htm")
 
             for name in sub_indexes:
-                template = self.environment.get_template(f"{name}.jinja")
-
-                html = template.render(pmac=pmac)
-
-                path = self.root_dir / f"{pmac.name}_{name}"
-                log.info(f"writing {path}")
-                with path.open(mode="w") as stream:
-                    stream.write(html)
+                self._render(
+                    f"{name}.jinja", filename=f"{pmac.name}_{name}", pmac=pmac,
+                )
 
     def _render_variables(
         self,
         title: str,
         variables: List[VariableInfo],
-        path: Path,
+        filename: str,
         with_comments: bool = True,
         with_node: bool = False,
+        var_range: range = None,
     ):
-        vars_template = self.environment.get_template("variables.htm.jinja")
-        title += f" {datetime.now().ctime()}"
-
-        html = vars_template.render(
+        if var_range:
+            variables = variables[var_range.start : var_range.stop]
+        self._render(
+            "variables.htm.jinja",
+            filename=filename,
             title=title,
             variables=variables,
             with_comments=with_comments,
             with_node=with_node,
         )
-
-        log.info(f"writing {path}")
-        with path.open(mode="w") as stream:
-            stream.write(html)
 
     def _render_cs(self, pmac, cs_list):
         title = f"Coordinte Systems for {pmac} {datetime.now().ctime()}"
@@ -92,26 +99,42 @@ class Report:
         html = cs_template.render(title=title, pmac=pmac, cs_list=cs_list)
 
         path = self.root_dir / f"{pmac}_coordsystems.htm"
-        log.info(f"writing {path}")
-        with path.open(mode="w") as stream:
-            stream.write(html)
+        self._write_html(html, path)
 
     def _render_programs(
         self,
         title: str,
-        plcs: List[PlcInfo],
-        path: Path,
-        pmac: str,
-        with_variables: bool,
+        programs: List[ProgInfo],
+        pmac_name: str,
+        prog_type: str = "plc",
+        variables: List[VariableInfo] = None,
     ):
-        cs_template = self.environment.get_template("plcs.htm.jinja")
-        title += f" {datetime.now().ctime()}"
+        self._render(
+            template_name="programs.htm.jinja",
+            filename=f"{pmac_name}_{prog_type}s.htm",
+            title=title,
+            pmac=pmac_name,
+            programs=programs,
+            prog_type=prog_type,
+            with_variables=variables is not None,
+        )
 
-        html = cs_template.render(title=title, pmac=pmac, plcs=plcs)
+        for program in programs:
+            self._render(
+                template_name="prog.htm.jinja",
+                filename=f"{pmac_name}_{prog_type}_{program.num}.htm",
+                title=f"PLC {program.num} for {pmac_name}",
+                lines=program.code,
+            )
 
-        log.info(f"writing {path}")
-        with path.open(mode="w") as stream:
-            stream.write(html)
+            if variables is not None:
+                self._render_variables(
+                    filename=f"{pmac_name}_{prog_type}_{program.num}_p.htm",
+                    title=f"P Variables for {pmac_name} PLC{program.num} ",
+                    variables=variables,
+                    with_comments=False,
+                    var_range=program.p_range
+                )
 
     def pmacs_to_html(self, pmacs: Dict[str, Pmac]):
         index: List[PmacIndexInfo] = [
@@ -131,7 +154,7 @@ class Report:
             self._render_variables(
                 title=f"Global I Variables for {pmac.name}",
                 variables=pmac.hardwareState.get_global_ivariables(),
-                path=self.root_dir / f"{pmac.name}_ivars_glob.htm",
+                filename=f"{pmac.name}_ivars_glob.htm",
             )
 
             # motor i variables
@@ -139,14 +162,15 @@ class Report:
                 self._render_variables(
                     title=f"motor {motor} I Variables for {pmac.name}",
                     variables=pmac.hardwareState.get_motor_ivariables(motor),
-                    path=self.root_dir / f"{pmac.name}_ivars_motor{motor}.htm",
+                    filename=f"{pmac.name}_ivars_motor{motor}.htm",
                 )
 
             # P variables
+            p_vars = pmac.hardwareState.get_pvariables()
             self._render_variables(
                 title=f"P Variables for {pmac.name}",
-                variables=pmac.hardwareState.get_pvariables(),
-                path=self.root_dir / f"{pmac.name}_pvariables.htm",
+                variables=p_vars,
+                filename=f"{pmac.name}_pvariables.htm",
                 with_comments=False,
             )
 
@@ -154,7 +178,7 @@ class Report:
             self._render_variables(
                 title=f"M Variable Mappings for {pmac.name}",
                 variables=pmac.hardwareState.get_mvariables(),
-                path=self.root_dir / f"{pmac.name}_mvariables.htm",
+                filename=f"{pmac.name}_mvariables.htm",
                 with_comments=False,
             )
 
@@ -162,7 +186,7 @@ class Report:
             self._render_variables(
                 title=f"M Variable Values for {pmac.name}",
                 variables=pmac.hardwareState.get_mvariables(content=True),
-                path=self.root_dir / f"{pmac.name}_mvariablevalues.htm",
+                filename=f"{pmac.name}_mvariablevalues.htm",
                 with_comments=False,
             )
 
@@ -175,7 +199,7 @@ class Report:
                 self._render_variables(
                     title=f"CS {cs} Q Variables for {pmac.name}",
                     variables=pmac.hardwareState.get_qvariables(cs),
-                    path=self.root_dir / f"{pmac.name}_cs{cs}_q.htm",
+                    filename=f"{pmac.name}_cs{cs}_q.htm",
                     with_comments=False,
                 )
 
@@ -184,7 +208,7 @@ class Report:
                 self._render_variables(
                     title=f"Global MSI Variables for {pmac.name}",
                     variables=pmac.hardwareState.get_global_msivariables(),
-                    path=self.root_dir / f"{pmac.name}_msivars_glob.htm",
+                    filename=f"{pmac.name}_msivars_glob.htm",
                     with_node=True,
                 )
 
@@ -193,14 +217,21 @@ class Report:
                     self._render_variables(
                         title=f"motor {motor} MSI Variables for {pmac.name}",
                         variables=pmac.hardwareState.get_motor_msivariables(motor),
-                        path=self.root_dir / f"{pmac.name}_msivars_motor{motor}.htm",
+                        filename=f"{pmac.name}_msivars_motor{motor}.htm",
                     )
 
             # PLCs
             self._render_programs(
                 title=f"PLCs for {pmac.name}",
-                plcs=pmac.hardwareState.get_plcs(),
-                path=self.root_dir / f"{pmac.name}_plcs.htm",
-                pmac=pmac.name,
-                with_variables=True,
+                programs=pmac.hardwareState.get_plcs(),
+                pmac_name=pmac.name,
+                variables=p_vars,
+            )
+
+            # PROGs
+            self._render_programs(
+                title=f"Motion Programs for {pmac.name}",
+                programs=pmac.hardwareState.get_progs(),
+                pmac_name=pmac.name,
+                prog_type="prog",
             )
