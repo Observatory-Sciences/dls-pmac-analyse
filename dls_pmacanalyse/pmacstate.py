@@ -247,18 +247,13 @@ class PmacState(object):
 
     def get_motor_ivariables(self, motor: int) -> List[VariableInfo]:
         return [
-            self.getIVariable(ivar).info(PmacState.motorIVariableDescriptions[n])
-            for n, ivar in enumerate(Constants.i_variable_global_numbers)
+            self.getIVariable(n + 100 * motor).info(
+                PmacState.motorIVariableDescriptions[n]
+            )
+            for n in range(100)
         ] + [
             self.getIVariable(ivar).info(PmacState.motorI7000VariableDescriptions[n])
             for n, ivar in enumerate(Constants.i_variable_motor7000_numbers)
-        ]
-
-    def get_msivariables(
-        self, start: int, count: int, descriptions: Dict[int, str]
-    ) -> List[VariableInfo]:
-        return [
-            self.getIVariable(i + start).info(descriptions[i]) for i in range(count)
         ]
 
     def get_global_msivariables(self) -> List[VariableInfo]:
