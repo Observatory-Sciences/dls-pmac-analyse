@@ -51,11 +51,12 @@ class PmacToken(object):
 class PmacVariable(object):
     spaces = "                        "
 
-    def __init__(self, prefix, n, v):
-        self.typeStr = "%s%s" % (prefix, n)
-        self.n = n
-        self.v = v
-        self.ro = False
+    def __init__(self, prefix, name, value, comment=None):
+        self.typeStr = "%s%s" % (prefix, name)
+        self.name = name
+        self.value = value
+        self.read_only = False
+        self.comment = None
 
     def info(self, comment: Optional[str] = None) -> VariableInfo:
         raise NotImplementedError
@@ -67,34 +68,35 @@ class PmacVariable(object):
         return self.typeStr
 
     def set(self, v):
-        self.v = v
+        self.value = v
 
     def compare(self, other):
-        if self.v == '' or other.v == '':
+        if self.value == '' or other.value == '':
             return False
-        elif self.ro or other.ro:
+        elif self.read_only or other.read_only:
             return True
-        elif tokenIsFloat(self.v) and tokenIsFloat(other.v):
-            a = tokenToFloat(self.v)
-            b = tokenToFloat(other.v)
+        elif tokenIsFloat(self.value) and tokenIsFloat(other.value):
+            a = tokenToFloat(self.value)
+            b = tokenToFloat(other.value)
             return (a >= b - 0.00001) and (a <= b + 0.00001)
         else:
-            return self.v == other.v
+            return self.value == other.value
 
     def valStr(self):
-        if isinstance(self.v, float):
-            result = ("%.12f" % self.v).rstrip("0")
+        if isinstance(self.value, float):
+            result = ("%.12f" % self.value).rstrip("0")
             if result.endswith("."):
                 result += "0"
         else:
-            result = "%s" % self.v
+            result = "%s" % self.value
         return result
 
     def getFloatValue(self):
-        return float(self.v)
+        return float(self.value)
 
     def isEmpty(self):
         return False
+
 
 class PmacIVariable(PmacVariable):
     useHexAxis = [2, 3, 4, 5, 10, 24, 25, 42, 43, 44, 55, 81, 82, 83, 84, 91, 95]
@@ -103,21 +105,21 @@ class PmacIVariable(PmacVariable):
     axisVarMax = 3299
     varsPerAxis = 100
 
-    def __init__(self, n, v=0, ro=False):
+    def __init__(self, n, v=0, read_only=False):
         PmacVariable.__init__(self, "i", n, v)
-        self.ro = ro
+        self.read_only = read_only
 
     def info(self, comment: Optional[str] = None):
-        return VariableInfo(name=f"i{self.n}", value=self.valStr(), comment=comment)
+        return VariableInfo(name=f"i{self.name}", value=self.valStr(), comment=comment)
 
     def dump(self, typ=0, comment=""):
         result = ""
         if typ == 1:
             result = "%s" % self.valStr()
         else:
-            if self.ro:
+            if self.read_only:
                 result += ";"
-            result += "i%s=%s" % (self.n, self.valStr())
+            result += "i%s=%s" % (self.name, self.valStr())
             if len(comment) == 0:
                 result += "\n"
             else:
@@ -127,26 +129,26 @@ class PmacIVariable(PmacVariable):
         return result
 
     def copyFrom(self):
-        result = PmacIVariable(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacIVariable(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         return result
 
     def valStr(self):
-        if isinstance(self.v, float):
-            result = ("%.12f" % self.v).rstrip("0")
+        if isinstance(self.value, float):
+            result = ("%.12f" % self.value).rstrip("0")
             if result.endswith("."):
                 result += "0"
         else:
             useHex = False
-            if self.n >= self.axisVarMin and self.n <= self.axisVarMax:
-                useHex = (self.n % self.varsPerAxis) in self.useHexAxis
+            if self.name >= self.axisVarMin and self.name <= self.axisVarMax:
+                useHex = (self.name % self.varsPerAxis) in self.useHexAxis
             else:
-                useHex = self.n in self.useHexGlobal
+                useHex = self.name in self.useHexGlobal
             if useHex:
-                result = "$%x" % self.v
+                result = "$%x" % self.value
             else:
-                result = "%s" % self.v
+                result = "%s" % self.value
         return result
 
 
@@ -157,13 +159,13 @@ class PmacMVariable(PmacVariable):
 
     def info(self, comment: Optional[str] = None, content: bool = False):
         value = self.contentsStr() if content else self.valStr()
-        return VariableInfo(name=f"m{self.n}", value=value, comment=comment)
+        return VariableInfo(name=f"m{self.name}", value=value, comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:
             result = "%s" % self.valStr()
         else:
-            result = "m%s->%s\n" % (self.n, self.valStr())
+            result = "m%s->%s\n" % (self.name, self.valStr())
         return result
 
     def valStr(self):
@@ -200,13 +202,13 @@ class PmacMVariable(PmacVariable):
         self.width = width
         self.format = format
 
-    def setValue(self, v):
-        self.v = v
+    def setValue(self, value):
+        self.value = value
 
     def copyFrom(self):
-        result = PmacMVariable(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacMVariable(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.type = self.type
         result.address = self.address
         result.offset = self.offset
@@ -215,7 +217,7 @@ class PmacMVariable(PmacVariable):
         return result
 
     def compare(self, other):
-        if self.ro or other.ro:
+        if self.read_only or other.read_only:
             return True
         else:
             return (
@@ -232,19 +234,19 @@ class PmacPVariable(PmacVariable):
         PmacVariable.__init__(self, "p", n, v)
 
     def info(self, comment: Optional[str] = None):
-        return VariableInfo(name=f"p{self.n}", value=self.valStr(), comment=comment)
+        return VariableInfo(name=f"p{self.name}", value=self.valStr(), comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:
             result = "%s" % self.valStr()
         else:
-            result = "p%s=%s\n" % (self.n, self.valStr())
+            result = "p%s=%s\n" % (self.name, self.valStr())
         return result
 
     def copyFrom(self):
-        result = PmacPVariable(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacPVariable(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         return result
 
 
@@ -254,19 +256,19 @@ class PmacQVariable(PmacVariable):
         self.cs = cs
 
     def info(self, comment: Optional[str] = None):
-        return VariableInfo(name=f"q{self.n}", value=self.valStr(), comment=comment)
+        return VariableInfo(name=f"q{self.name}", value=self.valStr(), comment=comment)
 
     def dump(self, typ=0):
         if typ == 1:
             result = "%s" % self.valStr()
         else:
-            result = "&%sq%s=%s\n" % (self.cs, self.n, self.valStr())
+            result = "&%sq%s=%s\n" % (self.cs, self.name, self.valStr())
         return result
 
     def copyFrom(self):
-        result = PmacQVariable(self.cs, self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacQVariable(self.cs, self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         return result
 
 
@@ -284,20 +286,20 @@ class PmacFeedrateOverride(PmacVariable):
 
     def copyFrom(self):
         result = PmacFeedrateOverride(self.cs)
-        result.v = self.v
-        result.ro = self.ro
+        result.value = self.value
+        result.read_only = self.read_only
         return result
 
 
 class PmacMsIVariable(PmacVariable):
-    def __init__(self, ms, n, v="", ro=False):
+    def __init__(self, ms, n, v="", read_only=False):
         PmacVariable.__init__(self, "ms%si" % ms, n, v)
         self.ms = ms
-        self.ro = ro
+        self.read_only = read_only
 
     def info(self, comment: Optional[str] = None):
         return VariableInfo(
-            name=f"i{self.n}", value=self.valStr(), comment=comment, node=self.ms
+            name=f"i{self.name}", value=self.valStr(), comment=comment, node=self.ms
         )
 
     def dump(self, typ=0):
@@ -305,13 +307,13 @@ class PmacMsIVariable(PmacVariable):
             result = "%s" % self.valStr()
         else:
             result = ""
-            if self.ro:
+            if self.read_only:
                 result += ";"
-            result += "ms%s,i%s=%s\n" % (self.ms, self.n, self.valStr())
+            result += "ms%s,i%s=%s\n" % (self.ms, self.name, self.valStr())
         return result
 
     def copyFrom(self):
-        result = PmacMsIVariable(self.ms, self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacMsIVariable(self.ms, self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         return result

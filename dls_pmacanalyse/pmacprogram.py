@@ -25,23 +25,23 @@ class ProgInfo:
 
 
 class PmacProgram(PmacVariable):
-    def __init__(self, prefix, n, v, lines=None, offsets=None):
-        PmacVariable.__init__(self, prefix, n, v)
+    def __init__(self, prefix, name, variable, lines=None, offsets=None):
+        PmacVariable.__init__(self, prefix, name, variable)
         self.offsets = offsets
         self.lines: List[str] = lines or []
 
     def add(self, t):
         if not isinstance(t, PmacToken):
             log.warning("PmacProgram: %s is not a token" % repr(t))
-        self.v.append(t)
+        self.value.append(t)
 
     def clear(self):
-        self.v = []
+        self.value = []
 
     def valueText(self, typ=0, ignore_ret=False):
         result = ""
-        last_line = len(self.v) - 1
-        for i, t in enumerate(self.v):
+        last_line = len(self.value) - 1
+        for i, t in enumerate(self.value):
             if t == "\n":
                 if len(result) > 0 and not result[-1] == "\n":
                     result += str(t)
@@ -63,13 +63,13 @@ class PmacProgram(PmacVariable):
         # Strip the newline tokens from the two lists.  There's
         # probably a better way of doing this.
         a = []
-        for i in self.v:
+        for i in self.value:
             if i == "\n":
                 pass
             else:
                 a.append(i)
         b = []
-        for i in other.v:
+        for i in other.value:
             if i == "\n":
                 pass
             else:
@@ -124,7 +124,7 @@ class PmacProgram(PmacVariable):
 
     def isEmpty(self):
         a = []
-        for i in self.v:
+        for i in self.value:
             if i == "\n":
                 pass
             else:
@@ -135,7 +135,7 @@ class PmacProgram(PmacVariable):
     # maybe reuse some of this ????
     def htmlCompare(self, page, parent, other):
         lineLen = 0
-        for t in self.v:
+        for t in self.value:
             if t == "\n":
                 if lineLen > 0:
                     page.lineBreak(parent)
@@ -159,10 +159,10 @@ class PmacPlcProgram(PmacProgram):
 
     def info(self, comment: Optional[str] = None):
         return ProgInfo(
-            num=self.n,
+            num=self.name,
             exists=self.lines is not None,
             code=self.lines,
-            p_range=range(self.n * 100, self.n * 100 + 100),
+            p_range=range(self.name * 100, self.name * 100 + 100),
         )
 
     def dump(self, typ=0):
@@ -170,16 +170,16 @@ class PmacPlcProgram(PmacProgram):
             result = self.valueText()
         else:
             result = ""
-            if len(self.v) > 0:
-                result = "\nopen plc %s clear\n" % self.n
+            if len(self.value) > 0:
+                result = "\nopen plc %s clear\n" % self.name
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacPlcProgram(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacPlcProgram(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.offsets = self.offsets
         result.lines = self.lines
         return result
@@ -191,7 +191,7 @@ class PmacPlcProgram(PmacProgram):
         """
         self.shouldBeRunning = True
         state = "idle"
-        for i in self.v:
+        for i in self.value:
             if state == "idle":
                 if i == "DISABLE":
                     state = "disable"
@@ -201,7 +201,7 @@ class PmacPlcProgram(PmacProgram):
                 else:
                     state = "idle"
             elif state == "plc":
-                if tokenToInt(i) == self.n:
+                if tokenToInt(i) == self.name:
                     self.shouldBeRunning = False
                 state = "idle"
 
@@ -223,12 +223,12 @@ class PmacCsAxisDef(PmacProgram):
         if typ == 1:
             result = "%s" % self.valueText()
         else:
-            result = "&%s#%s->%s" % (self.cs, self.n, self.valueText())
+            result = "&%s#%s->%s" % (self.cs, self.name, self.valueText())
         return result
 
     def isZero(self):
         result = True
-        for t in self.v:
+        for t in self.value:
             if t == "0" or t == "0.0" or t == "\n":
                 pass
             else:
@@ -236,9 +236,9 @@ class PmacCsAxisDef(PmacProgram):
         return result
 
     def copyFrom(self):
-        result = PmacCsAxisDef(self.cs, self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacCsAxisDef(self.cs, self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.offsets = self.offsets
         result.lines = self.lines
         return result
@@ -253,16 +253,16 @@ class PmacForwardKinematicProgram(PmacProgram):
             result = self.valueText()
         else:
             result = ""
-            if len(self.v) > 0:
-                result = "\n&%s open forward clear\n" % self.n
+            if len(self.value) > 0:
+                result = "\n&%s open forward clear\n" % self.name
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacForwardKinematicProgram(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacForwardKinematicProgram(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.offsets = self.offsets
         result.lines = self.lines
         return result
@@ -277,16 +277,16 @@ class PmacInverseKinematicProgram(PmacProgram):
             result = self.valueText()
         else:
             result = ""
-            if len(self.v) > 0:
-                result = "\n&%s open inverse clear\n" % self.n
+            if len(self.value) > 0:
+                result = "\n&%s open inverse clear\n" % self.name
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacInverseKinematicProgram(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacInverseKinematicProgram(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.offsets = self.offsets
         result.lines = self.lines
         return result
@@ -297,23 +297,23 @@ class PmacMotionProgram(PmacProgram):
         PmacProgram.__init__(self, "prog", n, v, lines, offsets)
 
     def info(self, comment: Optional[str] = None):
-        return ProgInfo(num=self.n, exists=self.lines is not None, code=self.lines)
+        return ProgInfo(num=self.name, exists=self.lines is not None, code=self.lines)
 
     def dump(self, typ=0):
         if typ == 1:
             result = self.valueText()
         else:
             result = ""
-            if len(self.v) > 0:
-                result = "\nopen program %s clear\n" % self.n
+            if len(self.value) > 0:
+                result = "\nopen program %s clear\n" % self.name
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacMotionProgram(self.n)
-        result.v = self.v
-        result.ro = self.ro
+        result = PmacMotionProgram(self.name)
+        result.value = self.value
+        result.read_only = self.read_only
         result.offsets = self.offsets
         result.lines = self.lines
         return result

@@ -293,7 +293,7 @@ class Pmac(object):
             ivars = enumerate(returnStr.split("\r")[:-1])
             for o, x in ivars:
                 ro = i + o in roVars
-                var = PmacIVariable(i + o, self.toNumber(x), ro=ro)
+                var = PmacIVariable(i + o, self.toNumber(x), read_only=ro)
                 self.hardwareState.addVar(var)
                 motor = (i + o) / 100
                 index = (i + o) % 100
@@ -668,7 +668,7 @@ class Pmac(object):
         for v in roVars:
             (returnStr, status) = self.sendCommand("ms%s,i%s" % (ms, v))
             if status and returnStr[0] != "\x07":
-                var = PmacMsIVariable(ms, v, self.toNumber(returnStr[:-2]), ro=True)
+                var = PmacMsIVariable(ms, v, self.toNumber(returnStr[:-2]), read_only=True)
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
 

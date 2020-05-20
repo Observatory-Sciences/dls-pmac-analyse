@@ -357,17 +357,17 @@ class PmacState(object):
                 else:
                     desc = "No description available"
             if a not in other.vars:
-                if not self.vars[a].ro and not self.vars[a].isEmpty():
+                if not self.vars[a].read_only and not self.vars[a].isEmpty():
                     result = False
                     if unfixfile is not None:
                         unfixfile.write(self.vars[a].dump(**commentargs))
             elif a not in self.vars:
-                if not other.vars[a].ro and not other.vars[a].isEmpty():
+                if not other.vars[a].read_only and not other.vars[a].isEmpty():
                     result = False
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
             elif not self.vars[a].compare(other.vars[a]):
-                if not other.vars[a].ro and not self.vars[a].ro:
+                if not other.vars[a].read_only and not self.vars[a].read_only:
                     result = False
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
