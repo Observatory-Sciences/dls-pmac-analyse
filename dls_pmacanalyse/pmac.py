@@ -56,22 +56,10 @@ class Pmac(object):
     #         text += "%s " % returnStr[:-2]
     #     log.info(text)
 
-    def htmlMotorIVariables(self, motor, page):
-        self.hardwareState.htmlMotorIVariables(motor, page, self.hardwareState.geobrick)
-
-    def htmlGlobalIVariables(self, page):
-        self.hardwareState.htmlGlobalIVariables(page)
-
-    def htmlMotorMsIVariables(self, motor, page):
-        self.hardwareState.htmlMotorMsIVariables(motor, page)
-
-    def htmlGlobalMsIVariables(self, page):
-        self.hardwareState.htmlGlobalMsIVariables(page)
-
-    def compare(self, page, fixfile, unfixfile):
+    def compare(self, fixfile, unfixfile):
         log.info("Comparing...")
         self.compareResult = self.hardwareState.compare(
-            self.referenceState, self.noCompare, self.name, page, fixfile, unfixfile
+            self.referenceState, self.noCompare, self.name, fixfile, unfixfile
         )
         if self.compareResult:
             log.warning("Hardware matches reference")

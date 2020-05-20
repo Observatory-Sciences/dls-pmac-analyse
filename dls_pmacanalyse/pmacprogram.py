@@ -122,18 +122,6 @@ class PmacProgram(PmacVariable):
             result = False
         return result
 
-    def html(self, page, parent):
-        lines = self.valueText(typ=1).split()
-        for line in lines:
-            page.text(parent, line)
-            page.lineBreak(parent)
-
-    def html2(self, page, parent):
-        text = ""
-        for i in range(len(self.lines)):
-            text += "%s:\t%s\n" % (self.offsets[i], self.lines[i])
-        page.paragraph(parent, text, id="code")
-
     def isEmpty(self):
         a = []
         for i in self.v:
@@ -143,6 +131,8 @@ class PmacProgram(PmacVariable):
                 a.append(i)
         return len(a) == 0 or a == ["RETURN"]
 
+    # TODO this is the code that prints red sections for non matching code
+    # maybe reuse some of this ????
     def htmlCompare(self, page, parent, other):
         lineLen = 0
         for t in self.v:

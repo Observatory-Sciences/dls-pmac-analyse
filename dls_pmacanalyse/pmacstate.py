@@ -323,79 +323,14 @@ class PmacState(object):
                 progs.append(prog.info())
         return progs
 
-    def htmlGlobalIVariables(self, page):
-        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for i in Constants.i_variable_global_numbers:
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getIVariable(i).valStr(),
-                    "%s" % PmacState.globalIVariableDescriptions[i],
-                ],
-            )
-
-    def htmlMotorIVariables(self, motor, page, geobrick):
-        table = page.table(page.body(), ["I-Variable", "Value", "Description"])
-        for n in Constants.i_variable_motor_numbers:
-            i = motor * 100 + n
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getIVariable(i).valStr(),
-                    "%s" % PmacState.motorIVariableDescriptions[n],
-                ],
-            )
-        if geobrick:
-            for n in range(10):
-                i = 7000 + PmacState.axisToMn[motor] + n
-                page.tableRow(
-                    table,
-                    [
-                        "i%s" % i,
-                        "%s" % self.getIVariable(i).valStr(),
-                        "%s" % PmacState.motorI7000VariableDescriptions[n],
-                    ],
-                )
-
-    def htmlGlobalMsIVariables(self, page):
-        table = page.table(
-            page.body(), ["MS I-Variable", "Node", "Value", "Description"]
-        )
-        for i, description in PmacState.globalMsIVariableDescriptions.items():
-            for node in [0, 16, 32, 64]:
-                page.tableRow(
-                    table,
-                    [
-                        "i%s" % i,
-                        "%s" % node,
-                        "%s" % self.getMsIVariable(0, i).valStr(),
-                        "%s" % description,
-                    ],
-                )
-
-    def htmlMotorMsIVariables(self, motor, page):
-        table = page.table(page.body(), ["MS I-Variable", "Value", "Description"])
-        node = PmacState.axisToNode[motor]
-        for i, description in PmacState.motorMsIVariableDescriptions.items():
-            page.tableRow(
-                table,
-                [
-                    "i%s" % i,
-                    "%s" % self.getMsIVariable(node, i).valStr(),
-                    "%s" % description,
-                ],
-            )
-
     #############################################################################
     # end of functions to extract logical grouping of brick variables
     #############################################################################
 
-    def compare(self, other, noCompare, pmacName, page, fixfile, unfixfile):
+    def compare(self, other, noCompare, pmacName, fixfile, unfixfile):
         """Compares the state of this PMAC with the other."""
         result = True
-        table = page.table(page.body(), ["Element", "Reason", "Reference", "Hardware"])
+
         # Build the list of variable addresses to test
         addrs = sorted(
             (set(self.vars.keys()) | set(other.vars.keys()))
@@ -421,27 +356,19 @@ class PmacState(object):
                     commentargs["comment"] = desc
                 else:
                     desc = "No description available"
-                texta = page.doc_node(a, desc)
             if a not in other.vars:
                 if not self.vars[a].ro and not self.vars[a].isEmpty():
                     result = False
-                    self.writeHtmlRow(page, table, texta, "Missing", None, self.vars[a])
                     if unfixfile is not None:
                         unfixfile.write(self.vars[a].dump(**commentargs))
             elif a not in self.vars:
                 if not other.vars[a].ro and not other.vars[a].isEmpty():
                     result = False
-                    self.writeHtmlRow(
-                        page, table, texta, "Missing", other.vars[a], None
-                    )
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
             elif not self.vars[a].compare(other.vars[a]):
                 if not other.vars[a].ro and not self.vars[a].ro:
                     result = False
-                    self.writeHtmlRow(
-                        page, table, texta, "Mismatch", other.vars[a], self.vars[a]
-                    )
                     if fixfile is not None:
                         fixfile.write(other.vars[a].dump())
                     if unfixfile is not None:
@@ -459,40 +386,17 @@ class PmacState(object):
                 )
                 if plc.shouldBeRunning and not plc.isRunning:
                     result = False
-                    self.writeHtmlRow(
-                        page, table, "plc%s" % n, "Not running", None, None
-                    )
                     if fixfile is not None:
                         fixfile.write("enable plc %s\n" % n)
                     if unfixfile is not None:
                         unfixfile.write("disable plc %s\n" % n)
                 elif not plc.shouldBeRunning and plc.isRunning:
                     result = False
-                    self.writeHtmlRow(page, table, "plc%s" % n, "Running", None, None)
                     if fixfile is not None:
                         fixfile.write("disable plc %s\n" % n)
                     if unfixfile is not None:
                         unfixfile.write("enable plc %s\n" % n)
         return result
-
-    def writeHtmlRow(self, page, parent, addr, reason, referenceVar, hardwareVar):
-        row = page.tableRow(parent)
-        # The address column
-        col = page.tableColumn(row, addr)
-        # The reason column
-        col = page.tableColumn(row, reason)
-        # The reference column
-        col = page.tableColumn(row)
-        if referenceVar is None:
-            page.text(col, "-")
-        else:
-            referenceVar.htmlCompare(page, col, hardwareVar)
-        # The hardware column
-        col = page.tableColumn(row)
-        if hardwareVar is None:
-            page.text(col, "-")
-        else:
-            hardwareVar.htmlCompare(page, col, referenceVar)
 
     def loadPmcFile(self, fileName):
         """Loads a PMC file into this PMAC state."""

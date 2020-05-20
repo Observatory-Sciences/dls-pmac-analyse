@@ -93,15 +93,8 @@ class PmacVariable(object):
     def getFloatValue(self):
         return float(self.v)
 
-    def html(self, page, parent):
-        page.text(parent, self.valStr())
-
     def isEmpty(self):
         return False
-
-    def htmlCompare(self, page, parent, other):
-        return self.html(page, parent)
-
 
 class PmacIVariable(PmacVariable):
     useHexAxis = [2, 3, 4, 5, 10, 24, 25, 42, 43, 44, 55, 81, 82, 83, 84, 91, 95]
