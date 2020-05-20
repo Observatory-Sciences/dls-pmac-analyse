@@ -15,11 +15,40 @@ log = logging.getLogger(__name__)
 
 
 class Analyse:
-    def __init__(self, config: GlobalConfig):
+    def __init__(self, config: GlobalConfig, pre_loaded=False):
         """Constructor."""
+        self.pre_loaded = pre_loaded
         self.config = config
-        self.pmacFactorySettings = PmacState("pmacFactorySettings")
-        self.geobrickFactorySettings = PmacState("geobrickFactorySettings")
+        if not pre_loaded:
+            self.pmacFactorySettings = PmacState("pmacFactorySettings")
+            self.geobrickFactorySettings = PmacState("geobrickFactorySettings")
+
+    # TODO temporary for tests only
+    def do_compare(self):
+        for name, pmac in self.config.pmacs.items():
+
+            # Create the comparison web page
+            page = WebPage(
+                "Comparison results for %s (%s)"
+                % (pmac.name, datetime.today().strftime("%x %X")),
+                "%s/%s_compare.htm" % (self.config.resultsDir, pmac.name),
+                styleSheet="analysis.css",
+            )
+
+            # Make the comparison
+            theFixFile = None
+            if self.config.fixfile is not None:
+                theFixFile = open(self.config.fixfile, "w")
+            theUnfixFile = None
+            if self.config.unfixfile is not None:
+                theUnfixFile = open(self.config.unfixfile, "w")
+            pmac.compare(page, theFixFile, theUnfixFile)
+            if theFixFile is not None:
+                theFixFile.close()
+            if theUnfixFile is not None:
+                theUnfixFile.close()
+            # Write out the HTML
+            page.write()
 
     def analyse(self):
         """Performs the analysis of the PMACs."""
@@ -27,17 +56,18 @@ class Analyse:
         factorySettingsFilename = os.path.join(
             os.path.dirname(__file__), "factorySettings_pmac.pmc"
         )
-        self.loadFactorySettings(
-            self.pmacFactorySettings, factorySettingsFilename, self.config.includePaths
-        )
-        factorySettingsFilename = os.path.join(
-            os.path.dirname(__file__), "factorySettings_geobrick.pmc"
-        )
-        self.loadFactorySettings(
-            self.geobrickFactorySettings,
-            factorySettingsFilename,
-            self.config.includePaths,
-        )
+        if not self.pre_loaded:
+            self.loadFactorySettings(
+                self.pmacFactorySettings, factorySettingsFilename, self.config.includePaths
+            )
+            factorySettingsFilename = os.path.join(
+                os.path.dirname(__file__), "factorySettings_geobrick.pmc"
+            )
+            self.loadFactorySettings(
+                self.geobrickFactorySettings,
+                factorySettingsFilename,
+                self.config.includePaths,
+            )
         # Make sure the results directory exists
         if self.config.writeAnalysis:
             if not os.path.exists(self.config.resultsDir):
@@ -82,31 +112,33 @@ class Analyse:
                     "%s/%s_compare.htm" % (self.config.resultsDir, pmac.name),
                     styleSheet="analysis.css",
                 )
-                # Read the hardware (or compare with file)
-                if pmac.compareWith is None:
-                    try:
-                        pmac.readHardware(
-                            self.config.backupDir,
-                            self.config.checkPositions,
-                            self.config.debug,
-                            self.config.comments,
-                            self.config.verbose,
-                        )
-                    except PmacReadError:
-                        msg = "FAILED TO CONNECT TO " + pmac.name
-                        log.debug(msg, exc_info=True)
-                        log.error(msg)
-                        continue
-                else:
-                    pmac.loadCompareWith()
-                # Load the reference
-                factoryDefs = None
-                if pmac.useFactoryDefs:
-                    if pmac.hardwareState.geobrick:
-                        factoryDefs = self.geobrickFactorySettings
+
+                if not self.pre_loaded:
+                    # Read the hardware (or compare with file)
+                    if pmac.compareWith is None:
+                        try:
+                            pmac.readHardware(
+                                self.config.backupDir,
+                                self.config.checkPositions,
+                                self.config.debug,
+                                self.config.comments,
+                                self.config.verbose,
+                            )
+                        except PmacReadError:
+                            msg = "FAILED TO CONNECT TO " + pmac.name
+                            log.debug(msg, exc_info=True)
+                            log.error(msg)
+                            continue
                     else:
-                        factoryDefs = self.pmacFactorySettings
-                pmac.loadReference(factoryDefs, self.config.includePaths)
+                        pmac.loadCompareWith()
+                    # Load the reference
+                    factoryDefs = None
+                    if pmac.useFactoryDefs:
+                        if pmac.hardwareState.geobrick:
+                            factoryDefs = self.geobrickFactorySettings
+                        else:
+                            factoryDefs = self.pmacFactorySettings
+                    pmac.loadReference(factoryDefs, self.config.includePaths)
                 # Make the comparison
                 theFixFile = None
                 if self.config.fixfile is not None:

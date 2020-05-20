@@ -43,3 +43,7 @@ ENV/
 .svn*
 .idea
 .history
+
+pmacAnalysis
+config.pickle
+

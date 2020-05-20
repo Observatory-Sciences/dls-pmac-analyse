@@ -70,7 +70,9 @@ class PmacVariable(object):
         self.v = v
 
     def compare(self, other):
-        if self.ro or other.ro:
+        if self.v == '' or other.v == '':
+            return False
+        elif self.ro or other.ro:
             return True
         elif tokenIsFloat(self.v) and tokenIsFloat(other.v):
             a = tokenToFloat(self.v)

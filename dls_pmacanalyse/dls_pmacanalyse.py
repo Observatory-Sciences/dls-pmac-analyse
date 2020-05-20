@@ -145,6 +145,8 @@ def main():
             config_pickle = Path(__file__).parent / "../tests/config.pickle"
             with open(config_pickle, "rb") as pickle_in:
                 config: GlobalConfig = pickle.load(pickle_in)
+            analyse = Analyse(config, pre_loaded=True)
+            analyse.analyse()
         else:
             analyse = Analyse(config)
             analyse.analyse()
