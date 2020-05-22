@@ -668,7 +668,9 @@ class Pmac(object):
         for v in roVars:
             (returnStr, status) = self.sendCommand("ms%s,i%s" % (ms, v))
             if status and returnStr[0] != "\x07":
-                var = PmacMsIVariable(ms, v, self.toNumber(returnStr[:-2]), read_only=True)
+                var = PmacMsIVariable(
+                    ms, v, self.toNumber(returnStr[:-2]), read_only=True
+                )
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
 

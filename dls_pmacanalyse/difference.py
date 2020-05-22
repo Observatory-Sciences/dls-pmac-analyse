@@ -4,7 +4,7 @@ from typing import IO, Any, Dict, List, Optional
 class Difference:
     def __init__(self, names: List[str]) -> None:
         self.differences: Dict[str,  List] = {}
-        self.names = names
+        self.numbers = names
         self.size = len(names)
 
     def add_difference(self, item: str, values: List):

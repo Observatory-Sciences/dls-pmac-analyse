@@ -152,17 +152,17 @@ class PmacProgram(PmacVariable):
 
 
 class PmacPlcProgram(PmacProgram):
-    def __init__(self, n, v=[], lines=None, offsets=None):
-        PmacProgram.__init__(self, "plc", n, v, lines, offsets)
+    def __init__(self, number, value=[], lines=None, offsets=None):
+        PmacProgram.__init__(self, "plc", number, value, lines, offsets)
         self.isRunning = False
         self.shouldBeRunning = False
 
     def info(self, comment: Optional[str] = None):
         return ProgInfo(
-            num=self.name,
+            num=self.number,
             exists=self.lines is not None,
             code=self.lines,
-            p_range=range(self.name * 100, self.name * 100 + 100),
+            p_range=range(self.number * 100, self.number * 100 + 100),
         )
 
     def dump(self, typ=0):
@@ -171,13 +171,13 @@ class PmacPlcProgram(PmacProgram):
         else:
             result = ""
             if len(self.value) > 0:
-                result = "\nopen plc %s clear\n" % self.name
+                result = "\nopen plc %s clear\n" % self.number
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacPlcProgram(self.name)
+        result = PmacPlcProgram(self.number)
         result.value = self.value
         result.read_only = self.read_only
         result.offsets = self.offsets
@@ -201,7 +201,7 @@ class PmacPlcProgram(PmacProgram):
                 else:
                     state = "idle"
             elif state == "plc":
-                if tokenToInt(i) == self.name:
+                if tokenToInt(i) == self.number:
                     self.shouldBeRunning = False
                 state = "idle"
 
@@ -210,20 +210,20 @@ class PmacPlcProgram(PmacProgram):
 
 
 class PmacCommandString(PmacProgram):
-    def __init__(self, v):
-        PmacProgram.__init__(self, "CMD", 0, v)
+    def __init__(self, value):
+        PmacProgram.__init__(self, "CMD", 0, value)
 
 
 class PmacCsAxisDef(PmacProgram):
-    def __init__(self, cs, n, v=[PmacToken("0")]):
-        PmacProgram.__init__(self, "&%s#" % cs, n, v)
+    def __init__(self, cs, number, value=[PmacToken("0")]):
+        PmacProgram.__init__(self, "&%s#" % cs, number, value)
         self.cs = cs
 
     def dump(self, typ=0):
         if typ == 1:
             result = "%s" % self.valueText()
         else:
-            result = "&%s#%s->%s" % (self.cs, self.name, self.valueText())
+            result = "&%s#%s->%s" % (self.cs, self.number, self.valueText())
         return result
 
     def isZero(self):
@@ -236,7 +236,7 @@ class PmacCsAxisDef(PmacProgram):
         return result
 
     def copyFrom(self):
-        result = PmacCsAxisDef(self.cs, self.name)
+        result = PmacCsAxisDef(self.cs, self.number)
         result.value = self.value
         result.read_only = self.read_only
         result.offsets = self.offsets
@@ -245,8 +245,8 @@ class PmacCsAxisDef(PmacProgram):
 
 
 class PmacForwardKinematicProgram(PmacProgram):
-    def __init__(self, n, v=[]):
-        PmacProgram.__init__(self, "fwd", n, v)
+    def __init__(self, number, value=[]):
+        PmacProgram.__init__(self, "fwd", number, value)
 
     def dump(self, typ=0):
         if typ == 1:
@@ -254,13 +254,13 @@ class PmacForwardKinematicProgram(PmacProgram):
         else:
             result = ""
             if len(self.value) > 0:
-                result = "\n&%s open forward clear\n" % self.name
+                result = "\n&%s open forward clear\n" % self.number
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacForwardKinematicProgram(self.name)
+        result = PmacForwardKinematicProgram(self.number)
         result.value = self.value
         result.read_only = self.read_only
         result.offsets = self.offsets
@@ -269,8 +269,8 @@ class PmacForwardKinematicProgram(PmacProgram):
 
 
 class PmacInverseKinematicProgram(PmacProgram):
-    def __init__(self, n, v=[]):
-        PmacProgram.__init__(self, "inv", n, v)
+    def __init__(self, number, value=[]):
+        PmacProgram.__init__(self, "inv", number, value)
 
     def dump(self, typ=0):
         if typ == 1:
@@ -278,13 +278,13 @@ class PmacInverseKinematicProgram(PmacProgram):
         else:
             result = ""
             if len(self.value) > 0:
-                result = "\n&%s open inverse clear\n" % self.name
+                result = "\n&%s open inverse clear\n" % self.number
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacInverseKinematicProgram(self.name)
+        result = PmacInverseKinematicProgram(self.number)
         result.value = self.value
         result.read_only = self.read_only
         result.offsets = self.offsets
@@ -293,11 +293,11 @@ class PmacInverseKinematicProgram(PmacProgram):
 
 
 class PmacMotionProgram(PmacProgram):
-    def __init__(self, n, v=[], lines=None, offsets=None):
-        PmacProgram.__init__(self, "prog", n, v, lines, offsets)
+    def __init__(self, number, value=[], lines=None, offsets=None):
+        PmacProgram.__init__(self, "prog", number, value, lines, offsets)
 
     def info(self, comment: Optional[str] = None):
-        return ProgInfo(num=self.name, exists=self.lines is not None, code=self.lines)
+        return ProgInfo(num=self.number, exists=self.lines is not None, code=self.lines)
 
     def dump(self, typ=0):
         if typ == 1:
@@ -305,13 +305,13 @@ class PmacMotionProgram(PmacProgram):
         else:
             result = ""
             if len(self.value) > 0:
-                result = "\nopen program %s clear\n" % self.name
+                result = "\nopen program %s clear\n" % self.number
                 result += self.valueText(ignore_ret=True)
                 result += "close\n"
         return result
 
     def copyFrom(self):
-        result = PmacMotionProgram(self.name)
+        result = PmacMotionProgram(self.number)
         result.value = self.value
         result.read_only = self.read_only
         result.offsets = self.offsets
