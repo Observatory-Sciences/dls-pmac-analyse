@@ -133,7 +133,7 @@ class Report:
                     title=f"P Variables for {pmac_name} PLC{program.num} ",
                     variables=variables,
                     with_comments=False,
-                    var_range=program.p_range
+                    var_range=program.p_range,
                 )
 
     def pmacs_to_html(self, pmacs: Dict[str, Pmac]):
@@ -234,4 +234,12 @@ class Report:
                 programs=pmac.hardwareState.get_progs(),
                 pmac_name=pmac.name,
                 prog_type="prog",
+            )
+
+            # Comparison
+            self._render(
+                template_name="compare.htm.jinja",
+                filename=f"{pmac.name}_compare.htm",
+                title=f"Comparison Results for {pmac.name}",
+                differences=pmac.differences.get_infos(),
             )

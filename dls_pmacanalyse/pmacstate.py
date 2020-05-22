@@ -1,19 +1,22 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from dls_pmacanalyse.constants import Constants
 from functools import cmp_to_key
 from logging import getLogger
 from typing import Dict, List, Optional, Union, cast
 
 from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
+from dls_pmacanalyse.constants import Constants
+from dls_pmacanalyse.difference import Differences
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
-    ProgInfo,
     PmacCsAxisDef,
     PmacForwardKinematicProgram,
     PmacInverseKinematicProgram,
     PmacMotionProgram,
     PmacPlcProgram,
+    ProgInfo,
 )
 from dls_pmacanalyse.pmacvariables import (
     PmacFeedrateOverride,
@@ -250,7 +253,7 @@ class PmacState(object):
             self.getIVariable(n + 100 * motor).info(
                 PmacState.motorIVariableDescriptions[n]
             )
-            for n in range(100)
+            for n in Constants.i_variable_motor_numbers
         ] + [
             self.getIVariable(ivar).info(PmacState.motorI7000VariableDescriptions[n])
             for n, ivar in enumerate(Constants.i_variable_motor7000_numbers)
@@ -327,9 +330,16 @@ class PmacState(object):
     # end of functions to extract logical grouping of brick variables
     #############################################################################
 
-    def compare(self, other, noCompare, pmacName, fixfile, unfixfile):
-        """Compares the state of this PMAC with the other."""
-        result = True
+    def compare(
+        self,
+        difference: Differences,
+        other: PmacState,
+        noCompare: PmacState,
+        pmacName: str
+    ):
+        """
+        Compares the state of this PMAC with the other.
+        """
 
         # Build the list of variable addresses to test
         addrs = sorted(
@@ -339,64 +349,28 @@ class PmacState(object):
         )
         # For each of these addresses, compare the variable
         for a in addrs:
-            texta = a
-            commentargs = {}
-            if texta.endswith("%0"):
-                texta = texta[:-1]
-            if texta.startswith("i") and not texta.startswith("inv"):
-                i = int(texta[1:])
-                if i in range(100):
-                    desc = PmacState.globalIVariableDescriptions[i]
-                    commentargs["comment"] = desc
-                elif i in range(3300):
-                    desc = PmacState.motorIVariableDescriptions[i % 100]
-                    commentargs["comment"] = desc
-                elif i in range(7000, 7350):
-                    desc = PmacState.motorI7000VariableDescriptions[i % 10]
-                    commentargs["comment"] = desc
-                else:
-                    desc = "No description available"
             if a not in other.vars:
                 if not self.vars[a].read_only and not self.vars[a].isEmpty():
-                    result = False
-                    if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump(**commentargs))
+                    difference.add(a, self.vars[a], None)
             elif a not in self.vars:
                 if not other.vars[a].read_only and not other.vars[a].isEmpty():
-                    result = False
-                    if fixfile is not None:
-                        fixfile.write(other.vars[a].dump())
+                    difference.add(a, None, other.vars[a])
             elif not self.vars[a].compare(other.vars[a]):
                 if not other.vars[a].read_only and not self.vars[a].read_only:
-                    result = False
-                    if fixfile is not None:
-                        fixfile.write(other.vars[a].dump())
-                    if unfixfile is not None:
-                        unfixfile.write(self.vars[a].dump(**commentargs))
+                    difference.add(a, self.vars[a], other.vars[a])
+
         # Check the running PLCs
-        for n in range(32):
+        for n in Constants.plc_numbers:
             plc = self.getPlcProgramNoCreate(n)
             if plc is not None:
+                # TODO this should compare with reference not with self
+                # (at least that keeps it consistent)
                 plc.setShouldBeRunning()
-                log.debug(
-                    "PLC%s, isRunning=%s, shouldBeRunning=%s",
-                    n,
-                    plc.isRunning,
-                    plc.shouldBeRunning,
-                )
                 if plc.shouldBeRunning and not plc.isRunning:
-                    result = False
-                    if fixfile is not None:
-                        fixfile.write("enable plc %s\n" % n)
-                    if unfixfile is not None:
-                        unfixfile.write("disable plc %s\n" % n)
+                    difference.add_plc(n, False, True)
                 elif not plc.shouldBeRunning and plc.isRunning:
-                    result = False
-                    if fixfile is not None:
-                        fixfile.write("disable plc %s\n" % n)
-                    if unfixfile is not None:
-                        unfixfile.write("enable plc %s\n" % n)
-        return result
+                    difference.add_plc(n, True, False)
+        return len(difference) == 0
 
     def loadPmcFile(self, fileName):
         """Loads a PMC file into this PMAC state."""

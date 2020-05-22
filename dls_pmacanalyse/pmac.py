@@ -3,6 +3,7 @@ import re
 
 from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
 
+from dls_pmacanalyse.difference import Differences
 from dls_pmacanalyse.errors import AnalyseError, PmacReadError
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
@@ -47,6 +48,8 @@ class Pmac(object):
         self.positionsBefore = []
         self.positionsAfter = []
 
+        self.differences = Differences("reference", "hardware")
+
     # def readCurrentPositions(self):
     #     """Read the current motor positions of the PMAC."""
     #     text = ""
@@ -59,7 +62,10 @@ class Pmac(object):
     def compare(self, fixfile, unfixfile):
         log.info("Comparing...")
         self.compareResult = self.hardwareState.compare(
-            self.referenceState, self.noCompare, self.name, fixfile, unfixfile
+            self.differences,
+            self.referenceState,
+            self.noCompare,
+            self.name,
         )
         if self.compareResult:
             log.warning("Hardware matches reference")
