@@ -21,11 +21,11 @@ class Analyse:
 
     def analyse(self):
         """Performs the analysis of the PMACs."""
-        # Load the factory settings
-        factorySettingsFilename = os.path.join(
-            os.path.dirname(__file__), "factorySettings_pmac.pmc"
-        )
         if not self.pre_loaded:
+            # Load the factory settings
+            factorySettingsFilename = os.path.join(
+                os.path.dirname(__file__), "factorySettings_pmac.pmc"
+            )
             self.loadFactorySettings(
                 self.pmacFactorySettings,
                 factorySettingsFilename,
@@ -57,22 +57,6 @@ class Analyse:
                     "Backup path exists but is not a directory: %s"
                     % self.config.backupDir
                 )
-        if self.config.writeAnalysis is True:
-            # Drop a style sheet
-            wFile = open("%s/analysis.css" % self.config.resultsDir, "w+")
-            wFile.write(
-                """
-                p{text-align:left; color:black; font-family:arial}
-                h1{text-align:center; color:green}
-                table{border-collapse:collapse}
-                table, th, td{border:1px solid black}
-                th, td{padding:5px; vertical-align:top}
-                th{background-color:#EAf2D3; color:black}
-                em{color:red; font-style:normal; font-weight:bold}
-                #code{white-space:pre}
-                #code{font-family:courier}
-                """
-            )
         # Analyse each pmac
         for name, pmac in self.config.pmacs.items():
             if self.config.onlyPmacs is None or name in self.config.onlyPmacs:

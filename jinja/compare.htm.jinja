@@ -1,0 +1,30 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="analysis.css" />
+</head>
+<title>{{ title }}</title>
+
+<body>
+    <h1>{{ title }}</h1>
+    <table>
+        <tr>
+            <th>Element</th>
+            <th>Reason</th>
+            <th>Reference</th>
+            <th>Hardware</th>
+            <th>Comment</th>
+        </tr>
+        {% for diff in differences %}
+        <tr>
+            <td>{{ diff.name }}</td>
+            <td>{{ diff.reason }}</td>
+            <td>{{ diff.reference_value|join('<br/>') }}</td>
+            <td>{{ diff.hardware_value|join('<br/>') }}</td>
+            <td>{{ diff.comment }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>

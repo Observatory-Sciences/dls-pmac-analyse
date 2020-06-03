@@ -14,7 +14,7 @@ class VariableInfo:
     name: str
     value: str
     comment: Optional[str] = None
-    node: Optional[int] = None
+    node: Optional[int] = None  # TODO lets get rid of this and include it in the 'name'
 
 
 class PmacToken(object):

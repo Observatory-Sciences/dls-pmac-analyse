@@ -28,7 +28,9 @@ class Report:
         this_path = Path(__file__).parent
         jinja_path = this_path.parent / "jinja"
         self.templateLoader = FileSystemLoader(searchpath=jinja_path)
-        self.environment = Environment(loader=self.templateLoader, autoescape=True)
+        # TODO not using autoescape so that we can show newlines in the
+        # plc code in the comparison.htm files but this is a sledgehammer
+        self.environment = Environment(loader=self.templateLoader, autoescape=False)
 
         if target_dir is None:
             target_dir = Path.cwd()
@@ -237,9 +239,10 @@ class Report:
             )
 
             # Comparison
-            self._render(
-                template_name="compare.htm.jinja",
-                filename=f"{pmac.name}_compare.htm",
-                title=f"Comparison Results for {pmac.name}",
-                differences=pmac.differences.get_infos(),
-            )
+            if pmac.differences:
+                self._render(
+                    template_name="compare.htm.jinja",
+                    filename=f"{pmac.name}_compare.htm",
+                    title=f"Comparison Results for {pmac.name}",
+                    differences=pmac.differences.get_infos(),
+                )

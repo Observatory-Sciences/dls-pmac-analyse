@@ -38,6 +38,9 @@ class PmacProgram(PmacVariable):
     def clear(self):
         self.value = []
 
+    def valStr(self):
+        return self.lines
+
     def valueText(self, typ=0, ignore_ret=False):
         result = ""
         last_line = len(self.value) - 1
@@ -60,20 +63,9 @@ class PmacProgram(PmacVariable):
         return result
 
     def compare(self, other):
-        # Strip the newline tokens from the two lists.  There's
-        # probably a better way of doing this.
-        a = []
-        for i in self.value:
-            if i == "\n":
-                pass
-            else:
-                a.append(i)
-        b = []
-        for i in other.value:
-            if i == "\n":
-                pass
-            else:
-                b.append(i)
+        # Strip the newline tokens from the two lists.
+        a = [token for token in self.value if token != "\n"]
+        b = [token for token in other.value if token != "\n"]
         # Now compare them token by token
         result = True
         while len(a) > 0 and len(b) > 0:

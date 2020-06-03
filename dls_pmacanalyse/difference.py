@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import IO, Any, Dict, Optional, Tuple
+from typing import IO, Any, Dict, List, Optional, Tuple, Union, cast
 
 from dls_pmacanalyse.pmacvariables import PmacVariable
 
@@ -9,8 +9,8 @@ from dls_pmacanalyse.pmacvariables import PmacVariable
 class DifferenceInfo:
     name: str
     reason: str
-    left_value: str
-    right_value: str
+    reference_value: List[str]
+    hardware_value: List[str]
 
 
 class Reason(Enum):
@@ -50,19 +50,27 @@ class Differences:
     def make_unfix_file(self, unfixfile: Optional[IO[Any]]):
         pass
 
+    @staticmethod
+    def listify(item: Union[str, List[str]]) -> List[str]:
+        if type(item) is not list:
+            result = [cast(str, item)]
+        else:
+            result = cast(List[str], item)
+        return result
+
     def get_infos(self):
         result = [
             DifferenceInfo(
-                name=left.addr(),
+                name=hardware.addr() if hardware else reference.addr(),
                 reason=reason.value,
-                left_value=left.valStr(),
-                right_value=right.valStr(),
+                reference_value=self.listify(reference.valStr()) if reference else [],
+                hardware_value=self.listify(hardware.valStr()) if hardware else [],
             )
-            for (left, right, reason) in self.differences.values()
+            for (hardware, reference, reason) in self.differences.values()
         ]
         return result
 
-    # TODO migth want to use these
+    # TODO might want to use these
 
     # def clever_comment_extraction(self, texta: str):
     #     commentargs = {}
