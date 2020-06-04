@@ -34,7 +34,7 @@ class Report:
 
         if target_dir is None:
             target_dir = Path.cwd()
-        self.root_dir = target_dir / "pmacAnalysis"
+        self.root_dir = target_dir
         self.root_dir.mkdir(exist_ok=True)
 
         css = jinja_path / "analysis.css"

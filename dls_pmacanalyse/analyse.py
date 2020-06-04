@@ -15,30 +15,29 @@ class Analyse:
         """Constructor."""
         self.pre_loaded = pre_loaded
         self.config = config
-        if not pre_loaded:
-            self.pmacFactorySettings = PmacState("pmacFactorySettings")
-            self.geobrickFactorySettings = PmacState("geobrickFactorySettings")
+        self.pmacFactorySettings = PmacState("pmacFactorySettings")
+        self.geobrickFactorySettings = PmacState("geobrickFactorySettings")
 
     def analyse(self):
         """Performs the analysis of the PMACs."""
-        if not self.pre_loaded:
-            # Load the factory settings
-            factorySettingsFilename = os.path.join(
-                os.path.dirname(__file__), "factorySettings_pmac.pmc"
-            )
-            self.loadFactorySettings(
-                self.pmacFactorySettings,
-                factorySettingsFilename,
-                self.config.includePaths,
-            )
-            factorySettingsFilename = os.path.join(
-                os.path.dirname(__file__), "factorySettings_geobrick.pmc"
-            )
-            self.loadFactorySettings(
-                self.geobrickFactorySettings,
-                factorySettingsFilename,
-                self.config.includePaths,
-            )
+        # Load the factory settings
+        factorySettingsFilename = os.path.join(
+            os.path.dirname(__file__), "factorySettings_pmac.pmc"
+        )
+        self.loadFactorySettings(
+            self.pmacFactorySettings,
+            factorySettingsFilename,
+            self.config.includePaths,
+        )
+        factorySettingsFilename = os.path.join(
+            os.path.dirname(__file__), "factorySettings_geobrick.pmc"
+        )
+        self.loadFactorySettings(
+            self.geobrickFactorySettings,
+            factorySettingsFilename,
+            self.config.includePaths,
+        )
+
         # Make sure the results directory exists
         if self.config.writeAnalysis:
             if not os.path.exists(self.config.resultsDir):
@@ -48,6 +47,7 @@ class Analyse:
                     "Results path exists but is not a directory: %s"
                     % self.config.resultsDir
                 )
+
         # Make sure the backup directory exists if it is required
         if self.config.backupDir is not None:
             if not os.path.exists(self.config.backupDir):
@@ -79,14 +79,16 @@ class Analyse:
                             continue
                     else:
                         pmac.loadCompareWith()
-                    # Load the reference
-                    factoryDefs = None
-                    if pmac.useFactoryDefs:
-                        if pmac.hardwareState.geobrick:
-                            factoryDefs = self.geobrickFactorySettings
-                        else:
-                            factoryDefs = self.pmacFactorySettings
-                    pmac.loadReference(factoryDefs, self.config.includePaths)
+
+                # Load the reference
+                factoryDefs = None
+                if pmac.useFactoryDefs:
+                    if pmac.hardwareState.geobrick:
+                        factoryDefs = self.geobrickFactorySettings
+                    else:
+                        factoryDefs = self.pmacFactorySettings
+                pmac.loadReference(factoryDefs, self.config.includePaths)
+
                 # Make the comparison
                 theFixFile = None
                 if self.config.fixfile is not None:
