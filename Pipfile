@@ -12,10 +12,14 @@ flake8-isort = "*"
 pytest-mypy = "*"
 sphinx-rtd-theme = "*"
 doc8 = "*"
+mypy = "*"
+pygount = "*"
 
 [packages]
-dls-pmaclib = "==2.1.0"
+dls-pmaclib = {editable = true,path = "./../dls_pmaclib"}
 jinja2 = "*"
+click = "*"
+click-configfile = "*"
 
 [scripts]
 # Put coverage here so we don't interfere with debugging in the IDE

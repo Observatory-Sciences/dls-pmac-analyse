@@ -1,5 +1,5 @@
 class Constants:
-    """contains the global contants for describing pmacs."""
+    """contains the global constants for describing pmacs."""
 
     coord_sys_numbers = range(1, 17)
     macro_station_nodes = [0, 16, 32, 64]

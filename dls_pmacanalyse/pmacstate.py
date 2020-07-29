@@ -5,8 +5,6 @@ from functools import cmp_to_key
 from logging import getLogger
 from typing import Dict, List, Optional, Union, cast
 
-from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
-
 from dls_pmacanalyse.constants import Constants
 from dls_pmacanalyse.difference import Differences
 from dls_pmacanalyse.pmacparser import PmacParser
@@ -28,6 +26,7 @@ from dls_pmacanalyse.pmacvariables import (
     PmacVariable,
     VariableInfo,
 )
+from dls_pmaclib.dls_pmcpreprocessor import ClsPmacParser
 
 from .errors import AnalyseError, GeneralError
 from .utils import numericSort

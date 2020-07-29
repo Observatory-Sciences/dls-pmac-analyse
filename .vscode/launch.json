@@ -9,7 +9,8 @@
             "type": "python",
             "request": "launch",
             "module": "dls_pmacanalyse.dls_pmacanalyse",
-            "args": ["--test"]
+            "args": ["--test","--loglevel", "debug"],
+            "cwd": "/home/giles/dls/BL07I/Settings"
         }
     ]
 }

@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import List
 
 from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
 
@@ -20,7 +21,7 @@ from dls_pmacanalyse.pmacvariables import (
     PmacMsIVariable,
     PmacMVariable,
     PmacPVariable,
-    PmacQVariable,
+    PmacQVariable, PmacVariable,
 )
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,8 @@ log = logging.getLogger(__name__)
 
 class Pmac(object):
     """A class that represents a single PMAC and its state."""
+
+    global_no_compare: List[str]
 
     def __init__(self, name):
         self.name = name
@@ -62,10 +65,7 @@ class Pmac(object):
     def compare(self, fixfile, unfixfile):
         log.info("Comparing...")
         self.compareResult = self.hardwareState.compare(
-            self.differences,
-            self.referenceState,
-            self.noCompare,
-            self.name,
+            self.differences, self.referenceState, self.noCompare, self.name,
         )
         if self.compareResult:
             log.warning("Hardware matches reference")
@@ -93,16 +93,23 @@ class Pmac(object):
     def setCompareWith(self, compareWith):
         self.compareWith = compareWith
 
-    def setNoCompare(self, vars):
-        for var in vars:
+    @staticmethod
+    def _expand_variable_specs(varspecs: List[str]):
+        parser = PmacParser(varspecs, None)
+        (type, nodeList, start, count, increment) = parser.parseVarSpec()
+        while count > 0:
+            for var in PmacVariable.makeVars(type, nodeList, start):
+                yield var
+            start += increment
+            count -= 1
+
+    def setNoCompare(self, varspecs: List[str]):
+        for var in self._expand_variable_specs(varspecs):
             self.noCompare.addVar(var)
 
-    def clearNoCompare(self, vars):
-        for var in vars:
+    def clearNoCompare(self, varspecs: List[str]):
+        for var in self._expand_variable_specs(varspecs):
             self.noCompare.removeVar(var)
-
-    def copyNoComparesFrom(self, otherPmac):
-        self.noCompare.copyFrom(otherPmac.noCompare)
 
     def readHardware(self, backupDir, checkPositions, debug, comments, verbose):
         """Loads the current state of the PMAC.  If a backupDir is provided, the

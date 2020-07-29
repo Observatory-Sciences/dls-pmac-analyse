@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dls_pmacanalyse.errors import ConfigError
 from logging import getLogger
 from typing import Optional
 
@@ -96,6 +97,27 @@ class PmacVariable(object):
 
     def isEmpty(self):
         return False
+
+    # a factory method for creating a PmacVariable from a string
+    @classmethod
+    def makeVars(cls, varType, nodeList, n):
+        """Makes a variable of the correct type."""
+        result = []
+        if varType == "i":
+            result.append(PmacIVariable(n))
+        elif varType == "p":
+            result.append(PmacPVariable(n))
+        elif varType == "m":
+            result.append(PmacMVariable(n))
+        elif varType == "ms":
+            for ms in nodeList:
+                result.append(PmacMsIVariable(ms, n))
+        elif varType == "&":
+            for cs in nodeList:
+                result.append(PmacQVariable(cs, n))
+        else:
+            raise ConfigError("Cannot decode variable type %s" % repr(varType))
+        return result
 
 
 class PmacIVariable(PmacVariable):
