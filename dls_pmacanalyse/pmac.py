@@ -706,6 +706,7 @@ class Pmac(object):
     def loadCompareWith(self):
         """Loads the compare with file."""
         self.hardwareState.loadPmcFile(self.compareWith)
+        self.numCoordSystems = self.hardwareState.vars['i68'].getIntValue()
 
     def toNumber(self, text):
         if text[0] == "$":

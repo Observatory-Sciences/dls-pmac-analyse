@@ -7,7 +7,6 @@ from .pmac import Pmac
 class GlobalConfig:
     def __init__(
         self,
-        test: bool,
         verbose: bool,
         backupDir: Path,
         writeAnalysis: bool,
@@ -23,7 +22,6 @@ class GlobalConfig:
     ):
         self.pmacs: Dict[str, Pmac] = {}
 
-        self.test = test
         self.verbose = verbose
         self.backupDir = backupDir
         self.writeAnalysis = writeAnalysis
@@ -36,4 +34,4 @@ class GlobalConfig:
         self.fixfile = fixfile
         self.unfixfile = unfixfile
         # todo make this a list of Path
-        self.include = include
+        self.includePaths = include

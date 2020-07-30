@@ -92,6 +92,9 @@ class PmacVariable(object):
             result = "%s" % self.value
         return result
 
+    def getIntValue(self):
+        return int(self.value)
+
     def getFloatValue(self):
         return float(self.value)
 

@@ -1,6 +1,5 @@
 import logging
 import os
-import pickle
 from xml.dom.minidom import getDOMImplementation
 
 from dls_pmacanalyse.errors import ConfigError, PmacReadError
@@ -11,9 +10,8 @@ log = logging.getLogger(__name__)
 
 
 class Analyse:
-    def __init__(self, config: GlobalConfig, pre_loaded=False):
+    def __init__(self, config: GlobalConfig):
         """Constructor."""
-        self.pre_loaded = pre_loaded
         self.config = config
         self.pmacFactorySettings = PmacState("pmacFactorySettings")
         self.geobrickFactorySettings = PmacState("geobrickFactorySettings")
@@ -59,26 +57,25 @@ class Analyse:
                 )
         # Analyse each pmac
         for name, pmac in self.config.pmacs.items():
-            if self.config.onlyPmacs is None or name in self.config.onlyPmacs:
+            if self.config.onlyPmacs == () or name in self.config.onlyPmacs:
 
-                if not self.pre_loaded:
-                    # Read the hardware (or compare with file)
-                    if pmac.compareWith is None:
-                        try:
-                            pmac.readHardware(
-                                self.config.backupDir,
-                                self.config.checkPositions,
-                                self.config.debug,
-                                self.config.comments,
-                                self.config.verbose,
-                            )
-                        except PmacReadError:
-                            msg = "FAILED TO CONNECT TO " + pmac.name
-                            log.debug(msg, exc_info=True)
-                            log.error(msg)
-                            continue
-                    else:
-                        pmac.loadCompareWith()
+                # Read the hardware (or compare with file)
+                if pmac.compareWith is None:
+                    try:
+                        pmac.readHardware(
+                            self.config.backupDir,
+                            self.config.checkPositions,
+                            self.config.debug,
+                            self.config.comments,
+                            self.config.verbose,
+                        )
+                    except PmacReadError:
+                        msg = "FAILED TO CONNECT TO " + pmac.name
+                        log.debug(msg, exc_info=True)
+                        log.error(msg)
+                        continue
+                else:
+                    pmac.loadCompareWith()
 
                 # Load the reference
                 factoryDefs = None
@@ -101,12 +98,6 @@ class Analyse:
                     theFixFile.close()
                 if theUnfixFile is not None:
                     theUnfixFile.close()
-
-        # TODO this is a temporary mechanism for generating test data without
-        # connecting to all pmacs every time
-        pickle_out = open("config.pickle", "wb")
-        pickle.dump(self.config, pickle_out)
-        pickle_out.close()
 
     def loadFactorySettings(self, pmac, fileName, includeFiles):
         for i in range(8192):

@@ -9,8 +9,9 @@
             "type": "python",
             "request": "launch",
             "module": "dls_pmacanalyse.dls_pmacanalyse",
-            "args": ["--test","--loglevel", "debug"],
-            "cwd": "/home/giles/dls/BL07I/Settings"
+            "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-06"],
+            "cwd": "/home/giles/dls/BL08J"
+            // "cwd": "/home/giles/dls/BL07I/Settings"
         }
     ]
 }

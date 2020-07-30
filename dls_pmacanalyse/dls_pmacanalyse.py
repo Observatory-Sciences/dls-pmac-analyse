@@ -11,10 +11,11 @@
 
 import logging
 import sys
+from pathlib import Path
 from typing import Any, Dict, List
-import regex as re
 
 import click
+import regex as re
 from click_configfile import Param, SectionSchema, matches_section
 
 from dls_pmacanalyse.analyse import Analyse
@@ -22,8 +23,6 @@ from dls_pmacanalyse.configfilereader import ConfigFileReader2
 from dls_pmacanalyse.errors import ArgumentError
 from dls_pmacanalyse.globalconfig import GlobalConfig
 from dls_pmacanalyse.pmac import Pmac
-from dls_pmacanalyse.pmacparser import PmacParser
-from dls_pmacanalyse.pmacvariables import PmacVariable
 from dls_pmacanalyse.report import Report
 
 # get the root logger to control application wide log levels
@@ -176,8 +175,6 @@ CONTEXT_SETTINGS = dict(
     default_map=ConfigFileProcessor.read_config(inline_comment_prefixes=[";", "#"])
 )
 
-
-@click.option("--test", is_flag=True)
 # global settings
 @click.option("--resultsdir", default="pmacAnalysis", type=click.Path(file_okay=False))
 @click.option("--verbose", "-v", is_flag=True)
@@ -209,7 +206,6 @@ CONTEXT_SETTINGS = dict(
 def main(
     context,
     resultsdir,
-    test,
     verbose,
     backup,
     only,
@@ -236,7 +232,6 @@ def main(
 
     # save the global command line parameters in a global config object
     config = GlobalConfig(
-        test=test,
         verbose=verbose,
         backupDir=backup,
         comments=comments,
@@ -291,40 +286,33 @@ def main(
 
     for name, value in map.items():
         if name.startswith(SECTION_PREFIX):
+            name = name[len(SECTION_PREFIX):]
+            if only is not None and name not in only:
+                continue
             add_pmac(
                 config=config,
-                name=name[len(SECTION_PREFIX):],
+                name=name,
                 ts=value.get("ts"),
                 tcpip=value.get("tcpip"),
                 geobrick=value.get("geobrick"),
                 vme_pmac=value.get("vme_pmac"),
                 no_factory_defaults=value.get("no_factory_defaults"),
                 reference=value.get("reference"),
-                compareWith=value.get("compareWith"),
+                compareWith=value.get("comparewith"),
                 nocompare=value.get("nocompare"),
                 compare=value.get("compare"),
                 macroics=value.get("macroics"),
             )
 
-    # if config.processArguments():
-    #     config.processConfigFile()
-    #     test = config.test
-    #     if test:
-    #         # get the brick configuration from a pickle file instead of hardware
-    #         config_pickle = Path(__file__).parent / "../tests/config.pickle"
-    #         with open(config_pickle, "rb") as pickle_in:
-    #             config: GlobalConfig = pickle.load(pickle_in)
-    #             del config.pmacs["BL07I-MO-STEP-01"]
+    analyse = Analyse(config)
+    analyse.analyse()
 
-    #     analyse = Analyse(config, pre_loaded=test)
-    #     analyse.analyse()
-
-    #     if config.writeAnalysis:
-    #         report = Report(Path(config.resultsDir))
-    #         report.pmacs_to_html(config.pmacs)
-    # else:
-    #     log.error(helpText)
-    #     return 1
+    if config.writeAnalysis:
+        report = Report(Path(config.resultsDir))
+        report.pmacs_to_html(config.pmacs)
+    else:
+        log.error(helpText)
+        return 1
     return 0
 
 
