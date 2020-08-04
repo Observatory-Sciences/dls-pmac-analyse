@@ -274,7 +274,7 @@ def main(
 
     map: Dict[str, Any] = context.default_map
 
-    # TODO Temporary debug command line and config file parsing
+    # TODO Temporary debug of command line and config file parsing
     log.debug(f"Global Config - {config}")
     for section in map:
         log.debug(f"  {section}")
@@ -287,7 +287,7 @@ def main(
     for name, value in map.items():
         if name.startswith(SECTION_PREFIX):
             name = name[len(SECTION_PREFIX):]
-            if only is not None and name not in only:
+            if only != () and name not in only:
                 continue
             add_pmac(
                 config=config,

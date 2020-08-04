@@ -2,8 +2,6 @@ import logging
 import re
 from typing import List
 
-from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
-
 from dls_pmacanalyse.difference import Differences
 from dls_pmacanalyse.errors import AnalyseError, PmacReadError
 from dls_pmacanalyse.pmacparser import PmacParser
@@ -21,8 +19,12 @@ from dls_pmacanalyse.pmacvariables import (
     PmacMsIVariable,
     PmacMVariable,
     PmacPVariable,
-    PmacQVariable, PmacVariable,
+    PmacQVariable,
+    PmacVariable,
 )
+from dls_pmaclib.dls_pmacremote import PmacEthernetInterface, PmacTelnetInterface
+
+# from copy import deepcopy
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +33,45 @@ class Pmac(object):
     """A class that represents a single PMAC and its state."""
 
     global_no_compare: List[str]
+
+    ro_i_vars = set(
+        [3, 4, 6, 9, 20, 21, 22, 23, 24, 41, 58]
+        + list(range(4900, 5000))
+        + [
+            5111,
+            5112,
+            5211,
+            5212,
+            5311,
+            5312,
+            5411,
+            5412,
+            5511,
+            5512,
+            5611,
+            5612,
+            5711,
+            5712,
+            5811,
+            5812,
+            5911,
+            5912,
+            6011,
+            6012,
+            6111,
+            6112,
+            6211,
+            6212,
+            6311,
+            6312,
+            6411,
+            6412,
+            6511,
+            6512,
+            6611,
+            6612,
+        ]
+    )
 
     def __init__(self, name):
         self.name = name
@@ -52,6 +93,12 @@ class Pmac(object):
         self.positionsAfter = []
 
         self.differences = Differences("reference", "hardware")
+
+        # add read only variables to the no compare list
+        # TODO need to add msi variables to this
+        for ivar_num in self.ro_i_vars:
+            ivar = PmacIVariable(ivar_num)
+            self.noCompare.addVar(ivar)
 
     # def readCurrentPositions(self):
     #     """Read the current motor positions of the PMAC."""
@@ -95,13 +142,14 @@ class Pmac(object):
 
     @staticmethod
     def _expand_variable_specs(varspecs: List[str]):
-        parser = PmacParser(varspecs, None)
-        (type, nodeList, start, count, increment) = parser.parseVarSpec()
-        while count > 0:
-            for var in PmacVariable.makeVars(type, nodeList, start):
-                yield var
-            start += increment
-            count -= 1
+        for varspec in varspecs:
+            parser = PmacParser([varspec], None)
+            (type, nodeList, start, count, increment) = parser.parseVarSpec()
+            while count > 0:
+                for var in PmacVariable.makeVars(type, nodeList, start):
+                    yield var
+                start += increment
+                count -= 1
 
     def setNoCompare(self, varspecs: List[str]):
         for var in self._expand_variable_specs(varspecs):
@@ -226,14 +274,27 @@ class Pmac(object):
         """Determines the number of axes the PMAC has by determining the
            number of macro station ICs."""
         if self.numMacroStationIcs is None:
-            (returnStr, status) = self.sendCommand("i20 i21 i22 i23")
-            if not status:
-                raise PmacReadError(returnStr)
-            macroIcAddresses = returnStr[:-2].split("\r")
             self.numMacroStationIcs = 0
-            for i in range(4):
-                if macroIcAddresses[i] != "$0":
-                    self.numMacroStationIcs += 1
+            # TODO this is intended for comparison with a backup file but will
+            # not work currently because these readonly variables are commented out
+            # in the backup file
+            if "i20" in self.hardwareState.vars:
+                macroIcAddresses = []
+                for m in range(4):
+                    var_name = f"i{20+m}"
+                    macroIcAddresses.append(self.hardwareState.vars[var_name].value)
+                for i in range(4):
+                    if macroIcAddresses[i] != 0:
+                        self.numMacroStationIcs += 1
+            else:
+                (returnStr, status) = self.sendCommand("i20 i21 i22 i23")
+                if not status:
+                    raise PmacReadError(returnStr)
+                macroIcAddresses = returnStr[:-2].split("\r")
+                for i in range(4):
+                    # TODO this looking for the $ is fragile and naff
+                    if macroIcAddresses[i] != "$0":
+                        self.numMacroStationIcs += 1
         self.numAxes = self.numMacroStationIcs * 8
         if self.hardwareState.geobrick:
             self.numAxes += 8
@@ -256,44 +317,7 @@ class Pmac(object):
         """Reads the I variables."""
         log.info("Reading I-variables...")
         self.writeBackup("\n; I-variables\n")
-        roVars = set(
-            [3, 4, 6, 9, 20, 21, 22, 23, 24, 41, 58]
-            + list(range(4900, 5000))
-            + [
-                5111,
-                5112,
-                5211,
-                5212,
-                5311,
-                5312,
-                5411,
-                5412,
-                5511,
-                5512,
-                5611,
-                5612,
-                5711,
-                5712,
-                5811,
-                5812,
-                5911,
-                5912,
-                6011,
-                6012,
-                6111,
-                6112,
-                6211,
-                6212,
-                6311,
-                6312,
-                6411,
-                6412,
-                6511,
-                6512,
-                6611,
-                6612,
-            ]
-        )
+
         varsPerBlock = 100
         i = 0
         while i < 8192:
@@ -305,7 +329,7 @@ class Pmac(object):
                 raise PmacReadError(returnStr)
             ivars = enumerate(returnStr.split("\r")[:-1])
             for o, x in ivars:
-                ro = i + o in roVars
+                ro = i + o in self.ro_i_vars
                 var = PmacIVariable(i + o, self.toNumber(x), read_only=ro)
                 self.hardwareState.addVar(var)
                 motor = (i + o) / 100
@@ -695,6 +719,8 @@ class Pmac(object):
             self.referenceState.addVar(var)
         if factorySettings is not None:
             self.referenceState.copyFrom(factorySettings)
+            # TODO why does the following not work? (it looses CS feedrates)
+            # self.referenceState2 = deepcopy(factorySettings)
         if self.reference is not None:
             # when interpreting inline expressions, the actual current value of
             # variables in the hardware is used. Otherwise we would always only
@@ -706,7 +732,9 @@ class Pmac(object):
     def loadCompareWith(self):
         """Loads the compare with file."""
         self.hardwareState.loadPmcFile(self.compareWith)
-        self.numCoordSystems = self.hardwareState.vars['i68'].getIntValue()
+
+        self.numCoordSystems = self.hardwareState.vars["i68"].getIntValue() + 1
+        self.determineNumAxes()
 
     def toNumber(self, text):
         if text[0] == "$":

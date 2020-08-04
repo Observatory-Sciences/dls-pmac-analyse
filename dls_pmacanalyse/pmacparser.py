@@ -435,7 +435,7 @@ class PmacParser(object):
         result = self.parseE2()
         going = True
         while going:
-            t = self.lexer.getToken()
+            t = self.lexer.getToken(wantEol=True)
             if t == "*":
                 result = result * self.parseE2()
             elif t == "/":
@@ -444,6 +444,8 @@ class PmacParser(object):
                 result = result % self.parseE2()
             elif t == "&":
                 result = float(int(result) & int(self.parseE2()))
+            elif t == '\n':
+                going = False
             else:
                 self.lexer.putToken(t)
                 going = False

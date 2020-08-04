@@ -39,6 +39,7 @@ class PmacProgram(PmacVariable):
         self.value = []
 
     def valStr(self):
+        self.lines = self.valueText(typ=1).split()
         return self.lines
 
     def valueText(self, typ=0, ignore_ret=False):
@@ -289,7 +290,10 @@ class PmacMotionProgram(PmacProgram):
         PmacProgram.__init__(self, "prog", number, value, lines, offsets)
 
     def info(self, comment: Optional[str] = None):
-        return ProgInfo(num=self.number, exists=self.lines is not None, code=self.lines)
+        self.lines = self.valueText(typ=1).split()
+        return ProgInfo(
+            num=self.number, exists=self.lines is not None, code=self.lines
+        )
 
     def dump(self, typ=0):
         if typ == 1:

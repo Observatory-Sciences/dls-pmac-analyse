@@ -232,7 +232,7 @@ class PmacLexer(object):
         "SIN",
         "SQRT",
         "TAN",
-        "~",
+        "~"
     ]
     shortTokens = {
         "CHKS": "CHECKSUM",
