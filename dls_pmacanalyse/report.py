@@ -239,10 +239,9 @@ class Report:
             )
 
             # Comparison
-            if pmac.differences:
-                self._render(
-                    template_name="compare.htm.jinja",
-                    filename=f"{pmac.name}_compare.htm",
-                    title=f"Comparison Results for {pmac.name}",
-                    differences=pmac.differences.get_infos(),
-                )
+            self._render(
+                template_name="compare.htm.jinja",
+                filename=f"{pmac.name}_compare.htm",
+                title=f"Comparison Results for {pmac.name}",
+                differences=pmac.differences.get_infos(),
+            )

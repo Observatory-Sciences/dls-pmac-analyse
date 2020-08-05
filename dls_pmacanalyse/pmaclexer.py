@@ -241,6 +241,7 @@ class PmacLexer(object):
         "DAT": "DATE",
         "DEF": "DEFINE",
         "GAT": "GATHER",
+        "GOS": "GOSUB",
         "LOOK": "LOOKAHEAD",
         "ENDI": "ENDIF",
         "ROT": "ROTARY",
