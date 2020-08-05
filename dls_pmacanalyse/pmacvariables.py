@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from dls_pmacanalyse.errors import ConfigError
 from logging import getLogger
 from typing import Optional
 
+from dls_pmacanalyse.errors import ConfigError
 from dls_pmacanalyse.utils import tokenIsFloat, tokenToFloat
 
 log = getLogger(__name__)
@@ -62,7 +62,7 @@ class PmacVariable(object):
     def info(self, comment: Optional[str] = None) -> VariableInfo:
         raise NotImplementedError
 
-    def dump(self):
+    def dump(self) -> str:
         raise NotImplementedError
 
     def addr(self):

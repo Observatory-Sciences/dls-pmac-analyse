@@ -240,8 +240,8 @@ def main(
         global_nocompare=nocompare,
         checkPositions=checkpositions,
         debug=debug,
-        fixfile=fixfile,
-        unfixfile=unfixfile,
+        fixfile=Path(fixfile) if fixfile else None,
+        unfixfile=Path(unfixfile) if unfixfile else None,
         writeAnalysis=True,
         include=include,
     )

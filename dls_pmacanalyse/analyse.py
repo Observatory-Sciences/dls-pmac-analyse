@@ -50,11 +50,6 @@ class Analyse:
         if self.config.backupDir is not None:
             if not os.path.exists(self.config.backupDir):
                 os.makedirs(self.config.backupDir)
-            elif not os.path.isdir(self.config.backupDir):
-                raise ConfigError(
-                    "Backup path exists but is not a directory: %s"
-                    % self.config.backupDir
-                )
         # Analyse each pmac
         for name, pmac in self.config.pmacs.items():
             if self.config.onlyPmacs == () or name in self.config.onlyPmacs:
@@ -87,17 +82,17 @@ class Analyse:
                 pmac.loadReference(factoryDefs, self.config.includePaths)
 
                 # Make the comparison
-                theFixFile = None
+                matches = pmac.compare()
+
+                # generate a fixfile which can be uploaded to the brick to make
+                # it match the reference
                 if self.config.fixfile is not None:
-                    theFixFile = open(self.config.fixfile, "w")
-                theUnfixFile = None
+                    pmac.differences.make_fix_file(self.config.fixfile)
+
+                # generate an unfix file which if added to the reference would make
+                # it match the hardware
                 if self.config.unfixfile is not None:
-                    theUnfixFile = open(self.config.unfixfile, "w")
-                matches = pmac.compare(theFixFile, theUnfixFile)
-                if theFixFile is not None:
-                    theFixFile.close()
-                if theUnfixFile is not None:
-                    theUnfixFile.close()
+                    pmac.differences.make_unfix_file(self.config.unfixfile)
 
     def loadFactorySettings(self, pmac, fileName, includeFiles):
         for i in range(8192):

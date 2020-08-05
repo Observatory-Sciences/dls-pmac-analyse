@@ -109,7 +109,7 @@ class Pmac(object):
     #         text += "%s " % returnStr[:-2]
     #     log.info(text)
 
-    def compare(self, fixfile, unfixfile):
+    def compare(self):
         log.info("Comparing...")
         self.compareResult = self.hardwareState.compare(
             self.differences, self.referenceState, self.noCompare, self.name,

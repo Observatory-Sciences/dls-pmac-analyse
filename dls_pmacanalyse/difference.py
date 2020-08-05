@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import IO, Any, Dict, List, Optional, Tuple, Union, cast
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 from dls_pmacanalyse.pmacvariables import PmacVariable
 
@@ -44,11 +45,19 @@ class Differences:
     def add_plc(self, number: int, running1: bool, running2: bool):
         self.plc_run_differences[number] = (running1, running2)
 
-    def make_fix_file(self, fixfile: Optional[IO[Any]]):
-        pass
+    def make_fix_file(self, fixfile: Path):
+        with fixfile.open("w") as stream:
+            for value1, value2, reason in self.differences.values():
+                if value2 is not None:
+                    value2 = cast(PmacVariable, value2)
+                    stream.write(value2.dump())
 
-    def make_unfix_file(self, unfixfile: Optional[IO[Any]]):
-        pass
+    def make_unfix_file(self, unfixfile: Path):
+        with unfixfile.open("w") as stream:
+            for value1, value2, reason in self.differences.values():
+                if value1 is not None:
+                    value1 = cast(PmacVariable, value1)
+                    stream.write(value1.dump())
 
     @staticmethod
     def listify(item: Union[str, List[str]]) -> List[str]:
