@@ -77,6 +77,15 @@ class Differences:
             )
             for (hardware, reference, reason) in self.differences.values()
         ]
+        result += [
+            DifferenceInfo(
+                name=f"PLC{plc_num}",
+                reason="Running",
+                reference_value=[str(reference)],
+                hardware_value=[str(hardware)],
+            )
+            for plc_num, (reference, hardware) in self.plc_run_differences.items()
+        ]
         return result
 
     # TODO might want to use these
