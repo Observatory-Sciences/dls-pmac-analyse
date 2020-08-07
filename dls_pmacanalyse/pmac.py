@@ -497,7 +497,8 @@ class Pmac(object):
            of the list command to slowly build up the listing.  Note
            that the function fails if any chunk exceeds 1350 characters.
            For use in small buffer mode."""
-        lines = offsets = []
+        lines = []
+        offsets = []
         startPos = 0
         increment = 80
         while True:
