@@ -1,0 +1,128 @@
+;####################################################
+; DO NOT MODIFY: File created from src/PLC1_BRICK_initialise.psub
+;####################################################
+
+
+CLOSE
+
+;####################################################
+; PLC for putting Geobrick into defined state at startup
+; Original Author: Tom Cobb
+; Used variables: None, (P101..P132 reserved for CS mres)
+; Macros (and values):
+; PLC2 = DISABLE ; Enable or disable PLC2
+; ...
+; PLC31 = DISABLE ; Enable or disable PLC31
+; CMDS =  ;Extra commands to run after PLCS are started
+; This PLC will make sure a brick is in a known state at startup by running
+; PLC6, defining some lookahead buffers, and enabling/disabling PLCs. After
+; first run, it will just define the buffers and enable/disable PLCs
+;
+; NB Needs BRICK_M_variables.pmc loaded
+;####################################################
+
+; To make timeout more readable
+#define MilliSeconds               * 8388608/i10
+#define timer                      i5112
+; This m variable is zeroed at startup
+#define runFlag                    M4900
+; This is always set to $60000 in PLC1 so it can be used to tell an axis
+; "your limits are on, stop now"
+; Set ixx43 to $10FF to redirect limits to this variable
+#define DummyLimitsValue           M4965
+
+OPEN PLC1
+CLEAR
+
+IF (runFlag = 0)
+    ; Mark the PLC as having had its first run
+    runFlag = 1
+    DummyLimitsValue=$60000
+
+    ; Disable PLCs
+    DISABLE PLC2..31
+    timer=1000 MilliSeconds
+    WHILE(timer>0)
+    ENDW
+
+    ; Run PLC6
+    ENABLE PLC6
+
+    ; Wait for PLC6 to finish running
+    timer=100 MilliSeconds
+    WHILE(timer>0)
+    ENDW
+    WHILE(M5006=0)
+    ENDW
+ENDIF
+
+; define lookaheads for coordinate systems
+ADDRESS&16
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&15
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&14
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&13
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&12
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&11
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&10
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&9
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&8
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&7
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&6
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&5
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&4
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&3
+COMMAND"DEFINE LOOKAHEAD 50,10"
+ADDRESS&2
+COMMAND"DEFINE LOOKAHEAD 50,10"
+
+; Enable or disable all PLCs
+DISABLE PLC2
+DISABLE PLC3
+ENABLE PLC4
+DISABLE PLC5
+ENABLE PLC7
+DISABLE PLC8
+DISABLE PLC9
+DISABLE PLC10
+DISABLE PLC11
+DISABLE PLC12
+DISABLE PLC13
+DISABLE PLC14
+DISABLE PLC15
+DISABLE PLC16
+DISABLE PLC17
+DISABLE PLC18
+DISABLE PLC19
+DISABLE PLC20
+DISABLE PLC21
+DISABLE PLC22
+DISABLE PLC23
+DISABLE PLC24
+DISABLE PLC25
+DISABLE PLC26
+DISABLE PLC27
+DISABLE PLC28
+DISABLE PLC29
+DISABLE PLC30
+DISABLE PLC31
+
+; Run any extra commands
+
+
+; Disable this PLC
+DISABLE PLC1
+
+CLOSE

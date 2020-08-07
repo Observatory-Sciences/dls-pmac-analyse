@@ -1,0 +1,14 @@
+; Coarse Fine motor SYNC stack
+; COORD =  ;CS number, e.g. 2
+; PLC =  ;PLC number, should be CS number+15, e.g. 17
+; XC =  ;Axis number for Coarse X motor
+; XF =  ;Axis number for Fine X motor
+; YC =  ;Axis number for Coarse Y motor
+; YF =  ;Axis number for Fine Y motor
+substitute "COORD=2"
+substitute "PLC=17"
+substitute "XC=4"
+substitute "XF=9"
+substitute "YC=5"
+substitute "YF=10"
+include "CS_Coarse_Fine_2D_sync.pmc"

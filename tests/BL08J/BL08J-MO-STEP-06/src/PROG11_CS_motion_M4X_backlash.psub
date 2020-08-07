@@ -1,0 +1,44 @@
+; Source for PROG11 on BL08I-MO-STEP-04
+; M4 X1 and X2 motor coordinate system.
+;
+; In order to do the backlash correction, have to use a different motion 
+; programme.
+; Using the one written for BL24I DCM.  It requires the co-ordinate system
+; inverse kinematic to be modified to have the backlash distances set by 
+; this programme to be taken into account.
+;
+; Conversation with Emma who wrote it to explain how and why it works and
+; Brian to understand what the Delta Tau is doing.
+; First it notes the start position of the motors.
+; Then it demands the first of three moves, to the target position - because the
+; kinematics knows where this is for the underlying motors, but the programme
+; cannot.
+; Then it looks at the motor current and start positions to decide whether
+; correction is needed depending on the size, direction, position, resolution.
+; If correction is needed, it sets the BDST Q variable to be picked up by the
+; kinematics and then moves to the backlash correction position.  Finally it
+; resets the BDST q-variable to zero and demands the final move to the target position.
+;
+; It controls the speed of the moves using the feedrate of the co-ordinate system
+; (Isx89 in units of Isx90 - Isx89 is set by the motor record - it becomes the velocity 
+; field on the co-ordinate system motor record).  It is only the motion programme which 
+; can set the feedrate to control the moves.  This is why the functionality is split 
+; between the motion programme and the co-ordinate system which have to work together.
+;
+
+substitute "PROG=11"
+substitute "MTR1BDST=0.1"
+substitute "MTR2BDST=0.1"
+substitute "MTR3BDST=0"
+substitute "MTR4BDST=0"
+substitute "MTR5BDST=0"
+substitute "MTR6BDST=0"
+substitute "MTR1=1"
+substitute "MTR2=2"
+substitute "MTR3=0"
+substitute "MTR4=0"
+substitute "MTR5=0"
+substitute "MTR6=0"
+substitute "SLOWFEEDRATE=0.1"
+substitute "FASTFEEDRATE=0.25"
+include "PROG_CS_motion_backlash.pmc"

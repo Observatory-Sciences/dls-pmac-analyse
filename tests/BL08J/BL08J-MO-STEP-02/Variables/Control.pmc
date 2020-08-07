@@ -1,0 +1,130 @@
+; GENERATED BL08J-MO-STEP-02
+; FROM - BL08J-MO-RACK-01.xlsm
+; FULL LIST 
+; Time Stamp: 02 July 2019  10:54
+; ASSET: DSC000000
+; IP: 10.108.2.22           MAC: 00 50 C2 CB DF 97
+; -----------------------------------------------------
+
+I00 =  0                ;Serial Card Number
+I01 =  0                ;Serial Port Mode
+I02 =  1                ;Control Panel Port Activation
+; I03 =  2              ;I/O Handshake Control
+; I04 =  0              ;Communications Integrity Mode
+I05 =  2                ;PLC Program Control
+; I06 =  1              ;Error Reporting Mode
+I07 =  0                ;Phase Cycle Extension
+I08 =  2                ;Real-Time Interrupt Period
+; I09 =  2              ;Full/Abbrev Listing Control
+I10 =  1677653          ;Servo Interrupt Time
+I11 =  0                ;Programmed Move Calculation Time
+I12 =  0                ;Lookahead Time Spline Enable
+I13 =  0                ;Foreground In-Position Check Enable
+I14 =  0                ;Temporary Buffer Save Enable
+I15 =  0                ;Deg/Rad Control for User Trig Functions
+I16 =  5                ;Rotary Buffer Request On Point
+I17 =  5                ;Rotary Buffer Request Off Point
+I18 =  10               ;Fixed Buffer Full Warning Point
+I19 =  7007             ;Clock Source I-Variable Number
+; I20 = $0              ;MACRO IC 0 Base Address
+; I21 = $0              ;MACRO IC 1 Base Address
+; I22 = $0              ;MACRO IC 2 Base Address
+; I23 = $0              ;MACRO IC 3 Base Address
+; I24 = $0              ;Main DPRAM Base Address
+I25 =  0                ;Reserved
+I26 =  0                ;UMAC Electrical MACRO Enable
+I27 =  0                ;Alternate TWS Input Format
+I28 =  0                ;Display Port Disable
+I29 = $0                ;Multiplexer Port Alternate Address
+I30 =  0                ;Compensation Table Wrap Enable
+I31 =  0                ;Reserved
+I32 =  0                ;Reserved
+I33 =  0                ;Reserved
+I34 =  0                ;Reserved
+I35 =  0                ;Reserved
+I36 =  0                ;Enable/Abort Separation Control
+I37 = $0                ;Additional Wait States
+I38 =  0                ;In-Line CALL Enable
+I39 =  0                ;UBUS Accessory ID Variable Display Control
+I40 =  0                ;Watchdog Timer Reset Value
+; I41 =  0              ;I-Variable Lockout Control
+I42 =  0                ;Spline/PVT Time Control Mode
+I43 =  0                ;Auxiliary/Main Serial Port Parser Disable
+I44 =  0                ;PMAC Ladder Program Enable 
+I45 =  0                ;Foreground Binary Rotary Buffer Transfer Enable
+I46 =  0                ;P & Q-Variable Storage Location
+I47 =  0                ;DPRAM Motor Data Foreground Reporting Period
+I48 =  0                ;DPRAM Motor Data Foreground Reporting Enable
+I49 =  0                ;DPRAM Background Data Reporting Enable
+I50 =  20               ;DPRAM Background Data Reporting Period
+I51 =  0                ;Compensation Table Enable
+I52 =  7                ;CPU Frequency Control
+I53 =  12               ;Auxiliary Serial Port Baud Rate Control
+I54 =  12               ;Serial Port Baud Rate Control
+I55 =  0                ;DPRAM Background Variable Buffers Enable
+; I56 =  0              ;DPRAM ASCII Communications Interrupt Enable
+I57 =  0                ;DPRAM Motor Data Background Reporting Enable
+; I58 =  0              ;DPRAM ASCII Communications Enable
+I59 =  0                ;Motor/C.S. Group Select
+I60 =  15               ;Filtered Velocity Sample Time
+I61 =  8                ;Filtered Velocity Shift
+I62 =  0                ;Internal Message Carriage Return Control
+I63 =  1                ;Control-X Echo Enable
+I64 =  1                ;Internal Response Tag Enable
+I65 =  1058             ;User Configuration Variable
+I66 =  0                ;Reserved
+I67 = $0                ;Modbus TCP Buffer Start Address
+I68 =  15               ;Coordinate System Activation Control
+I69 = $0                ;Modbus TCP Software Control Panel Start Address
+I70 = $0                ;MACRO IC 0 Node Auxiliary Register Enable
+I71 = $0                ;MACRO IC 0 Node Protocol Type Control
+I72 = $0                ;MACRO IC 1 Node Auxiliary Register Enable
+I73 = $0                ;MACRO IC 1 Node Protocol Type Control
+I74 = $0                ;MACRO IC 2 Node Auxiliary Register Enable
+I75 = $0                ;MACRO IC 2 Node Protocol Type Control
+I76 = $0                ;MACRO IC 3 Node Auxiliary Register Enable
+I77 = $0                ;MACRO IC 3 Node Protocol Type Control
+I78 =  0                ;MACRO Type 1 Master/Slave Communications Timeout
+I79 =  0                ;MACRO Type 1 Master/Master Communications Timeout
+I80 =  0                ;MACRO Ring Check Period
+I81 =  0                ;MACRO Maximum Ring Error Count
+I82 =  0                ;MACRO Minimum Sync Packet Count
+I83 =  0                ;MACRO Parallel Ring Enable Mask
+I84 =  0                ;MACRO IC # for Master Communications
+I85 =  0                ;MACRO Ring Order Number
+I86 =  0                ;Reserved
+I87 =  0                ;Reserved
+I88 =  0                ;Reserved
+I89 =  0                ;Cutter Comp Outside Corner Break
+I90 = $39               ;VME Address Modifier
+I91 = $4                ;VME Address Modifier Don’t Care Bits
+I92 = $FF               ;VME Base Address Bits A31-A24
+I93 = $7F               ;VME Mailbox Address Bits A23-A16,ISA DPR Address A23-A16
+I94 = $A0               ;VME Mailbox Addr Bits A15-A08,ISA DPR Addr A15-A14 And Control
+I95 = $7                ;VME Interrupt Level
+I96 = $A1               ;VME Interrupt Vector 
+I97 = $0                ;VME DPRAM Base Address Bits A23-A20
+I98 = $60               ;VME DPRAM Enable
+I99 = $30               ;VME Address Width Control
+; ----------------
+; Modified order June 2014. i6800+ then 7100+ then 7000+ to help Macro settings
+I7100 =  2996           ;MaxPhase/PWM Frequency Control
+I7101 =  1              ;Phase Clock Frequency Control 
+I7102 =  1              ;Servo Clock Frequency Control 
+I7103 =  2257           ; Hardware Clock Control 
+I7104 =  3              ;PWM Deadtime/PFM Pulse Width Control
+I7105 = $7FFFC0         ;DAC Strobe Word
+I7106 = $F30DFE         ;ADC Strobe Word
+I7107 =  3              ;Phase/Servo Clock Direction
+I7000 =  2996           ;MaxPhase/PWM Frequency Control 
+I7001 =  1              ;Phase Clock Frequency Control
+I7002 =  1              ;Servo Clock Frequency Control 
+I7003 =  2257           ;Hardware Clock Control 
+I7004 =  3              ;PWM Deadtime/PFM Pulse Width Control 
+I7005 = $7FFFC0         ;DAC Strobe Word 
+I7006 = $F30DFE         ;ADC Strobe Word 
+I7007 =  0              ;Phase/Servo Clock Direction 
+; -----------------------------------------------------
+
+; End Of Control I0 to I99 Values 
+

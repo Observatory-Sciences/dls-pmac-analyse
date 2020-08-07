@@ -1,0 +1,13 @@
+<?xml version="1.0" ?><html><head><link href="analysis.css" rel="stylesheet" type="text/css"/></head><title>BL08J-MO-STEP-06 PLC17</title><body><h1>BL08J-MO-STEP-06 PLC17</h1><p id="code">0:	ADR&amp;2
+1:	Q328=((P(4800+3)*M362/(I308*32)+P(4900+3))-(P(4800+2)*M262/(I208*32)+P(4900+2)))/Q20
+18:	Q88=ATAN(Q328)
+20:	Q87=(P(4800+2)*M262/(I208*32)+P(4900+2))+Q328*Q21+Q22/COS(Q88)
+31:	IF(P(4700+2)=1)
+35:	OR(P(4700+3)=1)
+40:	P(4700+2)=0
+44:	P(4700+3)=0
+48:	Q77=Q87
+49:	Q78=Q88
+50:	ENDI
+51:	RET
+</p></body></html>

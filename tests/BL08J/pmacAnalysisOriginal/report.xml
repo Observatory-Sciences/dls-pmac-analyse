@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<testsuite tests="4" time="0" timestamp="0">
+  <testcase classname="pmac" name="BL08J-MO-STEP-01" time="0">
+    <error message="Compare mismatch">See file:///pmacAnalysis/index.htm for details</error>
+  </testcase>
+  <testcase classname="pmac" name="BL08J-MO-STEP-02" time="0">
+    <error message="Compare mismatch">See file:///pmacAnalysis/index.htm for details</error>
+  </testcase>
+  <testcase classname="pmac" name="BL08J-MO-STEP-07" time="0">
+    <error message="Compare mismatch">See file:///pmacAnalysis/index.htm for details</error>
+  </testcase>
+  <testcase classname="pmac" name="BL08J-MO-STEP-06" time="0">
+    <error message="Compare mismatch">See file:///pmacAnalysis/index.htm for details</error>
+  </testcase>
+</testsuite>

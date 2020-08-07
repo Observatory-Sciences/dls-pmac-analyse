@@ -1,0 +1,66 @@
+; BL08J-OP-HFM-06 Y jack coordinate system
+; We have three jacks and so we use the standard 3 jack CS.
+; Here is the layout of the jacks as seen from above,
+; with coordinates in (X mm, Z mm) 
+; from IDT drwaing DLS-208-11-0001-E - 5-9-17-Layout1
+;
+;               ( Y2 #5 )
+;              ( -250, 330)
+;  Z                     
+;  <----+                     ( Y1 #4 )    <== Beam
+;       |                     (0, -330)
+;       |
+;       V X     ( Y3 #6 )
+;              ( 250, 330)
+;
+; From Jon Kelly (JIRA I08-268):
+; - Vertical (positive Y) offset between the Jack spherical pivots and the optic is 408 mm.
+; - The horizontal offset from the centre of the Cone Jack to the optic is outboard (positive X) 94 mm.
+;
+; Therefore according to the definition in the CS,
+; the motors are assigned to the CS axes as follows:
+; - J1: #4
+; - J2: #6
+; - J3: #5
+;
+; Here follows the comment from the top of the CS file.
+;
+;
+;; Define motion of a generic 3 jack system. Jacks should be numbered in a 
+;; clockwise order looking from the top with J1 having the smallest Z value
+;;
+;; Defined axes:
+;; - X (addr 6) = Pitch in i15 EGUs
+;; - Y (addr 7) = Roll in i15 EGUs
+;; - Z (addr 8) = Height in same EGUs as jacks
+;;
+;; Macros (and example values):
+;; - COORD   CS number (only works for CS 1..9), e.g. 2
+;; - PLC   PLC number, should be CS number+15, e.g. 17
+;; - J1    Axisnum for jack 1, e.g. 2
+;; - J1X   global X co-ord of J1 base in mm, e.g. 0
+;; - J1Z   global Z co-ord of J1 base in mm, e.g. -100
+;; - J2    Axisnum for jack 2, e.g. 3
+;; - J2X   global X co-ord of J2 base in mm, e.g. 50
+;; - J2Z   global Z co-ord of J2 base in mm, e.g. 100
+;; - J3    Axisnum for jack 3, e.g. 4
+;; - J3X   global X co-ord of J3 base in mm, e.g. -50
+;; - J3Z   global Z co-ord of J3 base in mm, e.g. 100
+;; - MD    depth of surface in mm, e.g. 10
+;; - MCX   global X co-ord of measure point in mm, e.g. 0
+;; - MCZ   global Z co-ord of measure in mm, e.g. 10
+substitute "COORD=3"
+substitute "PLC=18"
+substitute "J1=4"
+substitute "J1X=0"
+substitute "J1Z=-330"
+substitute "J2=6"
+substitute "J2X=250"
+substitute "J2Z=330"
+substitute "J3=5"
+substitute "J3X=-250"
+substitute "J3Z=330"
+substitute "MD=408"
+substitute "MCX=94"
+substitute "MCZ=0"
+include "CS_3jack.pmc"

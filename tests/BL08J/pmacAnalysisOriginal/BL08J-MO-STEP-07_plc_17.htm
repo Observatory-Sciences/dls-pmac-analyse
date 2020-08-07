@@ -1,0 +1,12 @@
+<?xml version="1.0" ?><html><head><link href="analysis.css" rel="stylesheet" type="text/css"/></head><title>BL08J-MO-STEP-07 PLC17</title><body><h1>BL08J-MO-STEP-07 PLC17</h1><p id="code">0:	ADR&amp;2
+1:	Q87=((P(4800+2)*M262/(I208*32)+P(4900+2))+(P(4800+4)*M462/(I408*32)+P(4900+4)))/2
+18:	Q88=(P(4800+2)*M262/(I208*32)+P(4900+2))-(P(4800+4)*M462/(I408*32)+P(4900+4))
+34:	IF(P(4700+2)=1)
+38:	OR(P(4700+4)=1)
+43:	P(4700+2)=0
+47:	P(4700+4)=0
+51:	Q77=Q87
+52:	Q78=Q88
+53:	ENDI
+54:	RET
+</p></body></html>

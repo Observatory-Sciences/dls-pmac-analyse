@@ -1,0 +1,4 @@
+; Load the PLC 1 to setup lookaheads and reset umacs.
+substitute "CMDS=COMMAND\"#1$*\"\,COMMAND\"#2$*\"\,COMMAND\"#3$*\""
+substitute "PLC2=ENABLE,PLC4=ENABLE,PLC7=ENABLE, PLC17=ENABLE"
+include "PLC1_BRICK_initialise.pmc"

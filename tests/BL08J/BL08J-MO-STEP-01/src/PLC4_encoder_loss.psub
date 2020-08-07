@@ -1,0 +1,2 @@
+substitute "ONM1=3, ONM2=2, ONM3=3, ONM4=3, ONM5=2, ONM6=0, ONM7=0, ONM8=0"
+include "PLC4_encoder_loss.pmc"

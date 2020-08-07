@@ -1,0 +1,15 @@
+;Log created by PMAC Win32 Driver from file: \\software\dls_sw\work\motion\Common\GB_ECT_Default.pmc
+;
+000001:            Processing Macro File: \\software\dls_sw\work\motion\Common\GB_ECT_Default.pmc
+000002:            $60450
+000003:            Total Lines: 105
+000004:            Compiling for PLCC: \\software\dls_sw\work\motion\Common\GB_ECT_Default.PMA = \\software\dls_sw\work\motion\Common\GB_ECT_Default.56K
+000005:            PLCC Compiling PMAC file: \\software\dls_sw\work\motion\Common\GB_ECT_Default.PMA
+000006:            Success in Compiling to output file: \\software\dls_sw\work\motion\Common\GB_ECT_Default.56K
+000007:            No PLCC(s) were compiled
+000008:            Downloading file: \\software\dls_sw\work\motion\Common\GB_ECT_Default.56K
+000009:            Downloaded 106 lines in 81 msecs
+000010:            Writing MAP file: \\software\dls_sw\work\motion\Common\GB_ECT_Default.MAP
+000011:            Writing macro dictionary table: \\software\dls_sw\work\motion\Common\GB_ECT_Default.TBL
+000012:            Total Warnings: 0
+000013:            Total Errors: 0

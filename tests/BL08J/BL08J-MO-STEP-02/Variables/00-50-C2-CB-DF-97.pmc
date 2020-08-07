@@ -1,0 +1,44 @@
+; SPREADSHEET GENERATED BL08J-MO-STEP-02
+; FROM - BL08J-MO-RACK-01.xlsm
+; Current(AMPS) Offset .pmc File 
+; Time Stamp: 02 July 2019  10:54
+; ASSET: DSC000000
+; MAC: 00 50 C2 CB DF 97
+; -----------------------------------------------------
+
+
+; ----- Axis 1
+I129 =                  ;Output/First Phase Offset
+I179 =                  ;Second Phase Offset
+
+; ----- Axis 2
+I229 =                  ;Output/First Phase Offset
+I279 =                  ;Second Phase Offset
+
+; ----- Axis 3
+I329 =                  ;Output/First Phase Offset
+I379 =                  ;Second Phase Offset
+
+; ----- Axis 4
+I429 =                  ;Output/First Phase Offset
+I479 =                  ;Second Phase Offset
+
+; ----- Axis 5
+I529 =                  ;Output/First Phase Offset
+I579 =                  ;Second Phase Offset
+
+; ----- Axis 6
+I629 =                  ;Output/First Phase Offset
+I679 =                  ;Second Phase Offset
+
+; ----- Axis 7
+I729 =                  ;Output/First Phase Offset
+I779 =                  ;Second Phase Offset
+
+; ----- Axis 8
+I829 =                  ;Output/First Phase Offset
+I879 =                  ;Second Phase Offset
+; -----------------------------------------------------
+
+; End Current Offset Values 
+

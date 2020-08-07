@@ -1,0 +1,61 @@
+;*************************
+; BL08J-MO-STEP-07, AKA BL08I-MO-STEP-07
+; Location: BL08I-MO-RACK-02
+;
+; Axis summary
+; 1 BL08J-AL-SLITS-01:X:PLUS
+; 2 BL08J-AL-SLITS-01:Y:PLUS
+; 3 BL08J-AL-SLITS-01:X:MINUS
+; 4 BL08J-AL-SLITS-01:Y:MINUS
+;
+;*************************
+
+END GATHER
+DELETE GATHER
+DELETE TRACE
+
+; First we want to clear all the PLCs and CSs
+#include "../Common/clear_PLC_CS.pmc"
+
+; Setup the current offsets
+;#include "Variables/00-50-C2-C0-27-08.pmc"
+
+; Add the axes and control I Variables
+#include "Variables/Axis.pmc"
+#include "Variables/Control.pmc"
+
+; And the m-variable definitions
+#include "../Common/BRICK_M_variables.pmc"
+
+; a PLC to setup the internal amps
+#include "PLCs/PLC6_Initialise_and_Reset.pmc"
+
+;#############################################################################
+; Controls section
+; Uncomment this when brick is handed over
+;#############################################################################
+
+; a PLC to initialise the brick
+#include "PLCs/PLC1_BRICK_initialise.pmc"
+
+; a PLC to do motion stop
+#include "PLCs/PLC2_motion_stop.pmc"
+
+; a PLC to do encoder loss and amp status protection
+#include "PLCs/PLC4_encoder_loss.pmc"
+
+; a PLC to kill axes after a move
+#include "PLCs/PLC7_power_down_when_idle.pmc"
+
+; Finally add some homing PLCs
+#include "PLCs/PLC11_S1_HM.pmc"
+#include "PLCs/PLC12_D8_HM.pmc"
+
+; a motion program for the CS moves
+#include "PROGs/PROG10_CS_motion.pmc"
+
+; Disable soft limits
+;i113,8,100=0
+;i114,8,100=0
+
+#include "../BL08J-MO-STEP-07.unfix"

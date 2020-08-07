@@ -9,8 +9,9 @@
             "type": "python",
             "request": "launch",
             "module": "dls_pmacanalyse.dls_pmacanalyse",
-            // "args": ["--loglevel", "debug"],
-            "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-06"],
+            "args": ["--loglevel", "debug"],
+            // "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-06"],
+            // "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-01"],
             "cwd": "/home/giles/dls/BL08J"
         },
         {

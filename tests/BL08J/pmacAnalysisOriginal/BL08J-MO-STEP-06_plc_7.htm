@@ -1,0 +1,36 @@
+<?xml version="1.0" ?><html><head><link href="analysis.css" rel="stylesheet" type="text/css"/></head><title>BL08J-MO-STEP-06 PLC7</title><body><h1>BL08J-MO-STEP-06 PLC7</h1><p id="code">0:	IF(I(5111+(7&amp;30)*50+7%2)&lt;0)
+10:	I(5111+(7&amp;30)*50+7%2)=50*8388608/I10
+20:	P700=1
+22:	WHILE(P700!&gt;8)
+24:	IF(P(P700+700)&gt;0)
+30:	IF(M(P700*100+40)=1ANDM(P700*100+39)=1)
+40:	P(P700+764)=P(P700+764)+50
+45:	IF(P(P700+764)!&lt;P(P700+700))
+50:	IF(P(P700+732)=0)
+55:	ADR#P700
+56:	CMD&quot;K&quot;
+57:	ELSE
+58:	I(P700*100+77)=INT(P(P700+732)/100)/100*(P(P700+732)%100)
+69:	ENDI
+70:	P(P700+764)=0
+73:	ENDI
+74:	ELSE
+75:	P(P700+764)=0
+78:	ENDI
+79:	ENDI
+80:	P700=P700+1
+83:	ENDW
+84:	ENDI
+85:	P700=1
+87:	WHILE(P700!&gt;8)
+89:	IF(P(P700+732)!=0)
+95:	IF(M(P700*100+40)=0ANDM(P700*100+39)=1)
+105:	IF(I(P700*100+77)&lt;INT(P(P700+732)/100))
+113:	I(P700*100+77)=INT(P(P700+732)/100)
+120:	ENDI
+121:	ENDI
+122:	ENDI
+123:	P700=P700+1
+126:	ENDW
+127:	RET
+</p></body></html>

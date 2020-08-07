@@ -1,0 +1,184 @@
+; SPREADSHEET GENERATED BL08I-MO-STEP-06
+; FROM - BL08I-MO-RACK-02.xlsm
+; Time Stamp: 05 November 2018            09:20
+; ASSET: DSC000000          
+; IP: 172.23.xxx.xxx        MAC: 00 50 C2 xx xx xx
+; DSP: 
+; -----------------------------------------------------
+P600..699 = 0   ;Clear All PLC6 Variables on first load
+
+CLOSE
+OPEN PLC6
+CLEAR
+i5411 = 2000 * 8388608/i10    ;First Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;Set Axis Type and CLRF Bits: Axis  1 
+Command "wx$78014, $F8CDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  1 
+Command "wx$78014, $F84DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  1 
+Command "wx$78014, $F00DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M148 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  2 
+Command "wx$78014, $F9CDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  2 
+Command "wx$78014, $F94DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  2 
+Command "wx$78014, $F10DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M248 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  3 
+Command "wx$78014, $FACDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  3 
+Command "wx$78014, $FA4DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  3 
+Command "wx$78014, $F20DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M348 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  4 
+Command "wx$78014, $FBCDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  4 
+Command "wx$78014, $FB4DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  4 
+Command "wx$78014, $F30DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M448 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  5 
+Command "wx$78114, $F8CDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  5 
+Command "wx$78114, $F84DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  5 
+Command "wx$78114, $F00DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M548 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  6 
+Command "wx$78114, $F9CDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  6 
+Command "wx$78114, $F94DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  6 
+Command "wx$78114, $F10DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M648 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  7 
+Command "wx$78114, $FACDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  7 
+Command "wx$78114, $FA4DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  7 
+Command "wx$78114, $F20DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M748 = 0 ;reset phase error
+
+;Set Axis Type and CLRF Bits: Axis  8 
+Command "wx$78114, $FBCDFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET CLRF Bit: Axis  8 
+Command "wx$78114, $FB4DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+
+;RESET Protection Bit: Axis  8 
+Command "wx$78114, $F30DFE"
+i5411 = 50 * 8388608/i10    ;Delay
+WHILE (i5411 > 0)
+END WHILE
+ M848 = 0 ;reset phase error
+
+;Configurations settings 0=Brushless or DC,  1 = Stepper
+P601 = 1
+P602 = 1
+P603 = 1
+P604 = 1
+P605 = 1
+P606 = 1
+P607 = 1
+P608 = 1
+
+DISABLE PLC6
+CLOSE
+; -----------------------------------------------------
+
+; End Of PLC6
+

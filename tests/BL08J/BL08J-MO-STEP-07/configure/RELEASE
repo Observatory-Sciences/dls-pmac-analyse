@@ -1,0 +1,10 @@
+SUPPORT= /dls_sw/prod/R3.14.12.7/support
+
+# PMACUTIL must be specified
+PMACUTIL= $(SUPPORT)/pmacUtil/5-8
+
+# PMACCORD contains co-ordinate system pmc files
+PMACCOORD= $(SUPPORT)/pmacCoord/1-60
+
+# Other modules can also be specified here
+PMAC = $(SUPPORT)/pmac/2-4-10

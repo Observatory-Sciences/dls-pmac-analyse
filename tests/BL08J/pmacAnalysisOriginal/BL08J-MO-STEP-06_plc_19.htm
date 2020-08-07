@@ -1,0 +1,12 @@
+<?xml version="1.0" ?><html><head><link href="analysis.css" rel="stylesheet" type="text/css"/></head><title>BL08J-MO-STEP-06 PLC19</title><body><h1>BL08J-MO-STEP-06 PLC19</h1><p id="code">0:	ADR&amp;4
+1:	Q87=((P(4800+7)*M762/(I708*32)+P(4900+7))+(P(4800+8)*M862/(I808*32)+P(4900+8)))/2
+18:	Q88=(P(4800+7)*M762/(I708*32)+P(4900+7))-(P(4800+8)*M862/(I808*32)+P(4900+8))
+34:	IF(P(4700+7)=1)
+38:	OR(P(4700+8)=1)
+43:	P(4700+7)=0
+47:	P(4700+8)=0
+51:	Q77=Q87
+52:	Q78=Q88
+53:	ENDI
+54:	RET
+</p></body></html>

@@ -1,0 +1,71 @@
+;*************************
+; BL08J-MO-STEP-06, AKA BL08I-MO-STEP-06
+; Location: BL08I-MO-RACK-02
+;
+; Axis summary:
+; #1 - BL08J-DI-PHDGN-07:Y
+; #2 - BL08J-OP-HFM-06:X1
+; #3 - BL08J-OP-HFM-06:X2
+; #4 - BL08J-OP-HFM-06:Y1
+; #5 - BL08J-OP-HFM-06:Y2
+; #6 - BL08J-OP-HFM-06:Y3
+; #7 - BL08J-OP-HFM-06:BEND1
+; #8 - BL08J-OP-HFM-06:BEND2
+;
+; Commissioning notes:
+; https://confluence.diamond.ac.uk/x/DjwoBQ
+;*************************
+
+END GATHER
+DELETE GATHER
+DELETE TRACE
+
+; First we want to clear all the PLCs and CSs
+#include "../Common/clear_PLC_CS.pmc"
+
+; Setup the current offsets
+;#include "Variables/00-50-C2-CB-DF-66.pmc"
+
+; Add the axes and control I Variables
+#include "Variables/Axis.pmc"
+#include "Variables/Control.pmc"
+
+; And the m-variable definitions
+#include "../Common/BRICK_M_variables.pmc"
+
+; a PLC to setup the internal amps
+#include "PLCs/PLC6_Initialise_and_Reset.pmc"
+
+;#############################################################################
+; Controls section
+; Uncomment this when brick is handed over
+;#############################################################################
+
+; a PLC to initialise the brick
+#include "PLCs/PLC1_BRICK_initialise.pmc"
+
+; a PLC to do motion stop
+; AAW: Removed because I think motion stop is not done by this method
+; motion stop button should kill rack power
+;#include "PLCs/PLC2_motion_stop.pmc"
+
+; a PLC to do encoder loss and amp status protection
+#include "PLCs/PLC4_encoder_loss.pmc"
+
+; a PLC to kill axes after a move
+#include "PLCs/PLC7_power_down_when_idle.pmc"
+
+; Homing PLCs
+#include "PLCs/PLC11_MJ2_HM.pmc"
+#include "PLCs/PLC12_DJ7_HM.pmc"
+
+; Coordinate systems
+#include "PLCs/PLC17_M6X_CS.pmc"
+#include "PLCs/PLC18_M6Y_CS.pmc"
+#include "PLCs/PLC19_M6Bend_CS.pmc"
+
+; a motion program for the CS moves
+#include "PROGs/PROG10_CS_motion.pmc"
+
+
+#include "../BL08J-MO-STEP-06.unfix"

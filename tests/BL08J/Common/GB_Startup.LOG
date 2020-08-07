@@ -1,0 +1,16 @@
+;Log created by PMAC Win32 Driver from file: \\software\dls_sw\work\motion\Common\GB_Startup.pmc
+;
+000001:            Processing Macro File: \\software\dls_sw\work\motion\Common\GB_Startup.pmc
+000002:            $60450
+000003:            Including file: \\software\dls_sw\work\motion\Common\BRICK_M_variables.pmc
+000004:            Total Lines: 12171
+000005:            Compiling for PLCC: \\software\dls_sw\work\motion\Common\GB_Startup.PMA = \\software\dls_sw\work\motion\Common\GB_Startup.56K
+000006:            PLCC Compiling PMAC file: \\software\dls_sw\work\motion\Common\GB_Startup.PMA
+000007:            Success in Compiling to output file: \\software\dls_sw\work\motion\Common\GB_Startup.56K
+000008:            No PLCC(s) were compiled
+000009:            Downloading file: \\software\dls_sw\work\motion\Common\GB_Startup.56K
+000010:            Downloaded 11207 lines in 5057 msecs
+000011:            Writing MAP file: \\software\dls_sw\work\motion\Common\GB_Startup.MAP
+000012:            Writing macro dictionary table: \\software\dls_sw\work\motion\Common\GB_Startup.TBL
+000013:            Total Warnings: 0
+000014:            Total Errors: 0

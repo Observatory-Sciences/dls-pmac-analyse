@@ -1,0 +1,27 @@
+<?xml version="1.0" ?><html><head><link href="analysis.css" rel="stylesheet" type="text/css"/></head><title>Motion Program 2 for BL08J-MO-STEP-01</title><body><h1>Motion Program 2 for BL08J-MO-STEP-01</h1><p id="code">0:	LIN
+1:	INC
+2:	TA50
+3:	TS0
+4:	TM10
+5:	CMD&quot;End Gat&quot;
+8:	CMD&quot;Del Gat&quot;
+11:	CMD&quot;Def Gat&quot;
+14:	DWE0
+15:	CMD&quot;Gat&quot;
+17:	DWE0
+18:	P20=0
+20:	WHILE(P20&lt;1000)
+22:	X100
+24:	DWE50
+25:	P20=P20+100
+28:	ENDW
+29:	WHILE(P20&gt;0)
+31:	X-100
+33:	DWE50
+34:	P20=P20-100
+37:	ENDW
+38:	DWE0
+39:	CMD&quot;End Gat&quot;
+42:	DWE0
+43:	RET
+</p></body></html>

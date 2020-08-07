@@ -1,0 +1,80 @@
+;Patch for Briquette values
+;Rationalised so only differences from GB_Startup.pmc are included TPB 31/10/2012
+;changes WY:$35xx to I80yy to ease EPICS use TPB 9/4/2013
+CLOSE DEL GAT
+; Clock setup parameters
+;19.677 max phase
+;9.839 KHz PWM  9.839KHz phase 4.917KHz servo
+I7100=2996 I6800=2996
+I7000=2996
+I7101=1 I6801=1
+I7001=1
+I7102=1 I6802=1
+I7002=1
+I10=1705244
+I7004=0 I7104=0
+I7003=2258 I7103=2258	; changed from 1234- ECO mod makes 1234 unsustainable-crap I control
+
+; Encoder Conversion Table Setup
+;As standard except 24Bit + Offset 24  (No shift remains)
+;Note you will need to reduced all the Gains by a factor of 32 - or reduce Ixx08 Ixx09
+;Plus some other features which are integer e.g Friction Feed Foward may now act weirdly.
+;You could leave the original settigns if you like.
+I8009=$18018  ;WY:$350A,$018018
+I8012=$18018  ;WY:$350D,$018018
+I8015=$18018  ;WY:$3510,$018018
+I8018=$18018  ;WY:$3513,$018018
+I8021=$18018  ;WY:$3516,$018018
+I8024=$18018  ;WY:$3519,$018018
+I8027=$18018  ;WY:$351C,$018018
+I8030=$18018  ;WY:$351F,$018018
+
+
+; PWM scale factor settings
+;originally we were told this should be I7x00 + 10%
+;Then = I7x00
+;Now = I7x00 - 5%  ...  are we guessing?
+I166=I7000*.95  
+I266=I7000*.95  
+I366=I7000*.95  
+I466=I7000*.95  
+I566=I7100*.95
+I666=I7100*.95
+I766=I7100*.95
+I866=I7100*.95
+
+; Current Loop Gainsappear OK for 3A Motors
+I161=0.03 I162=0.3 I176=0.3
+I261=0.03 I262=0.3 I276=0.3
+I361=0.03 I362=0.3 I376=0.3
+I461=0.03 I462=0.3 I476=0.3
+I561=0.03 I562=0.3 I576=0.3
+I661=0.03 I662=0.3 I676=0.3
+I761=0.03 I762=0.3 I776=0.3
+I861=0.03 I862=0.3 I876=0.3
+
+; I2T Protection Settings (TPB puzzeling ixx69 is Integer so DP irrelevent?) 
+I157=0 I158=0 I169=5.3  ; was 42.6666666666666667  
+I257=0 I258=0 I269=5.3
+I357=0 I358=0 I369=5.3
+I457=0 I458=0 I469=5.3
+I557=0 I558=0 I569=5.3
+I657=0 I658=0 I669=5.3
+I757=0 I758=0 I769=5.3
+I857=0 I858=0 I869=5.3
+
+;4096=6400/rev 6400 =10000/rev   Weird or What!
+I171,8,100=6400
+
+I191,8,100=$500000  ; not got to the bottom of this yet!
+
+
+; PID values for Stepper motors only
+I130,8,100=1024
+I131,8,100=0
+I132,8,100=265
+I133,8,100=1024
+I134,8,100=1
+I135,8,100=0
+
+;End of Patch

@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<testsuite tests="1" time="0" timestamp="0">
+  <testcase classname="pmac" name="BL08J-MO-STEP-02" time="0">
+    <error message="Compare mismatch">See file:///backup/index.htm for details</error>
+  </testcase>
+</testsuite>

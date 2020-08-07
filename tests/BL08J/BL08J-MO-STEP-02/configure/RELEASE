@@ -1,0 +1,8 @@
+# PMACUTIL must be specified
+PMACUTIL = /dls_sw/prod/R3.14.12.7/support/pmacUtil/5-8-1
+
+# PMACCORD contains co-ordinate system pmc files
+PMACCOORD = /dls_sw/prod/R3.14.12.7/support/pmacCoord/1-60-1
+
+# Other modules can also be specified here
+PMAC = /dls_sw/prod/R3.14.12.7/support/pmac/2-4-11

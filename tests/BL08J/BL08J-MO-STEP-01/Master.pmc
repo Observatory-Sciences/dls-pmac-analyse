@@ -1,0 +1,49 @@
+ ; First we want to clear all the PLCs and CSs
+#include "../Common/clear_PLC_CS.pmc"
+
+; Add the axes and control I Variables
+#include "Variables/Axis.pmc"
+#include "Variables/Control.pmc"
+
+; And the m-variable definitions
+#include "../Common/BRICK_M_variables.pmc"
+
+; a PLC to setup the internal amps
+#include "PLCs/PLC6_Initialise_and_Reset.pmc"
+
+;#############################################################################
+; Controls section
+; Uncomment this when brick is handed over
+;#############################################################################
+
+; a PLC to initialise the brick
+#include "PLCs/PLC1_BRICK_initialise.pmc"
+
+; a PLC to do motion stop
+#include "PLCs/PLC2_motion_stop.pmc"
+
+; a PLC to do encoder loss and amp status protection
+#include "PLCs/PLC4_encoder_loss.pmc"
+
+; a PLC to kill axes after a move
+#include "PLCs/PLC7_kill_when_idle.pmc"
+
+; Finally add some homing PLCs
+#include "PLCs/PLC11_T1_HM.pmc"
+#include "PLCs/PLC12_ZP_HM.pmc"
+
+;#############################################################################
+; PROGs below
+;#############################################################################
+
+; Trajectory scan program
+#include "PROGs/trajectory_scan_brickette.pmc"
+
+; General CS program
+#include "PROGs/PROG10_CS_motion.pmc"
+
+; Coordinate systems
+; combined coarse and fine motors
+#include "PLCs/PLC17_T1SYNC_CS.pmc"
+
+#include "../BL08J-MO-STEP-01.unfix"

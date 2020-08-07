@@ -1,0 +1,44 @@
+; BL08J-OP-HRM-06 X coordinate system
+; We have two jacks so we use the standard 2 Jack CS
+; The X jacks are attached at the same point as the 
+; Y jacks, so the arrangement is as follows,
+; with coordinates in (X, Z).
+;
+;  Z         (X2 #3)......(X1 #2)
+;  <--+     (0, 330)      (0, -330)
+;     |
+;     V X
+;
+; From Jon Kelly (JIRA I08-268):
+; - The horizontal offset from the centre of the Cone Jack to the optic is outboard (positive X) 94 mm.
+;
+;
+; Here follows the comment from the top of the CS template
+;
+;;################################################
+;; \file
+;; Define motion for 2 jack system
+;;
+;; Original Author: Ronaldo Mercado
+;;
+;; Defined axes:
+;; - X (addr 6) = height of surface in EGUs, PIVOT away from J1
+;; - Y (addr 7) = angle of the surface in i15 units
+;;
+;; Macros:
+;; - COORD  CS number, e.g. 2
+;; - PLC PLC number, should be CS number+15, e.g. 17
+;; - J1  Axisnum for Jack 1, e.g. 1
+;; - J2  Axisnum for Jack 2, e.g. 2
+;; - DIST Distance between 2 jacks when they are in the zero position
+;; - PIVOT Distance from jack 1 to pivot point of the surface
+;; - DEPTH Depth of the surface on the mount
+;################################################
+substitute "COORD=2"
+substitute "PLC=17"
+substitute "J1=2"
+substitute "J2=3"
+substitute "DIST=660"
+substitute "PIVOT=330"
+substitute "DEPTH=94"
+include "CS_2jack.pmc"

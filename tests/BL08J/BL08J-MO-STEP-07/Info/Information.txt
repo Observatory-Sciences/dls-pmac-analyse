@@ -1,0 +1,79 @@
+BL08I-MO-STEP-07 (AKA BL18J-MO-STEP-07)
+10.108.2.7
+
+RACK ID                      STEP-07
+Axis No                       1 
+Description                  Description
+Enc Res                      inc
+Pos Direction                CCW
+Upper Limit                  +5678
+Lower Limit                  -1234
+Notes                        Additional
+
+RACK ID                      STEP-07
+Axis No                       2 
+Description                  S3 US X
+Enc Res                      1nm
+Pos Direction                To Ring
+Upper Limit                  8918267
+Lower Limit                  -8502920
+Notes                        Homes on the reference mark in the middle of travel
+
+RACK ID                      STEP-07
+Axis No                       3 
+Description                  S3 US Y
+Enc Res                      1nm
+Pos Direction                down
+Upper Limit                   8425346 
+Lower Limit                  -8275220
+Notes                        Homes on the reference mark in the middle of travel
+
+RACK ID                      STEP-07
+Axis No                       4 
+Description                  S3 DS X
+Enc Res                      1nm
+Pos Direction                To ring (In?)
+Upper Limit                   8261469 
+Lower Limit                  -8244101
+Notes                        Homes on the reference mark in the middle of travel
+
+RACK ID                      STEP-07
+Axis No                       5 
+Description                  S3 DS Y
+Enc Res                      1nm
+Pos Direction                down
+Upper Limit                   8036410 
+Lower Limit                  -8730308
+Notes                        Homes on the reference mark in the middle of travel
+
+RACK ID                      STEP-07
+Axis No                       6 
+Description                  Description
+Enc Res                      inc
+Pos Direction                CCW
+Upper Limit                  +5678
+Lower Limit                  -1234
+Notes                        Additional
+
+RACK ID                      STEP-07
+Axis No                       7 
+Description                  Description
+Enc Res                      inc
+Pos Direction                CCW
+Upper Limit                  +5678
+Lower Limit                  -1234
+Notes                        Additional
+
+RACK ID                      STEP-07
+Axis No                       8 
+Description                  Description
+Enc Res                      inc
+Pos Direction                CCW
+Upper Limit                  +5678
+Lower Limit                  -1234
+Notes                        Additional
+
+; -----------------------------------------------------
+
+; End Of Data Base File 
+

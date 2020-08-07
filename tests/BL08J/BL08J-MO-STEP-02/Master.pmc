@@ -1,0 +1,61 @@
+;*************************
+; BL08J-MO-STEP-02
+; Location: BL08J-MO-RACK-01
+;
+; Axis summary:
+; #1 -
+; #2 -
+; #3 -
+; #4 -
+; #5 -
+; #6 -
+; #7 -
+; #8 - S3 shutter
+;
+; Commissioning notes:
+; https://confluence.diamond.ac.uk/x/DjwoBQ
+;*************************
+
+END GATHER
+DELETE GATHER
+DELETE TRACE
+
+; First we want to clear all the PLCs and CSs
+#include "../Common/clear_PLC_CS.pmc"
+
+; Setup the current offsets
+;#include "Variables/00-50-C2-CB-DF-97.pmc"
+
+; Add the axes and control I Variables
+#include "Variables/Axis.pmc"
+#include "Variables/Control.pmc"
+
+; And the m-variable definitions
+#include "../Common/BRICK_M_variables.pmc"
+
+; a PLC to setup the internal amps
+#include "PLCs/PLC6_Initialise_and_Reset.pmc"
+
+;#############################################################################
+; Controls section
+; Uncomment this when brick is handed over
+;#############################################################################
+
+; a PLC to initialise the brick
+#include "PLCs/PLC1_BRICK_initialise.pmc"
+
+; a PLC to do motion stop
+#include "PLCs/PLC2_motion_stop.pmc"
+
+; a PLC to do encoder loss and amp status protection
+#include "PLCs/PLC4_encoder_loss.pmc"
+
+; a PLC to kill axes after a move
+#include "PLCs/PLC7_Motion_Control_Constants.pmc"
+#include "PLCs/PLC7_power_down_when_idle.pmc"
+
+; Homing PLCs
+#include "PLCs/PLC11_S3J_HM.pmc"
+#include "PLCs/PLC12_OSA_HM.pmc"
+
+#include "../BL08J-MO-STEP-02.unfix"

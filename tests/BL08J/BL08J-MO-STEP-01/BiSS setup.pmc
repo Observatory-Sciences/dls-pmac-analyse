@@ -1,0 +1,60 @@
+;IDS3010 32-bit BiSS-C
+
+;Assign Mx99 to the Servo IC global Control registers
+M199->X:$78B2F,24,U
+M599->X:$78B3F,24,U
+
+;Assign Mx98 Pointers to the ACC 910 Abs Encoder Control registers
+M198->X:$78B20,24,U
+M298->X:$78B24,24,U
+M398->X:$78B28,24,U
+M498->X:$78B2C,24,U 
+
+M598->X:$78B30,24,U
+M698->X:$78B34,24,U
+
+;Assign Mx97 to the Absolute Readback Channel A
+M197->Y:$78B20,24,U
+M297->Y:$78B24,24,U
+M397->Y:$78B28,24,U
+M497->Y:$78B2C,24,U
+M597->Y:$78B30,24,U
+M697->Y:$78B34,24,U
+
+;Assign Mx96 to the Absolute Readback Channel B
+M196->Y:$78B21,24,U
+M296->Y:$78B25,24,U
+M396->Y:$78B29,24,U
+M496->Y:$78B2D,24,U
+M596->Y:$78B31,24,U
+M696->Y:$78B35,24,U
+
+;================================================
+;Add These Lines to PLC1 to initialise the Encoder on Power Up
+
+M199 = $63000B   ; default seems to work consult ACC910
+M599 = $63000B
+
+M198=$2114A0
+M298=$2114A0
+M398=$2114A0
+M498=$2114A0
+M598=$2114A0
+M698=$2114A0
+
+;power on
+I980,3,100 = 0
+//I995,3,100 = $A00000 ;signed 32 bit
+I995,3,100 = $0 ;power-up as hmz
+
+//I910 = $78B2C ;channel 4
+//I1010 = $78B30 ;channel 5
+//I1110 = $78B34 ;channel 6
+I910,3,100 = $0 ;power-up as hmz
+
+I908,3,100 = 1 ;position-loop scale factor
+I909,3,100 = 1 ;velocity-loop scale factor
+
+I967,3,100 = 8388607 ;position error limit
+
+

@@ -1,0 +1,26 @@
+;################################################
+;; \file
+;; For a two axis mirror bender mechanism, define
+;; coordinate system axes for ellipticity and curvature paramters
+;; without doing any sort of calculation to physical units.
+;; Used on J08 M6.
+;;
+;; Author: Andrew Wilson
+;;
+;; Defined axes:
+;; - X (pmac addr 7) - Curvature in EGUs = average of motor positions
+;; - Y (pmac addr 8) - Ellipticity in EGUs = difference between motor positions
+;;
+;; Macros
+;; - COORD = 4  CS number, e.g. 2
+;; - PLC = 19  PLC number, should be CS number+15, e.g. 17
+;; - J1 = 7  Axisnum for bending actuator 1
+;; - J2 = 8  Axisnum for bending actuator 2
+;;
+;################################################
+
+substitute "COORD=4"
+substitute "PLC=19"
+substitute "J1=7"
+substitute "J2=8"
+include "CS_bender_uncalibrated.pmc"

@@ -1,0 +1,225 @@
+;####################################################
+; DO NOT MODIFY: File created from src/PLC17_T1SYNC_CS.psub
+;####################################################
+
+; Coarse Fine motor SYNC stack
+; COORD =  ;CS number, e.g. 2
+; PLC =  ;PLC number, should be CS number+15, e.g. 17
+; XC =  ;Axis number for Coarse X motor
+; XF =  ;Axis number for Fine X motor
+; YC =  ;Axis number for Coarse Y motor
+; YF =  ;Axis number for Fine Y motor
+CLOSE
+;##########################################################################
+;
+;; Define motion for two coarse/fine motor stacks where the fine motor stage is placed on top of the coarse motor stage.
+;; The fine motor encoder must cover the entire range of travel of the coarse+fine combined stage motion. Typically an 
+;; interferometer might be used as the encoder. The reading from this will change if either the coarse or fine stage is moved.
+;; The coarse motor is expected to have its own encoder or be run open loop with the same engineering units as the fine stage.
+;; The motion program applies the SAME DEMAND to both the fine and coarse stages. Provided the fine motor FE is set wide
+;; then the motion should succeed.
+;; 
+;; The CS provides a fine motor only mode for small scans in the range of the piezo:
+;;  Q21 = 0 then apply the same demand to both coarse and fine motors
+;;  Q21 = 1 then only apply the demand to fine motor (limited by piezo range)    
+;;   
+;; NB1: Coarse and fine motor should be calibrated so they have the same zero. 
+;;;
+;; Defined axes:
+;; - pmac X (Addr 6, Q77 demand) - X Combined Coarse & Fine motor  
+;; - pmac Y (Addr 7, Q78 demand) - Y Combined Coarse & Fine motor  
+;;
+; Macros:
+;; - COORD          - CS number, e.g. 2
+;; - PLC            - PLC number, should be CS number+15, e.g. 17
+;; - XC             - Axis number for Coarse X motor, e.g. 1
+;; - XF             - Axis number for Fine X motor, e.g. 2
+;; - YC             - Axis number for Coarse Y motor, e.g. 1
+;; - YF             - Axis number for Fine Y motor, e.g. 2
+;;
+;################################################
+
+
+; Change to CS2
+&2
+
+; Set relevant axes to use kinematics
+#4->I ; coarse X motor
+#9->I ; fine X motor
+#5->I ; coarse Y motor
+#10->I ; fine Y motor
+
+; error handling
+#define SETERROR M(100*2+5082)=1
+; servo cycle to ms conversion factor
+#define millisec_conversion   (8388608/i10)
+#define timer i(5111+(17&30)*50+17%2)
+
+; These are set by motor_in_cs.template
+#define XCMOVE P(4700+4)
+#define XCMRES P(4800+4)
+#define XCOFF  P(4900+4)
+#define XFMOVE P(4700+9)
+#define XFMRES P(4800+9)
+#define XFOFF  P(4900+9)
+#define YCMOVE P(4700+5)
+#define YCMRES P(4800+5)
+#define YCOFF  P(4900+5)
+#define YFMOVE P(4700+10)
+#define YFMRES P(4800+10)
+#define YFOFF  P(4900+10)
+
+
+; These are the real motor positions in steps calculated from M variables
+#define M_REAL_XC	((m462+m469)/(I408*32))
+#define M_REAL_XF	((m962+m969)/(I908*32))
+#define M_REAL_YC	((m562+m569)/(I508*32))
+#define M_REAL_YF	((m1062+m1069)/(I1008*32))
+
+
+#define FINEMODE Q21
+
+;*****************************
+; Kinematics 
+;
+; NB Definitions of the type &2#1->1000X+45 dont allow for offsets to be changed at runtime
+; so we define the simplest possible kinomatic here instead
+;
+
+; Kinematic Positions 
+; These are the virtual motor positions in egus calculated by the forward kinomatic
+#define COARSE_X      	Q7	; (=X demand) Coarse X in egus
+#define COARSE_Y	    Q8	; (=Y demand) Coarse Y in egus
+; These are the virtual motor velocities in egus required for PVT mode (Q10=1) moves
+#define COARSE_VEL_X    Q17	; (=X demand) Coarse X vel in egus
+#define COARSE_VEL_Y	Q18	; (=Y demand) Coarse Y vel in egus
+
+; These are the real motor positions/velocities in steps calculated by the inverse kinomatic
+#define REAL_XC	P4      ; Real X coarse motor in steps  
+#define REAL_XF	P9      ; Real X fine motor in steps  
+#define REAL_YC	P5      ; Real Y coarse motor in steps  
+#define REAL_YF	P10      ; Real Y fine motor in steps
+; These are the real motor velocities in steps calculated by the inverse kinomatic required for PVT mode (Q10=1) moves  
+#define REAL_VEL_XC P(100+4)  ; Real XC velocity in steps
+#define REAL_VEL_XF P(100+9)  ; Real XF velocity in steps
+#define REAL_VEL_YC P(100+5)  ; Real YC velocity in steps
+#define REAL_VEL_YF P(100+10)  ; Real YF velocity in steps
+
+;
+; Forward Kinematics - Calculate Fine X and Coarse X egus from real coarse and fine motor cts positions
+;
+
+; Q128-199 Forward Kinematic Temporary Variables
+#define XCPOS Q128
+#define XFPOS Q129
+#define YCPOS Q130
+#define YFPOS Q131
+
+OPEN FORWARD
+CLEAR
+    ; calc real motor positions in egu's
+;    XCPOS = ((XCMRES*REAL_XC)+XCOFF)
+    XFPOS = ((XFMRES*REAL_XF)+XFOFF)
+;    YCPOS = ((YCMRES*REAL_YC)+YCOFF)
+    YFPOS = ((YFMRES*REAL_YF)+YFOFF)
+    
+    ; set virtual motor egus
+    COARSE_X = XFPOS
+    COARSE_Y = YFPOS
+CLOSE
+
+;
+; Inverse Kinematics - Calculate real coarse and fine motor position cts from virtual egu coarse and fine motors
+;
+
+; Q228-299 Inverse Kinematic Temporary Variables
+#define XCPOS Q228
+#define XFPOS Q229
+#define YCPOS Q230
+#define YFPOS Q231
+
+OPEN INVERSE
+CLEAR    
+    ; work out the new motor positions in EGUs
+    XCPOS = COARSE_X
+    YCPOS = COARSE_Y
+
+    if (FINEMODE=1)
+        ; drive fine motor only
+        ; from the egu demand work out the motor positions in cts
+        ;REAL_XC=M_REAL_XC
+        REAL_XF=(XCPOS-XFOFF)/XFMRES    
+        ;REAL_YC=M_REAL_YC
+        REAL_YF=(YCPOS-YFOFF)/YFMRES
+        ; if PVT mode move
+        if (Q10=1)
+            ; calculate velocities in steps
+            REAL_VEL_XC=0
+            REAL_VEL_XF=COARSE_VEL_X/XFMRES
+            REAL_VEL_YC=0
+            REAL_VEL_YF=COARSE_VEL_Y/YFMRES
+        endif
+    else
+        ; drive both coarse and fine motors
+        ; from the egu demand work out the motor positions in cts
+        REAL_XC=(XCPOS-XCOFF)/XCMRES
+        REAL_XF=(XCPOS-XFOFF)/XFMRES    
+        REAL_YC=(YCPOS-YCOFF)/YCMRES
+        REAL_YF=(YCPOS-YFOFF)/YFMRES
+        ; if PVT mode move
+        if (Q10=1)
+            ; calculate velocities in steps
+            REAL_VEL_XC=COARSE_VEL_X/XCMRES
+            REAL_VEL_XF=COARSE_VEL_X/XFMRES
+            REAL_VEL_YC=COARSE_VEL_Y/YCMRES
+            REAL_VEL_YF=COARSE_VEL_Y/YFMRES
+        endif
+    endif            
+CLOSE
+
+;*****************************
+; A PLC for position reporting
+; as Forward Kinematics - Calculate Virtual X position from real coarse and fine motor positions 
+; Readbacks should be in &{axisnum}Q81..89
+; As forward kinematic, but with Px = (mx62+mx69)/(Ix08*32)
+
+; Q328-399 PLC Temporary Variables
+#define XCPOS Q328
+#define XFPOS Q329
+#define YCPOS Q330
+#define YFPOS Q331
+
+#define COARSE_X    Q87	; Virtual fine X position in egus
+#define COARSE_Y    Q88	; Virtual fine Y position in egus
+
+
+OPEN PLC17
+CLEAR
+    ADDRESS&2
+    ; calc real motor positions in egu's from the M variables
+;    XCPOS = ((XCMRES*M_REAL_XC)+XCOFF)
+    XFPOS = ((XFMRES*M_REAL_XF)+XFOFF)
+;    YCPOS = ((YCMRES*M_REAL_YC)+YCOFF)
+    YFPOS = ((YFMRES*M_REAL_YF)+YFOFF)
+
+    ; calc virtual motor in egus
+    COARSE_X = XFPOS
+    COARSE_Y = YFPOS
+ 
+    ; If real motor record did the last move, set demands = readbacks
+    if (XCMOVE = 1)
+    or (XFMOVE = 1)
+        XCMOVE = 0
+        XFMOVE = 0
+        Q77 = Q87
+    endif
+    if (YCMOVE = 1)
+    or (YFMOVE = 1)
+        YCMOVE = 0
+        YFMOVE = 0
+        Q78 = Q88
+    endif
+    
+CLOSE
+ENABLE PLC17
+

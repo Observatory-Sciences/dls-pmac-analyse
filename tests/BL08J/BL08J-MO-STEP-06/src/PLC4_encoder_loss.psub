@@ -1,0 +1,128 @@
+substitute "ONM1=2"
+substitute "ONM2=3"
+substitute "ONM3=3"
+substitute "ONM4=3"
+substitute "ONM5=3"
+substitute "ONM6=3"
+substitute "ONM7=2"
+substitute "ONM8=2"
+
+include "PLC4_encoder_loss.pmc"
+
+
+;###############################################################################
+; Define encoder loss protection
+; Original Author: Alan Greer
+; Used variables: P400..499,mxx84,85,86 defined
+;
+; Encoder loss detection PLC.  This checks if the encoder
+; is lost for each axis.  If it is, it kills the axis,
+; sets the following error to 1/16th of a count and aborts
+; any coordinate system move that this axis belongs to.
+;
+; If the encoder is recovered and the latch reset (P(464+axis_number)=0)
+; then the following error will be set back to its orginal
+; value
+;
+; Macros (and example values):
+; ONM1 = 1        ;Turn encoder loss protection for axis 1 on
+; ...
+; ONM32 = $10     ;Turn external safety check protection for axis 32 on
+; SAFE1 = 0       ;No External protection variable
+; ...
+; SAFE32 = P1701  ;Safety check var for axis 32 is P1701
+; SAFEOK = 0      ;If SAFEx != SAFEOK then trip protection
+;
+; ONMx is a bitmask with the following types of protection available:
+; 1 = encoder loss detection, when the encoder is marked as lost (mx84 = 0),
+;     the protection will be tripped and will need a manual reset 
+;     (set p(464+axis_number) = 0)
+; 2 = GeoBrick amplifier enable detection, when the amplifier goes undervoltage
+;     then trip the protection, auto reset when it comes back on
+; 4 = PMAC Micromech amplifier enable detection, when the amplifier is demanded 
+;     to be on, but is actually off, then trip the protection, auto reset when 
+;     it comes back on
+; 8 = encoder loss detection for SSI absolute magnetic encoder only, 
+;     when the encoder is marked as lost (mx95 = 0 or mx96!=0),
+;     the protection will be tripped and will need a manual reset 
+;     (set p(464+axis_number) = 0)
+;      e.g. M195->Y:$78B20,24 /* Channel 1 Lower 24 SSI Data bits 0-23 */
+;           M196->Y:$78B21,24 /* Channel 1 Upper SSI Data bits 0-7 and bit 23 is parity error */
+;           Bit 25 of the SSI data (bit 0 of M196) is the 'sensor is too far from the tape' error bit 
+;           Bit 26 of the SSI data (bit 1 of M196) is the 'out of temperature range' error bit.
+; $10 = Safety check External variable trip. If SAFEx != SAFEOK then the
+;       the protection will be tripped. Auto reset following error when SAFEx
+;       goes back to SAFEOK
+; $20 = encoder loss detection for BISS absolute encoder only.
+;       when the encoder is marked as in error or warning state (mx83 != 3),
+;       the protection will be tripped and will need a manual reset 
+;       (set p(464+axis_number) = 0)
+; $40 = Enable scaling factor for absolute encoders. This will divide the position value by
+;       ABS_ENC_SCALE_FACTOR when reinitialising the values. This is because the encoder can return
+;       more bits than the position value can handle, on long encoder strips.
+;
+; So ONMx = 2 for open loop brick, 3 for closed loop brick, 4 for open loop PMAC
+; 5 for closed loop PMAC.
+;
+; The readback value p(464+axis_number) is defined as:
+; * Bit 0: Set to 1 if encoder loss (when ONMx bit 0 or bit 3 is set and encoder loss tripped)
+; * Bit 1: Set to 1 if amplifier loss (when ONMx bit 1 or bit 2 is set and amplifier loss tripped)
+; * Bit 2: Set to 1 if safety check fails (when ONMx bit 4 is set and SAFEx is non-zero)
+; E.g. if amplifier for motor2 trips then P466=2
+;
+; NB Needs either BRICK_M_variables.pmc or PMAC_M_variables.pmc loaded
+;-------------------------------------------------------------------;
+; The following must be uncommented in your main pmc file for PMACs ;
+;-------------------------------------------------------------------;
+;;Memory locations for encoder loss bit
+;;These addresses work for micromech racks, OD racks need different ones
+;ms0,i21 = $6488C8DCC0A1
+;ms0,i22 = $6488C9DCC0A2
+;ms0,i23 = $6488CADCC0A3
+;ms0,i24 = $6488CBDCC0A5
+;ms0,i25 = $6488CCDCC0A6
+;ms0,i26 = $6488CDDCC0A7
+;ms0,i27 = $6488CEDCC0A9
+;ms0,i28 = $6488CFDCC0AA
+;ms0,i29 = $6498C8DCC0AB
+;ms0,i30 = $6498C9DCC0AD
+;ms0,i31 = $6498CADCC0AE
+;ms0,i32 = $6498CBDCC0AF
+;ms0,i33 = $6498CCDCC0B1
+;ms0,i34 = $6498CDDCC0B2
+;ms0,i35 = $6498CEDCC0B3
+;ms0,i36 = $6498CFDCC0B5
+;ms32,i21 = $6488C8DCC0A1
+;ms32,i22 = $6488C9DCC0A2
+;ms32,i23 = $6488CADCC0A3
+;ms32,i24 = $6488CBDCC0A5
+;ms32,i25 = $6488CCDCC0A6
+;ms32,i26 = $6488CDDCC0A7
+;ms32,i27 = $6488CEDCC0A9
+;ms32,i28 = $6488CFDCC0AA
+;ms32,i29 = $6498C8DCC0AB
+;ms32,i30 = $6498C9DCC0AD
+;ms32,i31 = $6498CADCC0AE
+;ms32,i32 = $6498CBDCC0AF
+;ms32,i33 = $6498CCDCC0B1
+;ms32,i34 = $6498CDDCC0B2
+;ms32,i35 = $6498CEDCC0B3
+;ms32,i36 = $6498CFDCC0B5
+;;Configure MACRO station node enable i variables
+;ms0,i996 = $FBFFF
+;ms32,i996 = $2FBFFF
+;;Configure IO, enable all nodes
+;ms0,i975 = $CCC
+;ms32,i975 = $CCC
+;;Macro IC0 and IC2 Node Activate Control
+;i6841 = $FFFFF
+;i6941 = $2FFFFF
+;; i20 sets up 16-bit data transfer lines between
+;; expansion cards and UMAC macro card.
+;ms0,i20=$FFFF
+;ms32,i20=$FFFF
+;
+;; i19 controls how often they are read
+;ms0,i19=$4
+;ms32,i19=$4
+;###############################################################################

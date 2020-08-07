@@ -1,0 +1,27 @@
+Dear future controls engineer,
+
+Some geobricks which control BL08J components have
+names in the BL08I domain for historical reasons and
+to add confusion.
+
+For example, BL08I-MO-STEP-06 lives in BL08I-MO-RACK-02
+but controls BL08J M2 and D1. Whilst BL08J-MO-STEP-02
+does not have an equivalent I-branch identifier.
+
+I have given each of these bricks a name in the BL08J
+domain, in order to logically separate the two branches 
+in the control system. The I branch name is mapped to
+the J branch name using soft links in this directory.
+
+====================================================================================
+I-branch name       J-branch name       Purpose
+====================================================================================
+N/A                 BL08J-MO-STEP-01    BL08J Sample stages, Zone plate
+N/A                 BL08J-MO-STEP-02    BL08J OSA, Hotel, Robot and S1 (S3) shutter
+BL08I-MO-STEP-06    BL08J-MO-STEP-06    BL08J M2 and D1 (D7)
+BL08I-MO-STEP-07    BL08J-MO-STEP-07    BL08J S1 (S3) and D2 (D8)
+====================================================================================
+
+Andrew Wilson, November 2018
+Modified by Ben Bradnick
+

@@ -1,0 +1,10 @@
+substitute "ONM1=2"
+substitute "ONM2=1"
+substitute "ONM3=1"
+substitute "ONM4=1"
+substitute "ONM5=1"
+substitute "ONM6=2"
+substitute "ONM7=2"
+substitute "ONM8=2"
+
+include "PLC4_encoder_loss.pmc"
