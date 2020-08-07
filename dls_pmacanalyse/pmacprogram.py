@@ -39,7 +39,7 @@ class PmacProgram(PmacVariable):
         self.value = []
 
     def valStr(self):
-        self.lines = self.valueText(typ=1).split()
+        self.lines = self.valueText(typ=1).split('\n')
         return self.lines
 
     def valueText(self, typ=0, ignore_ret=False):

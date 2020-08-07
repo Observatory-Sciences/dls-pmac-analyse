@@ -255,7 +255,7 @@ class PmacState(object):
             for n in Constants.i_variable_motor_numbers
         ] + [
             self.getIVariable(ivar).info(PmacState.motorI7000VariableDescriptions[n])
-            for n, ivar in enumerate(Constants.i_variable_motor7000_numbers)
+            for n, ivar in enumerate(Constants.i_variable_motor7000_numbers(motor))
         ]
 
     def get_global_msivariables(self) -> List[VariableInfo]:
@@ -268,7 +268,7 @@ class PmacState(object):
     def get_motor_msivariables(self, motor: int) -> List[VariableInfo]:
         result: List[VariableInfo] = []
         for i, description in PmacState.motorMsIVariableDescriptions.items():
-            node = PmacState.axisToNode[motor]
+            node = Constants.axisToNode[motor]
             result.append(self.getMsIVariable(node, i).info(description))
         return result
 
@@ -886,56 +886,4 @@ class PmacState(object):
         7: "Output invert control",
         8: "Output PFM direction signal invert control",
         9: "Hardware 1/T control",
-    }
-    axisToNode = {
-        1: 0,
-        2: 1,
-        3: 4,
-        4: 5,
-        5: 8,
-        6: 9,
-        7: 12,
-        8: 13,
-        9: 16,
-        10: 17,
-        11: 20,
-        12: 21,
-        13: 24,
-        14: 25,
-        15: 28,
-        16: 29,
-        17: 32,
-        18: 33,
-        19: 36,
-        20: 37,
-        21: 40,
-        22: 41,
-        23: 44,
-        24: 45,
-        25: 48,
-        26: 49,
-        27: 52,
-        28: 53,
-        29: 56,
-        30: 57,
-        31: 60,
-        32: 61,
-    }
-    axisToMn = {
-        1: 10,
-        2: 20,
-        3: 30,
-        4: 40,
-        5: 110,
-        6: 120,
-        7: 130,
-        8: 140,
-        9: 210,
-        10: 220,
-        11: 230,
-        12: 240,
-        13: 310,
-        14: 320,
-        15: 330,
-        16: 340,
     }
