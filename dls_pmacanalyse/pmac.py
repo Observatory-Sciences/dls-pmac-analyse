@@ -489,52 +489,44 @@ class Pmac(object):
                 self.hardwareState.addVar(var)
                 self.writeBackup(var.dump())
 
+    list_reg = re.compile(r"(\d+):([^\r]*)\r")
+
     def getListingLines(self, thing, pre_thing=""):
         """Returns the listing of a motion program or PLC using
            small blocks.  It uses the start and length parameters
            of the list command to slowly build up the listing.  Note
-           that the function fails if any chuck exceeds 1350 characters.
+           that the function fails if any chunk exceeds 1350 characters.
            For use in small buffer mode."""
-        lines = []
-        offsets = []
+        lines = offsets = []
         startPos = 0
         increment = 80
-        going = True
-        while going:
+        while True:
             (returnStr, status) = self.sendCommand(
                 f"{pre_thing}list {thing},{startPos},{increment}"
             )
-            startPos += increment
             if not status:
                 if returnStr.endswith("PMAC communication error"):
                     # Can get this instead of ERR for a missing program
-                    going = False
+                    break
                 else:
                     raise PmacReadError(returnStr)
+            if returnStr.find("ERR") >= 0:
+                # ERR - this program is missing
+                break
             if len(returnStr) > 1350:
                 raise PmacReadError("String too long for small buffer mode")
-            if returnStr.find("ERR") >= 0:
-                going = False
             else:
-                if not re.match(r"\d+:", returnStr):
-                    log.error(
-                        "Warning: first line not starting with offset for %s",
-                        repr(returnStr),
-                    )
-                    return (lines, offsets)
-                # Separate into offset and line
-                more = re.split(r"\r(\d+):", f"\r{returnStr}")[1:]
-                if not more or len(more) % 2 == 1:
-                    log.error(
-                        "Warning: could not split lines into offset and text for %s",
-                        repr(returnStr),
-                    )
-                    return (lines, offsets)
-                for index in range(0, len(more), 2):
-                    offsets.append(more[index])
-                    lines.append(more[index + 1])
-                # get rid of ending \r\x06
-                lines[-1] = lines[-1][:-2]
+                matches = self.list_reg.findall(returnStr)
+                # throw away the last line as it may be incomplete
+                # - except if there is only one line then it is the last one
+                for index in range(0, max(1, len(matches) - 1)):
+                    offset, line = matches[index]
+                    offsets.append(offset)
+                    lines.append(line)
+                if len(matches) == 1:
+                    break
+                else:
+                    startPos, _ = matches[-1]
         return (lines, offsets)
 
     def readPlcPrograms(self):
