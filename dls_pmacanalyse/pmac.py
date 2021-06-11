@@ -3,7 +3,7 @@ import re
 from typing import List
 
 from dls_pmacanalyse.difference import Differences
-from dls_pmacanalyse.errors import AnalyseError, PmacReadError
+from dls_pmacanalyse.errors import AnalyseError, ArgumentError, PmacReadError
 from dls_pmacanalyse.pmacparser import PmacParser
 from dls_pmacanalyse.pmacprogram import (
     PmacCsAxisDef,
@@ -270,7 +270,7 @@ class Pmac(object):
                 self.hardwareState.geobrick = False
             log.warning("Geobrick= %s" % self.hardwareState.geobrick)
 
-    def determineNumAxes(self):
+    def determineNumAxes(self, from_hardware=True):
         """Determines the number of axes the PMAC has by determining the
            number of macro station ICs."""
         if self.numMacroStationIcs is None:
@@ -278,11 +278,16 @@ class Pmac(object):
             # TODO this is intended for comparison with a backup file but will
             # not work currently because these readonly variables are commented out
             # in the backup file
-            if "i20" in self.hardwareState.vars:
+            if not from_hardware:
                 macroIcAddresses = []
                 for m in range(4):
                     var_name = f"i{20+m}"
-                    macroIcAddresses.append(self.hardwareState.vars[var_name].value)
+                    if var_name in self.hardwareState.vars:
+                        macroIcAddresses.append(self.hardwareState.vars[var_name].value)
+                    else:
+                        raise ArgumentError(
+                            "please uncomment i20..i23 to use a backup as a comparison"
+                        )
                 for i in range(4):
                     if macroIcAddresses[i] != 0:
                         self.numMacroStationIcs += 1
@@ -292,7 +297,7 @@ class Pmac(object):
                     raise PmacReadError(returnStr)
                 macroIcAddresses = returnStr[:-2].split("\r")
                 for i in range(4):
-                    # TODO this looking for the $ is fragile and naff
+                    # TODO looking for the $ is fragile and naff
                     if macroIcAddresses[i] != "$0":
                         self.numMacroStationIcs += 1
         self.numAxes = self.numMacroStationIcs * 8
@@ -727,7 +732,8 @@ class Pmac(object):
         self.hardwareState.loadPmcFile(self.compareWith)
 
         self.numCoordSystems = self.hardwareState.vars["i68"].getIntValue() + 1
-        self.determineNumAxes()
+        self.determineNumAxes(from_hardware=False)
+
 
     def toNumber(self, text):
         if text[0] == "$":

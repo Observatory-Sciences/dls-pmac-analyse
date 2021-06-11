@@ -362,13 +362,11 @@ class PmacState(object):
         for n in Constants.plc_numbers:
             plc = self.getPlcProgramNoCreate(n)
             if plc is not None:
-                # TODO this should compare with reference not with self
-                # (at least that keeps it consistent)
                 plc.setShouldBeRunning()
                 if plc.shouldBeRunning and not plc.isRunning:
-                    difference.add_plc(n, False, True)
-                elif not plc.shouldBeRunning and plc.isRunning:
                     difference.add_plc(n, True, False)
+                elif not plc.shouldBeRunning and plc.isRunning:
+                    difference.add_plc(n, False, True)
         return len(difference) == 0
 
     def loadPmcFile(self, fileName):

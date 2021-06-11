@@ -9,10 +9,10 @@
             "type": "python",
             "request": "launch",
             "module": "dls_pmacanalyse.dls_pmacanalyse",
-            "args": ["--loglevel", "debug"],
-            // "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-06"],
+            // "args": ["--loglevel", "debug"],
+            "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-06"],
             // "args": ["--loglevel", "debug", "--only", "BL08J-MO-STEP-01"],
-            "cwd": "/home/giles/dls/BL08J"
+            "cwd": "${workspaceFolder}/tests/BL08J"
         },
         {
             "name": "analyse BL07I",
@@ -22,7 +22,7 @@
             // "args": ["--loglevel", "debug", "--only", "BL07I-MO-STEP-08", "--backup", "pmacBackup"],
             // "args": ["--loglevel", "debug", "--only", "BL07I-MO-STEP-08", "--unfixfile", "BL07I-MO-STEP-08.unfix.pmc", "--fixfile", "BL07I-MO-STEP-08.fix.pmc"],
             "args": ["--loglevel", "debug", "--only", "BL07I-MO-STEP-08"],
-            "cwd": "/home/giles/dls/BL07I"
+            "cwd": "{/home/giles/dls}/BL07I"
         }
     ]
 }
