@@ -1,6 +1,9 @@
 import dls_pmacremote
 from scp import SCPClient
 import time
+import re
+import warnings
+import os
 
 
 def timer(func):
@@ -25,6 +28,38 @@ def responseListToDict(responseList, splitChars='='):
             responseDict[nameVal[0]] = nameVal[1]
     return responseDict
 
+class PPMACRepositoryWriteRead(object):
+    def __init__(self, ppmac=None):
+        self.ppmacInstance = ppmac
+        self.repositoryPath = os.environ['PWD'] + '/repository'
+
+    def setPPMACInstance(self, ppmac):
+        self.ppmacInstance = ppmac
+
+    def setRepositoryPath(self, path):
+        self.repositoryPath = path
+
+    def writeVars(self, vars, file):
+        with open(file, 'w+') as writeFile:
+            for var in vars:
+                writeFile.write(var.__str__() + '\n')
+
+    def writePvars(self):
+        file = self.repositoryPath + '/Pvars.txt'
+        self.writeVars(self.ppmacInstance.Pvariables, file)
+
+    def writeIvars(self):
+        file = self.repositoryPath + '/Ivars.txt'
+        self.writeVars(self.ppmacInstance.Ivariables, file)
+
+    def writeMvars(self):
+        file = self.repositoryPath + '/Mvars.txt'
+        self.writeVars(self.ppmacInstance.Mvariables, file)
+
+    def writeQvars(self):
+        for i in range(self.ppmacInstance.numberOfCoordSystems):
+            file = self.repositoryPath + f'/Qvars_CS{i}.txt'
+            self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
 class PPMACHardwareWriteRead(object):
     def __init__(self, ppmac=None):
@@ -86,32 +121,114 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.numberOfCompTables = self.getNumberOfCompTables()
         self.ppmacInstance.numberOfCamTables = self.getNumberOfCamTables()
         self.ppmacInstance.numberOfECATs = self.getNumberOfECATs()
-        #self.ppmacInstance.numberOfEncTables = self.getNumberOfEncTables()
+        # self.ppmacInstance.numberOfEncTables = self.getNumberOfEncTables()
 
-    #@timer
-    def readIVariables(self, indexStart=0, indexLimit=1639, varsPerBlock=100):
-        """
-        There are 16383 I-variables
-        """
-        for lowerIndex in range(indexStart, indexLimit, varsPerBlock):
-            upperIndex = min(lowerIndex + varsPerBlock - 1, indexLimit)
-            cmd = 'I' + str(lowerIndex) + '..' + str(upperIndex)
-            (Ivalues, status) = sshClient.sendCommand(cmd)
-            if status:
-                Ivalues = Ivalues.split("\r")[:-1]
-            else:
-                raise IOError("Cannot retrieve variable value: error communicating with PMAC")
-            cmd = cmd + '->'
-            (Idescriptions, status) = sshClient.sendCommand(cmd)
-            if status:
-                Idescriptions = Idescriptions.split("\r")[:-1]
-            else:
-                raise IOError("Cannot retrieve variable description: error communicating with PMAC")
-            for index in range(0, upperIndex - lowerIndex + 1):
-                if index > indexLimit:
+    def sendCommand(self, cmd):
+        start = time.time()
+        (data, status) = sshClient.sendCommand(cmd)
+        tdiff = time.time() - start
+        if tdiff > 0.07:
+            print(cmd, tdiff)
+        if not status:
+            raise IOError('Cannot retrieve data structure: error communicating with PMAC')
+        else:
+            data = data.split("\r")[:-1]
+        if 'error' in data[0]:
+            errMessage = 'Error reading data.'
+            raise IOError(errMessage + data[0])
+        return data
+
+    def readVariables(self, type, variables, indexStart=0, indexEnd=1639, varsPerBlock=100):
+        '''
+        :param type: string defining type of variables to be read from ppmac, e.g. P,Q,M,I
+        :param variables: reference to list of objects which are of type PowerPMAC.Variable()
+        :param indexStart:
+        :param indexEnd:
+        :param varsPerBlock:
+        :return:
+        '''
+        for lowerIndex in range(indexStart, indexEnd, varsPerBlock):
+            upperIndex = min(lowerIndex + varsPerBlock - 1, indexEnd)
+            cmd = type + str(lowerIndex) + '..' + str(upperIndex)
+            varValues = self.sendCommand(cmd)
+            for i in range(0, upperIndex - lowerIndex + 1):
+                index = lowerIndex + i
+                if i > indexEnd:  # - 1:
                     break
-                self.ppmacInstance.IVariables[lowerIndex + index] = \
-                    (PowerPMAC.IVariable(lowerIndex + index, Idescriptions[index], Ivalues[index]))
+                name = type + str(index)
+                value = varValues[i].split('=')[1]
+                variables[index] = PowerPMAC.Variable(index, name, value)
+
+    # @timer
+    def readDSVariables(self, type, variables, indexStart=0, indexEnd=1639, varsPerBlock=100):
+        '''
+        :param type: string defining type of variables to be read from ppmac, e.g. P,Q,M,I,L,D,C
+        :param variables: reference to list of objects which are of type PowerPMAC.Variable()
+        :param indexStart:
+        :param indexEnd:
+        :param varsPerBlock:
+        :return:
+        '''
+        for lowerIndex in range(indexStart, indexEnd, varsPerBlock):
+            upperIndex = min(lowerIndex + varsPerBlock - 1, indexEnd)
+            cmd = type + str(lowerIndex) + '..' + str(upperIndex)
+            varValues = self.sendCommand(cmd)
+            cmd = cmd + '->'
+            elementNames = self.sendCommand(cmd)
+            #print(elementNames)
+            for i in range(0, upperIndex - lowerIndex + 1):
+                index = lowerIndex + i
+                if i > indexEnd:  # - 1:
+                    break
+                name = type + str(index)
+                element = elementNames[i].split('->')[1]
+                value = varValues[i].split('=')[1]
+                group = re.split('\[|\.', element)[0]
+                variables[index] = PowerPMAC.DSVariable(index, name, element, value, group)
+
+    def readIVariables(self, indexStart=0, indexEnd=1639, varsPerBlock=100):
+        """
+        There are 16384 I-variables
+        """
+        if indexEnd > self.ppmacInstance.numberOfIVariables - 1 or indexStart < 0 or indexEnd < indexStart:
+            warnings.warn('Requested I-variables out of allowed range; please adjust your range')
+        else:
+            self.readDSVariables('I', self.ppmacInstance.Ivariables, indexStart, indexEnd, varsPerBlock)
+
+    @timer
+    def readPVariables(self, indexStart=0, indexEnd=1639, varsPerBlock=100):
+        """
+        There are 65536 P-variables
+        """
+        if indexEnd > self.ppmacInstance.numberOfPVariables - 1 or indexStart < 0 or indexEnd < indexStart:
+            warnings.warn('Requested P-variables out of allowed range; please adjust your range')
+        else:
+            self.readVariables('P', self.ppmacInstance.Pvariables, indexStart, indexEnd, varsPerBlock)
+
+    def readMVariables(self, indexStart=0, indexEnd=1639, varsPerBlock=100):
+        """
+        There are 16384 M-variables
+        """
+        if indexEnd > self.ppmacInstance.numberOfMVariables - 1 or indexStart < 0 or indexEnd < indexStart:
+            warnings.warn('Requested M-variables out of allowed range; please adjust your range')
+        else:
+            self.readDSVariables('M', self.ppmacInstance.Mvariables, indexStart, indexEnd, varsPerBlock)
+
+    def readQVariables(self, coordSystem='all', indexStart=0, indexEnd=1639, varsPerBlock=100):
+        """
+        There are 8191 Q-variables per coordinate system
+        """
+        if indexEnd > self.ppmacInstance.numberOfQVariables - 1 or indexStart < 0 or indexEnd < indexStart:
+            warnings.warn('Requested I-variables out of allowed range; please adjust your range')
+        else:
+            if coordSystem == 'all':
+                for i in range(self.ppmacInstance.numberOfCoordSystems):
+                    self.readVariables('Q', self.ppmacInstance.Qvariables[i], indexStart, indexEnd, varsPerBlock)
+            elif isinstance(coordSystem, int):
+                self.readVariables('Q', self.ppmacInstance.Qvariables[coordSystem], indexStart, indexEnd, varsPerBlock)
+            else:
+                warnings.warn('Unrecognised coordinate system number')
+
 
     def readDataStructure(self, cmd, ppmacDataStructure):
         '''
@@ -129,10 +246,9 @@ class PPMACHardwareWriteRead(object):
         if 'error' in setupData[0]:
             errMessage = 'Error reading data.'
             raise IOError(errMessage + setupData[0])
-        print(setupData)
         ppmacDataStructure.setupData = responseListToDict(setupData)
 
-    #@timer
+    # @timer
     def readMotorSetupData(self, motorNumber):
         cmd = f'backup Motor[{motorNumber}].'
         self.readDataStructure(cmd, self.ppmacInstance.Motors[motorNumber])
@@ -182,6 +298,7 @@ class PPMACHardwareWriteRead(object):
         self.readDataStructure(cmd, self.ppmacInstance.Gate3)
 
     def readGateIoSetupData(self, gateIoNumber):
+        # backup iogates
         i = gateIoNumber
         cmd = f'echo 0 GateIo[{i}].Init.CtrlReg '
         for j in range(0, 6):
@@ -193,6 +310,10 @@ class PPMACHardwareWriteRead(object):
                f'GateIo[{i}].Init.IntrReg128 ' \
                f'GateIo[{i}].Init.IntrReg192 '
         self.readDataStructure(cmd, self.ppmacInstance.GateIOs[gateIoNumber])
+
+    def readMacroSetupData(self):
+        cmd = 'backup Macro.'
+        self.readDataStructure(cmd, self.ppmacInstance.Macro)
 
     def readAllMotorsSetupData(self):
         for i in range(0, self.ppmacInstance.numberOfMotors):
@@ -240,20 +361,25 @@ class PowerPMAC:
         '''
         Super-class for all P,Q,M,I,L,R,C,D variables
         '''
-        def __init__(self, definition=None, value=None):
-            self.definition = definition
+        def __init__(self, index=None, name=None, value=None):
+            self.index = index
+            self.name = name
             self.value = value
 
-    class IVariable(Variable):
-        '''
-        Class representing a single I-variable
-        '''
-        def __init__(self, index=None, definition=None, value=None):
-            super().__init__(definition, value)
-            self.index = index
+        def __str__(self):
+            return 'Variable=' + str(self.name) + ', Index=' + str(self.index) + \
+                   ', Value=' + str(self.value)
+
+    class DSVariable(Variable):
+        def __init__(self, index=None, name=None, element=None, value=None, group=None):
+            super().__init__(index, name, value)
+            self.element = element
+            self.group = group
 
         def __str__(self):
-            return 'I' + str(self.index) + ' = ' + self.definition + ' = ' + str(self.value)
+            return 'Variable=' + str(self.name) + ', Index=' + str(self.index) + \
+                   ', Element=' + str(self.element) + ', Value=' + str(self.value) + \
+                   ', Group=' + str(self.group)
 
     class SetupDataStructure:
         '''
@@ -261,6 +387,7 @@ class PowerPMAC:
         index: instance of the structure (redundant)
         setupData: dictionary where data element descriptive name is key
         '''
+
         def __init__(self, number=None, setupData=None, nonSavedSetupData=None, statusBits=None):
             self.index = number
             '''
@@ -275,10 +402,28 @@ class PowerPMAC:
             self.nonSavedSetupData = nonSavedSetupData
             self.statusBits = statusBits
 
+    class PlcProgram:
+        '''
+        Will have own L-variables (Plc[i].Ldata.L[n], see PPMAC User Manual p.490)
+        '''
+        pass
+
     def __init__(self):
-        # 16383 total I variables
-        self.numberOfIVariables = 16383
-        self.numberOfMotors = 32
+        # 16384 total I variables, values range from I0 to I16383
+        self.numberOfIVariables = 16384
+        # 16384 total P variables, values range from P0 to P65535
+        self.numberOfPVariables = 65536
+        # 16384 total M variables, values range from M0 to M16383
+        self.numberOfMVariables = 16384
+        # 8192 Q variables per coordinate system, values range from Q0 to Q8191
+        self.numberOfQVariables = 8192
+        # 8192 L variables per communications thread, coordinate system, or PLC;
+        # values range from L0 to L8191
+        self.numberOfLVariables = 8192
+        # Power PMAC supports up to 32 PLC programs
+        self.numberOfPlcPrograms = 32
+        # Power PMAC supports up to 256 motors
+        self.numberOfMotors = 256
         # BufIo[i] can have i = 0,...,63 (software reference manual p.541-542)
         self.numberOfBufIOs = 64
         # Power PMAC supports up to 256 cam tables
@@ -290,28 +435,48 @@ class PowerPMAC:
         # Power PMAC supports up to 9 ECAT networks
         self.numberOfECATs = 9
         # Power PMAC supports up to 768 encoder conversion tables (software reference manual p.206)
-        self.numberOfEncTables = 3 #768
+        self.numberOfEncTables = 3  # 768
         # Gate1[i] can have i = 4,...,19 (software reference manual p.237)
         # currently these are all stored in one instance of SetupDataStructure()
-        #self.numberOfGate1ICs = 16
+        # self.numberOfGate1ICs = 16
         # Gate2[i] has an UNKNOWN range of indices i
         # currently these are all stored in one instance of SetupDataStructure()
-        #self.numberOfGate2ICs = ???
+        # self.numberOfGate2ICs = ???
         # Gate3[i] can have i = 0,..,15 (software reference manual p.289)
         # currently these are all stored in one instance of SetupDataStructure()
-        #self.numberOfGate3ICs = 16
+        # self.numberOfGate3ICs = 16
         # GateIo[i] can have i = 0,..,15 (software reference manual p.360), although
         # for some reason i > 15 does not return an error
         self.numberOfGateIoICs = 17
+        # Dictionary mapping between P,Q,M,I,L,R,C,D variables and the descriptive names of
+        # the data structure elements they represent
+        self.variableToElement = {}
+        self.elementToVariable = {}
 
     def initDataStructures(self):
+        # P,Q,M,I,L,D,C,R variables
+        # P,Q,M,I
+        self.Ivariables = [self.DSVariable() for _ in range(self.numberOfIVariables)]
+        self.Pvariables = [self.Variable() for _ in range(self.numberOfPVariables)]
+        self.Mvariables = [self.DSVariable() for _ in range(self.numberOfMVariables)]
+        self.Qvariables = [[self.Variable() for _ in range(self.numberOfQVariables)]
+                           for _ in range(self.numberOfCoordSystems)]
+        # L,D,C,R
+        # L variables local to a communication thread do not need to be backed-up
+        # L variables local to plc programs probably do not need to be backed-up
+        #self.PlcLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
+        #                   for _ in range(self.numberOfPlcPrograms)]
+        # L variables local to coordinate systems...
+        #self.CoordSystemLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
+        #                   for _ in range(self.numberOfCoordSystems)]
+
+        # Data structures
         self.Motors = [self.SetupDataStructure() for _ in range(self.numberOfMotors)]
         self.CoordSystems = [self.SetupDataStructure() for _ in range(self.numberOfCoordSystems)]
         self.BufIOs = [self.SetupDataStructure() for _ in range(self.numberOfBufIOs)]
         self.CamTables = [self.SetupDataStructure() for _ in range(self.numberOfCamTables)]  # Untested.
         self.BrickAC = self.SetupDataStructure()
         self.BrickLV = self.SetupDataStructure()
-        self.IVariables = [self.IVariable() for _ in range(self.numberOfIVariables)]
         self.Clipper = self.SetupDataStructure()  # Alias to Gate3. Not Implemented.
         self.CompTables = [self.SetupDataStructure() for _ in range(self.numberOfCompTables)]  # Untested.
         self.ECATs = [self.SetupDataStructure() for _ in range(self.numberOfECATs)]
@@ -320,11 +485,26 @@ class PowerPMAC:
         self.Gate2 = self.SetupDataStructure()  # Untested.
         self.Gate3 = self.SetupDataStructure()
         self.GateIOs = [self.SetupDataStructure() for _ in range(self.numberOfGateIoICs)]
+        self.Macro = self.SetupDataStructure()
+
+    def buildVariable2Element(self):
+        # I variables map
+        for ivar in self.Ivariables:
+            self.variableToElement[ivar.name] = ivar.element
+
+    def buildElement2Variable(self):
+        # I variables map
+        for ivar in self.Ivariables:
+            self.elementToVariable[ivar.element] = ivar.name
+        self.elementToVariable['*'] = None
 
 if __name__ == '__main__':
+
+    start = time.time()
+
     sshClient = dls_pmacremote.PPmacSshInterface()
     sshClient.port = 1025
-    #sshClient.hostname = '10.2.2.77'
+    # sshClient.hostname = '10.2.2.77'
     sshClient.hostname = '192.168.56.10'
     sshClient.connect()
 
@@ -335,12 +515,11 @@ if __name__ == '__main__':
 
     ppmac.initDataStructures()
 
-    #hardwareWriteRead.readIVariables(10, 31, 5)
     hardwareWriteRead.readAllMotorsSetupData()
     hardwareWriteRead.readAllCSSetupData()
     hardwareWriteRead.readBrickACData()
     hardwareWriteRead.readBrickLVData()
-    #hardwareWriteRead.readAllBufIOSetupData()
+    hardwareWriteRead.readAllBufIOSetupData()
     hardwareWriteRead.readAllCamTableSetupData()
     hardwareWriteRead.readAllCompTableSetupData()
     hardwareWriteRead.readAllECATsSetupData()
@@ -349,15 +528,16 @@ if __name__ == '__main__':
     hardwareWriteRead.readGate2SetupData()
     hardwareWriteRead.readGate3SetupData()
     hardwareWriteRead.readAllGateIoSetupData()
-
+    hardwareWriteRead.readMacroSetupData()
+    '''
     for i in range(0, ppmac.numberOfMotors):
         print(ppmac.Motors[i].setupData)
     for i in range(0, ppmac.numberOfCoordSystems):
         print(ppmac.CoordSystems[i].setupData)
     print(ppmac.BrickAC.setupData)
     print(ppmac.BrickLV.setupData)
-    #for i in range(0, ppmac.numberOfBufIOs):
-    #    print(ppmac.BufIOs[i].setupData)
+    for i in range(0, ppmac.numberOfBufIOs):
+        print(ppmac.BufIOs[i].setupData)
     for i in range(0, ppmac.numberOfCamTables):
         print(ppmac.CamTables[i].setupData)
     for i in range(0, ppmac.numberOfCompTables):
@@ -371,8 +551,38 @@ if __name__ == '__main__':
     print(ppmac.Gate3.setupData)
     for i in range(0, ppmac.numberOfGateIoICs):
         print(ppmac.GateIOs[i].setupData)
+    print(ppmac.Macro.setupData)
+    '''
+    lw = 0 #16000
+    up = 250 #ppmac.numberOfIVariables - 1
+    hardwareWriteRead.readIVariables(lw, ppmac.numberOfIVariables - 1, 100)
+    hardwareWriteRead.readPVariables(lw, ppmac.numberOfPVariables - 1, 100)
+    hardwareWriteRead.readMVariables(lw, ppmac.numberOfMVariables - 1, 100)
+    hardwareWriteRead.readQVariables('all', lw, ppmac.numberOfQVariables - 1, 100)
+
+    '''
+    for i in range(0, up + 1):
+        print(ppmac.Ivariables[i])
+    for i in range(0, up + 1):
+        print(ppmac.Pvariables[i])
+    for i in range(0, up + 1):
+        print(ppmac.Mvariables[i])
+    for i in range(ppmac.numberOfCoordSystems):
+        for j in range(0, up + 1):
+            print(ppmac.Qvariables[i][j])
+
+    repositoryWriteRead = PPMACRepositoryWriteRead(ppmac)
+    repositoryWriteRead.writePvars()
+    repositoryWriteRead.writeIvars()
+    repositoryWriteRead.writeQvars()
+    repositoryWriteRead.writeMvars()
+    '''
+    #ppmac.buildVariable2Element()
+    #ppmac.buildElement2Variable()
 
     # scpFromPowerPMACtoLocal(source='/opt/ppmac/usrflash/Project/Configuration/pp_diff.cfg',
     #                        destination='/home/dlscontrols/Workspace/pp_diff.cfg')
 
     sshClient.disconnect()
+
+    print(time.time() - start)
