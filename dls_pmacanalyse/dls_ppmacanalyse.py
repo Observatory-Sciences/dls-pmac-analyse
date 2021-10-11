@@ -4,6 +4,7 @@ import time
 import re
 import warnings
 import os
+import numpy as np
 
 
 def timer(func):
@@ -17,8 +18,38 @@ def timer(func):
 
 def exitGpascii():
     (exitGpascii, status) = sshClient.sendCommand('\x03')
-    print(exitGpascii.split("\r"))
+    if not status:
+        raise IOError("Failed to exit gpascii.")
 
+def scpFromPowerPMACtoLocal(source, destination, recursive):
+    try:
+        scp = SCPClient(sshClient.client.get_transport())
+        scp.get(source, destination, recursive)
+        scp.close()
+    except Exception as e:
+        print(f"Error: {e}, unable to get directory from remote host: {source}")
+
+def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
+    try:
+        scp = SCPClient(sshClient.client.get_transport())
+        scp.put(files, remote_path, recursive)
+        scp.close()
+    except Exception as e:
+        print(f"Error: {e}, unable to copy files {files} to remote path: {remote_path}")
+
+def nthRepl(s, sub, repl, nth):
+    find = s.find(sub)
+    # if find is not p1 we have found at least one match for the substring
+    i = find != -1
+    # loop util we find the nth or we find no match
+    while find != -1 and i != nth:
+        # find + 1 means we start at the last match start index + 1
+        find = s.find(sub, find + 1)
+        i += 1
+    # if i  is equal to nth we found nth matches so replace
+    if i == nth:
+        return s[:find] + repl + s[find + len(sub):]
+    return s
 
 def responseListToDict(responseList, splitChars='='):
     responseDict = {}
@@ -62,6 +93,10 @@ class PPMACRepositoryWriteRead(object):
             self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
 class PPMACHardwareWriteRead(object):
+    # Standard Data Structure symbols tables
+    #pp_swtlbs = ['pp_swtbl0.sym', 'pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
+    pp_swtlbs_files = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
+
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
 
@@ -133,9 +168,10 @@ class PPMACHardwareWriteRead(object):
             raise IOError('Cannot retrieve data structure: error communicating with PMAC')
         else:
             data = data.split("\r")[:-1]
-        if 'error' in data[0]:
-            errMessage = 'Error reading data.'
-            raise IOError(errMessage + data[0])
+            print(data)
+        #if 'error' in data[0]:
+        #    errMessage = 'Error reading data.'
+        #    raise IOError(errMessage + data[0])
         return data
 
     def readVariables(self, type, variables, indexStart=0, indexEnd=1639, varsPerBlock=100):
@@ -347,13 +383,257 @@ class PPMACHardwareWriteRead(object):
         for i in range(0, self.ppmacInstance.numberOfGateIoICs):
             self.readGateIoSetupData(i)
 
-    def scpFromPowerPMACtoLocal(source, destination):
-        try:
-            scp = SCPClient(sshClient.client.get_transport())
-            scp.get(source, destination)
-            scp.close()
-        except Exception as e:
-            print("Unable to get directory from remote host: ", source)
+    def swtblFileToList(self, pp_swtbl, destination):
+        sywtblFile = pp_swtbl
+        try: # , errors='ignore'
+            file = open(file=destination + '/' + sywtblFile, mode="r", encoding='ISO-8859-1')
+            multi_line = ''
+            swtblDSElements = []
+            for line in file:
+                multi_line_ = multi_line
+                line.replace
+                if line[-2:] == '\\\n':
+                    multi_line += line
+                else:
+                    line = multi_line_ + line
+                    #print(multi_line_, line)
+                    elem = line.split('\x01')
+                    #key = repr(elem[2])
+                    #val = repr(elem[1])
+                    #print('key=', key, '  value=', val)
+                    #if key in swtblDSElements:
+                    #    print('exists')
+                    #swtblDSElements[key] = val
+                    #print(key, swtblDSElements[key])
+                    multi_line = ''
+                    swtblDSElements.append(elem)
+            file.close()
+            print(len(swtblDSElements))
+        except IOError as e:
+            print(e)
+        return swtblDSElements
+
+    def fillDataStructures_1(self, DS_string, DSs):
+        i = 0
+        cmd_accepted = True
+        while cmd_accepted:
+            i_idex_string = f'[{i}]'
+            DS_string_ = DS_string.replace('[]', i_idex_string)
+            cmd_return = self.sendCommand(DS_string_)
+            if 'ILLEGAL CMD' in cmd_return:
+                cmd_accepted = False
+            else:
+                DSs.append(DS_string_)
+            i += 1
+
+    def fillDataStructures_2(self, DS_string, DSs):
+        i = 0
+        cmd_accepted = True
+        while cmd_accepted:
+            j = 0
+            i_idex_string = f'[{i}]'
+            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+            while cmd_accepted:
+                j_idex_string = f'[{j}]'
+                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                print(DS_string__)
+                cmd_return = self.sendCommand(DS_string__)
+                if 'ILLEGAL CMD' in cmd_return[0]:
+                    cmd_accepted = False
+                else:
+                    last_i_accepted = i
+                    DSs.append(DS_string__)
+                j += 1
+            cmd_accepted = True
+            # print(last_i_accepted, i)
+            if i - last_i_accepted > 1:
+                cmd_accepted = False
+            # print(cmd_accepted)
+            i += 1
+
+    def fillDataStructures_3(self, DS_string, DSs):
+        i = 0
+        cmd_accepted = True
+        while cmd_accepted:
+            j = 0
+            i_idex_string = f'[{i}]'
+            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+            while cmd_accepted:
+                k = 0
+                j_idex_string = f'[{j}]'
+                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                while cmd_accepted:
+                    k_idex_string = f'[{k}]'
+                    DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
+                    print(DS_string___)
+                    cmd_return = self.sendCommand(DS_string___)
+                    if 'ILLEGAL CMD' in cmd_return[0]:
+                        cmd_accepted = False
+                    else:
+                        last_j_accepted = j
+                        last_i_accepted = i
+                        DSs.append(DS_string___)
+                    k += 1
+                cmd_accepted = True
+                # print(last_i_accepted, i)
+                if j - last_j_accepted > 1:
+                    cmd_accepted = False
+                j += 1
+            cmd_accepted = True
+            # print(last_i_accepted, i)
+            if i - last_i_accepted > 1:
+                cmd_accepted = False
+            i += 1
+
+
+    def createDataStructuresDict(self):
+        # delete old dict
+        remote_db_path = '/var/ftp/usrflash/Database'
+        local_db_path = './tmp/Database'
+        if not os.path.isdir(local_db_path):
+            os.system('mkdir ' + local_db_path)
+        scpFromPowerPMACtoLocal(source=remote_db_path, destination=local_db_path, recursive=True)
+        print(self.pp_swtlbs_files)
+        pp_swtbls = []
+        for pp_swtbl_file in self.pp_swtlbs_files:
+            pp_swtbls.append(self.swtblFileToList(pp_swtbl_file, local_db_path))
+        swtbl1 = pp_swtbls[0]
+        swtbl2 = pp_swtbls[1]
+        swtbl3 = pp_swtbls[2]
+        swtbl1_nparray = np.asarray(swtbl1)
+        swtbl2_nparray = np.asarray(swtbl2)
+        swtbl3_nparray = np.asarray(swtbl3)
+        #print(swtbl1_nparray.shape[0])
+        DSs = []
+        for i in range(swtbl1_nparray.shape[0]):
+            for j in range(swtbl2_nparray.shape[0]):
+                if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
+                    for k in range(swtbl3_nparray.shape[0]):
+                        if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
+                            print(swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] +
+                                  '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2])
+                            if swtbl3_nparray[k, 2][-2:] == '[]':
+                                DS_string = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                      '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
+                                #DS_string = 'Coord[].CdPos[]'
+                                DS_string = 'Gate1[].Chan[].Dac[]'
+                                print(DS_string)
+                                DSs = []
+                                N_brackets = DS_string.count('[]') #dims
+                                # Here we'll probably want to construct a big string of lots of commands to send
+                                # at once and then parse the response to see which were accepted, rather than
+                                # sending each command individually
+                                if N_brackets == 1:
+                                    self.fillDataStructures_1(DS_string, DSs)
+                                    """
+                                    i = 0
+                                    cmd_accepted = True
+                                    while cmd_accepted:
+                                        i_idex_string = f'[{i}]'
+                                        DS_string_ = DS_string.replace('[]', i_idex_string)
+                                        cmd_return = self.sendCommand(DS_string_)
+                                        if 'ILLEGAL CMD' in cmd_return:
+                                            cmd_accepted = False
+                                        else:
+                                            DSs.append(DS_string_)
+                                        i += 1
+                                    """
+                                if N_brackets == 2:
+                                    self.fillDataStructures_2(DS_string, DSs)
+                                    """
+                                    i = 0
+                                    cmd_accepted = True
+                                    while cmd_accepted:
+                                        j = 0
+                                        i_idex_string = f'[{i}]'
+                                        DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+                                        while cmd_accepted:
+                                            j_idex_string = f'[{j}]'
+                                            DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                                            print(DS_string__)
+                                            cmd_return = self.sendCommand(DS_string__)
+                                            if 'ILLEGAL CMD' in cmd_return[0]:
+                                                cmd_accepted = False
+                                            else:
+                                                last_i_accepted = i
+                                                DSs.append(DS_string__)
+                                            j += 1
+                                        cmd_accepted = True
+                                        #print(last_i_accepted, i)
+                                        if i - last_i_accepted > 1:
+                                            cmd_accepted = False
+                                        #print(cmd_accepted)
+                                        i += 1
+                                    """
+                                if N_brackets == 3:
+                                    self.fillDataStructures_3(DS_string, DSs)
+                                    """
+                                    i = 0
+                                    cmd_accepted = True
+                                    while cmd_accepted:
+                                        j = 0
+                                        i_idex_string = f'[{i}]'
+                                        DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+                                        while cmd_accepted:
+                                            k = 0
+                                            j_idex_string = f'[{j}]'
+                                            DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                                            while cmd_accepted:
+                                                k_idex_string = f'[{k}]'
+                                                DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
+                                                print(DS_string___)
+                                                cmd_return = self.sendCommand(DS_string___)
+                                                if 'ILLEGAL CMD' in cmd_return[0]:
+                                                    cmd_accepted = False
+                                                else:
+                                                    last_j_accepted = j
+                                                    last_i_accepted = i
+                                                    DSs.append(DS_string___)
+                                                k += 1
+                                            cmd_accepted = True
+                                            #print(last_i_accepted, i)
+                                            if j - last_j_accepted > 1:
+                                                cmd_accepted = False
+                                            j += 1
+                                        cmd_accepted = True
+                                        #print(last_i_accepted, i)
+                                        if i - last_i_accepted > 1:
+                                            cmd_accepted = False
+                                        i += 1
+                                    """
+                                print(DSs)
+                                cmd = ' '.join(DSs)
+                                print(cmd)
+                                test = self.sendCommand(cmd)
+                                print(test)
+                                DSs.clear()
+
+
+
+
+
+                                #for l in range(0, dims):
+                                #    # replace first few occurrences
+                                #    count = dims - l
+                                #    DS_string_ = DS_string.replace('[]', '[0]', count - 1)
+                                #    print(dims, dims - l, DS_string_)
+                                #    err = False
+                                #    indices = [0] * (dims - count + 1)
+                                #    print(indices)
+                                #    #for m in range(count, dims):
+                                #    #    DS_string_ = DS_string_
+                                #    #while not err:
+
+                                    #DS_string_ = nthRepl(DS_string, '[]', [])
+                                    #while allowed:
+                                    #    (cmdReturn, status) = sshClient.sendCommand(DS_string)
+
+
+
+
+
+
+
 
 
 class PowerPMAC:
@@ -515,20 +795,20 @@ if __name__ == '__main__':
 
     ppmac.initDataStructures()
 
-    hardwareWriteRead.readAllMotorsSetupData()
-    hardwareWriteRead.readAllCSSetupData()
-    hardwareWriteRead.readBrickACData()
-    hardwareWriteRead.readBrickLVData()
-    hardwareWriteRead.readAllBufIOSetupData()
-    hardwareWriteRead.readAllCamTableSetupData()
-    hardwareWriteRead.readAllCompTableSetupData()
-    hardwareWriteRead.readAllECATsSetupData()
-    hardwareWriteRead.readAllEncTableSetupData()
-    hardwareWriteRead.readGate1SetupData()
-    hardwareWriteRead.readGate2SetupData()
-    hardwareWriteRead.readGate3SetupData()
-    hardwareWriteRead.readAllGateIoSetupData()
-    hardwareWriteRead.readMacroSetupData()
+    #hardwareWriteRead.readAllMotorsSetupData()
+    #hardwareWriteRead.readAllCSSetupData()
+    #hardwareWriteRead.readBrickACData()
+    #hardwareWriteRead.readBrickLVData()
+    #hardwareWriteRead.readAllBufIOSetupData()
+    #hardwareWriteRead.readAllCamTableSetupData()
+    #hardwareWriteRead.readAllCompTableSetupData()
+    #hardwareWriteRead.readAllECATsSetupData()
+    #hardwareWriteRead.readAllEncTableSetupData()
+    #hardwareWriteRead.readGate1SetupData()
+    #hardwareWriteRead.readGate2SetupData()
+    #hardwareWriteRead.readGate3SetupData()
+    #hardwareWriteRead.readAllGateIoSetupData()
+    #hardwareWriteRead.readMacroSetupData()
     '''
     for i in range(0, ppmac.numberOfMotors):
         print(ppmac.Motors[i].setupData)
@@ -553,12 +833,12 @@ if __name__ == '__main__':
         print(ppmac.GateIOs[i].setupData)
     print(ppmac.Macro.setupData)
     '''
-    lw = 0 #16000
-    up = 250 #ppmac.numberOfIVariables - 1
-    hardwareWriteRead.readIVariables(lw, ppmac.numberOfIVariables - 1, 100)
-    hardwareWriteRead.readPVariables(lw, ppmac.numberOfPVariables - 1, 100)
-    hardwareWriteRead.readMVariables(lw, ppmac.numberOfMVariables - 1, 100)
-    hardwareWriteRead.readQVariables('all', lw, ppmac.numberOfQVariables - 1, 100)
+    #lw = 0 #16000
+    #up = 250 #ppmac.numberOfIVariables - 1
+    #hardwareWriteRead.readIVariables(lw, ppmac.numberOfIVariables - 1, 100)
+    #hardwareWriteRead.readPVariables(lw, ppmac.numberOfPVariables - 1, 100)
+    #hardwareWriteRead.readMVariables(lw, ppmac.numberOfMVariables - 1, 100)
+    #hardwareWriteRead.readQVariables('all', lw, ppmac.numberOfQVariables - 1, 100)
 
     '''
     for i in range(0, up + 1):
@@ -580,8 +860,13 @@ if __name__ == '__main__':
     #ppmac.buildVariable2Element()
     #ppmac.buildElement2Variable()
 
-    # scpFromPowerPMACtoLocal(source='/opt/ppmac/usrflash/Project/Configuration/pp_diff.cfg',
-    #                        destination='/home/dlscontrols/Workspace/pp_diff.cfg')
+    scpFromPowerPMACtoLocal(source='/var/ftp/usrflash/Database',
+                        destination='/home/dlscontrols/Workspace/repository/Database', recursive=True)
+
+    #hardwareWriteRead.scpFromLocalToPowerPMAC(files='/home/dlscontrols/Workspace/repository/Project_01',
+    #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
+
+    hardwareWriteRead.createDataStructuresDict()
 
     sshClient.disconnect()
 
