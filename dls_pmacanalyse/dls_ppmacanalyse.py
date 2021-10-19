@@ -51,6 +51,13 @@ def nthRepl(s, sub, repl, nth):
         return s[:find] + repl + s[find + len(sub):]
     return s
 
+def find_nth(s, sub, n):
+    start = s.find(sub)
+    while start >= 0 and n > 1:
+        start = s.find(sub, start+len(sub))
+        n -= 1
+    return start
+
 def responseListToDict(responseList, splitChars='='):
     responseDict = {}
     if responseList != ['', '']:
@@ -93,9 +100,14 @@ class PPMACRepositoryWriteRead(object):
             self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
 class PPMACHardwareWriteRead(object):
+    # Path to directory containing symbols tables files on PPMAC
+    remote_db_path = '/var/ftp/usrflash/Database'
+    # Path to directory containing symbols tables files on local
+    local_db_path = './tmp/Database'
     # Standard Data Structure symbols tables
-    #pp_swtlbs = ['pp_swtbl0.sym', 'pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
     pp_swtlbs_files = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
+    # List of data structures to be ignored when reading active elements
+    dataStructureIgnoreList = set(['Sys.Uhex[]'])
 
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
@@ -168,7 +180,7 @@ class PPMACHardwareWriteRead(object):
             raise IOError('Cannot retrieve data structure: error communicating with PMAC')
         else:
             data = data.split("\r")[:-1]
-            print(data)
+            #print(data)
         #if 'error' in data[0]:
         #    errMessage = 'Error reading data.'
         #    raise IOError(errMessage + data[0])
@@ -383,35 +395,40 @@ class PPMACHardwareWriteRead(object):
         for i in range(0, self.ppmacInstance.numberOfGateIoICs):
             self.readGateIoSetupData(i)
 
-    def swtblFileToList(self, pp_swtbl, destination):
-        sywtblFile = pp_swtbl
-        try: # , errors='ignore'
-            file = open(file=destination + '/' + sywtblFile, mode="r", encoding='ISO-8859-1')
+    def swtblFileToList(self, pp_swtbl_file):
+        """
+        Generate a list of symbols from a symbols table file.
+        :param pp_swtbl_file: full path to symbols table file.
+        :return: swtbl_DSs: list of symbols.
+        """
+        try:
+            file = open(file=pp_swtbl_file, mode="r", encoding='ISO-8859-1')
             multi_line = ''
-            swtblDSElements = []
+            symbols = []
             for line in file:
                 multi_line_ = multi_line
-                line.replace
                 if line[-2:] == '\\\n':
                     multi_line += line
                 else:
                     line = multi_line_ + line
-                    #print(multi_line_, line)
-                    elem = line.split('\x01')
-                    #key = repr(elem[2])
-                    #val = repr(elem[1])
-                    #print('key=', key, '  value=', val)
-                    #if key in swtblDSElements:
-                    #    print('exists')
-                    #swtblDSElements[key] = val
-                    #print(key, swtblDSElements[key])
+                    symbol = line.split('\x01')
                     multi_line = ''
-                    swtblDSElements.append(elem)
+                    symbols.append(symbol)
             file.close()
-            print(len(swtblDSElements))
         except IOError as e:
             print(e)
-        return swtblDSElements
+        return symbols
+
+    def ignoreDataStructure(self, substructure):
+        N = substructure.count('.')
+        for _ in range(N + 1):
+            print('Ignore this --> ' + substructure)
+            if substructure in self.dataStructureIgnoreList:
+                print('Ignoring')
+                return True
+            substructure = substructure[0:substructure.rfind('.')]
+        return False
+
 
     def fillDataStructures_1(self, DS_string, DSs):
         i = 0
@@ -419,8 +436,14 @@ class PPMACHardwareWriteRead(object):
         while cmd_accepted:
             i_idex_string = f'[{i}]'
             DS_string_ = DS_string.replace('[]', i_idex_string)
+            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
+            #    break
+            if self.ignoreDataStructure(DS_string_):
+                break
+            print(DS_string_)
             cmd_return = self.sendCommand(DS_string_)
-            if 'ILLEGAL CMD' in cmd_return:
+            print(cmd_return)
+            if 'ILLEGAL' in cmd_return[0]:
                 cmd_accepted = False
             else:
                 DSs.append(DS_string_)
@@ -428,17 +451,29 @@ class PPMACHardwareWriteRead(object):
 
     def fillDataStructures_2(self, DS_string, DSs):
         i = 0
+        last_i_accepted = i
         cmd_accepted = True
         while cmd_accepted:
             j = 0
             i_idex_string = f'[{i}]'
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
+            #    break
+            if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
+                break
             while cmd_accepted:
                 j_idex_string = f'[{j}]'
                 DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                #if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
+                #    break
+                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
+                #    break
+                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
+                    break
                 print(DS_string__)
                 cmd_return = self.sendCommand(DS_string__)
-                if 'ILLEGAL CMD' in cmd_return[0]:
+                print(cmd_return)
+                if 'ILLEGAL' in cmd_return[0]:
                     cmd_accepted = False
                 else:
                     last_i_accepted = i
@@ -453,21 +488,43 @@ class PPMACHardwareWriteRead(object):
 
     def fillDataStructures_3(self, DS_string, DSs):
         i = 0
+        last_i_accepted = i
         cmd_accepted = True
         while cmd_accepted:
             j = 0
+            last_j_accepted = j
             i_idex_string = f'[{i}]'
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
+            #    break
+            if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
+                break
             while cmd_accepted:
                 k = 0
                 j_idex_string = f'[{j}]'
                 DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                #if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
+                #    break
+                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
+                #    break
+                if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, '[', 3)].replace(f'[{i}]', '[]', 1)):
+                    break
                 while cmd_accepted:
                     k_idex_string = f'[{k}]'
                     DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
+                    #if DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1) \
+                    #        in self.dataStructureIgnoreList:
+                    #    break
+                    #if self.ignoreDataStructure(
+                    #        DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    #    break
+                    if self.ignoreDataStructure(
+                            DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                        break
                     print(DS_string___)
                     cmd_return = self.sendCommand(DS_string___)
-                    if 'ILLEGAL CMD' in cmd_return[0]:
+                    print(cmd_return)
+                    if 'ILLEGAL' in cmd_return[0]:
                         cmd_accepted = False
                     else:
                         last_j_accepted = j
@@ -486,154 +543,93 @@ class PPMACHardwareWriteRead(object):
             i += 1
 
 
-    def createDataStructuresDict(self):
+    def createDataStructuresFromSymbolsTables(self):
+        """
+        Read the symbols tables and create a list of data structure names contained within them.
+        :return: dataStructures: list of data structure names
+        """
         # delete old dict
-        remote_db_path = '/var/ftp/usrflash/Database'
-        local_db_path = './tmp/Database'
-        if not os.path.isdir(local_db_path):
-            os.system('mkdir ' + local_db_path)
-        scpFromPowerPMACtoLocal(source=remote_db_path, destination=local_db_path, recursive=True)
-        print(self.pp_swtlbs_files)
+        if not os.path.isdir(self.local_db_path):
+            os.system('mkdir ' + self.local_db_path)
+        scpFromPowerPMACtoLocal(source=self.remote_db_path, destination=self.local_db_path, recursive=True)
         pp_swtbls = []
         for pp_swtbl_file in self.pp_swtlbs_files:
-            pp_swtbls.append(self.swtblFileToList(pp_swtbl_file, local_db_path))
-        swtbl1 = pp_swtbls[0]
-        swtbl2 = pp_swtbls[1]
-        swtbl3 = pp_swtbls[2]
-        swtbl1_nparray = np.asarray(swtbl1)
-        swtbl2_nparray = np.asarray(swtbl2)
-        swtbl3_nparray = np.asarray(swtbl3)
-        #print(swtbl1_nparray.shape[0])
-        DSs = []
-        for i in range(swtbl1_nparray.shape[0]):
-            for j in range(swtbl2_nparray.shape[0]):
-                if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
-                    for k in range(swtbl3_nparray.shape[0]):
-                        if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
-                            print(swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] +
-                                  '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2])
-                            if swtbl3_nparray[k, 2][-2:] == '[]':
-                                DS_string = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+            pp_swtbls.append(self.swtblFileToList(self.local_db_path + '/' + pp_swtbl_file))
+        swtbl1_nparray = np.asarray(pp_swtbls[0])
+        swtbl2_nparray = np.asarray(pp_swtbls[1])
+        swtbl3_nparray = np.asarray(pp_swtbls[2])
+        dataStructures = []
+        with open('tmp/master_swtbl_2.txt', 'w+') as writeFile:
+            for i in range(swtbl1_nparray.shape[0]):
+                substruct_12 = False
+                for j in range(swtbl2_nparray.shape[0]):
+                    if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
+                        if (swtbl1_nparray[i, 1].replace('[]','') != swtbl2_nparray[j, 5].replace('[]','')) and \
+                                (swtbl2_nparray[j, 5] != "NULL"):
+                            continue
+                        substruct_12 = True
+                        substruct_23 = False
+                        for k in range(swtbl3_nparray.shape[0]):
+                            if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
+                                if (swtbl1_nparray[i, 1].replace('[]','') != swtbl3_nparray[k, 5].replace('[]','')) and \
+                                        (swtbl3_nparray[k, 5] != "NULL"):
+                                    continue
+                                substruct_23 = True
+                                ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                       '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
-                                #DS_string = 'Coord[].CdPos[]'
-                                DS_string = 'Gate1[].Chan[].Dac[]'
-                                print(DS_string)
-                                DSs = []
-                                N_brackets = DS_string.count('[]') #dims
-                                # Here we'll probably want to construct a big string of lots of commands to send
-                                # at once and then parse the response to see which were accepted, rather than
-                                # sending each command individually
-                                if N_brackets == 1:
-                                    self.fillDataStructures_1(DS_string, DSs)
-                                    """
-                                    i = 0
-                                    cmd_accepted = True
-                                    while cmd_accepted:
-                                        i_idex_string = f'[{i}]'
-                                        DS_string_ = DS_string.replace('[]', i_idex_string)
-                                        cmd_return = self.sendCommand(DS_string_)
-                                        if 'ILLEGAL CMD' in cmd_return:
-                                            cmd_accepted = False
-                                        else:
-                                            DSs.append(DS_string_)
-                                        i += 1
-                                    """
-                                if N_brackets == 2:
-                                    self.fillDataStructures_2(DS_string, DSs)
-                                    """
-                                    i = 0
-                                    cmd_accepted = True
-                                    while cmd_accepted:
-                                        j = 0
-                                        i_idex_string = f'[{i}]'
-                                        DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-                                        while cmd_accepted:
-                                            j_idex_string = f'[{j}]'
-                                            DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                                            print(DS_string__)
-                                            cmd_return = self.sendCommand(DS_string__)
-                                            if 'ILLEGAL CMD' in cmd_return[0]:
-                                                cmd_accepted = False
-                                            else:
-                                                last_i_accepted = i
-                                                DSs.append(DS_string__)
-                                            j += 1
-                                        cmd_accepted = True
-                                        #print(last_i_accepted, i)
-                                        if i - last_i_accepted > 1:
-                                            cmd_accepted = False
-                                        #print(cmd_accepted)
-                                        i += 1
-                                    """
-                                if N_brackets == 3:
-                                    self.fillDataStructures_3(DS_string, DSs)
-                                    """
-                                    i = 0
-                                    cmd_accepted = True
-                                    while cmd_accepted:
-                                        j = 0
-                                        i_idex_string = f'[{i}]'
-                                        DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-                                        while cmd_accepted:
-                                            k = 0
-                                            j_idex_string = f'[{j}]'
-                                            DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                                            while cmd_accepted:
-                                                k_idex_string = f'[{k}]'
-                                                DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
-                                                print(DS_string___)
-                                                cmd_return = self.sendCommand(DS_string___)
-                                                if 'ILLEGAL CMD' in cmd_return[0]:
-                                                    cmd_accepted = False
-                                                else:
-                                                    last_j_accepted = j
-                                                    last_i_accepted = i
-                                                    DSs.append(DS_string___)
-                                                k += 1
-                                            cmd_accepted = True
-                                            #print(last_i_accepted, i)
-                                            if j - last_j_accepted > 1:
-                                                cmd_accepted = False
-                                            j += 1
-                                        cmd_accepted = True
-                                        #print(last_i_accepted, i)
-                                        if i - last_i_accepted > 1:
-                                            cmd_accepted = False
-                                        i += 1
-                                    """
-                                print(DSs)
-                                cmd = ' '.join(DSs)
-                                print(cmd)
-                                test = self.sendCommand(cmd)
-                                print(test)
-                                DSs.clear()
+                                print(ds_)
+                                dataStructures.append(ds_)
+                                writeFile.write(ds_.__str__() + '\n')
+                        if substruct_23 == False:
+                            ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                  '.' + swtbl2_nparray[j, 2]
+                            print(ds_)
+                            dataStructures.append(ds_)
+                            writeFile.write(ds_.__str__() + '\n')
+                if substruct_12 == False:
+                    ds_ = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
+                    print(ds_)
+                    dataStructures.append(ds_)
+                    writeFile.write(ds_.__str__() + '\n')
+        return dataStructures
 
 
+    def checkDataStructuresValidity(self, dataStructures):
+        # Check that data structure names have been accepted
+        acceptedDataStructures = []
+        for ds in dataStructures:
+            print(ds)
+            cmd_return = self.sendCommand(ds.replace('[]','[0]'))
+            if 'ILLEGAL CMD' not in cmd_return[0]:
+                acceptedDataStructures.append(ds)
+        return acceptedDataStructures
 
 
-
-                                #for l in range(0, dims):
-                                #    # replace first few occurrences
-                                #    count = dims - l
-                                #    DS_string_ = DS_string.replace('[]', '[0]', count - 1)
-                                #    print(dims, dims - l, DS_string_)
-                                #    err = False
-                                #    indices = [0] * (dims - count + 1)
-                                #    print(indices)
-                                #    #for m in range(count, dims):
-                                #    #    DS_string_ = DS_string_
-                                #    #while not err:
-
-                                    #DS_string_ = nthRepl(DS_string, '[]', [])
-                                    #while allowed:
-                                    #    (cmdReturn, status) = sshClient.sendCommand(DS_string)
-
-
+    def fillDataStructuresIndices(self, dataStructures):
+        # Here we'll probably want to construct a big string of lots of commands to send
+        # at once and then parse the response to see which were accepted, rather than
+        # sending each command individually
+        indexedDataStructures = []
+        for ds in dataStructures:
+            N_brackets = ds.count('[]')
+            if N_brackets == 1:
+                self.fillDataStructures_1(ds, indexedDataStructures)
+            elif N_brackets == 2:
+                self.fillDataStructures_2(ds, indexedDataStructures)
+            elif N_brackets == 3:
+                self.fillDataStructures_3(ds, indexedDataStructures)
+            else:
+                continue
+        return indexedDataStructures
 
 
-
-
-
+    def generateActiveDataStructures(self):
+        self.dataStructureIgnoreList = {'Sys.Uhex[0]', 'Sys.Cdata[10]', 'Motor[].New[5]', 'Motor[7]', 'Coord[4]',
+                                        'Coord[].TPData[1]', 'Coord[].TPData[].Pos[27]', 'SubProg[0]',
+                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]'} #set
+        DSs = self.createDataStructuresFromSymbolsTables()
+        DSs_ = self.checkDataStructuresValidity(DSs)
+        DSs__ = self.fillDataStructuresIndices(DSs_)
 
 
 class PowerPMAC:
@@ -866,7 +862,7 @@ if __name__ == '__main__':
     #hardwareWriteRead.scpFromLocalToPowerPMAC(files='/home/dlscontrols/Workspace/repository/Project_01',
     #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
 
-    hardwareWriteRead.createDataStructuresDict()
+    hardwareWriteRead.generateActiveDataStructures()
 
     sshClient.disconnect()
 
