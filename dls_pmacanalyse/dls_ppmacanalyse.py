@@ -446,8 +446,6 @@ class PPMACHardwareWriteRead(object):
         while cmd_accepted:
             i_idex_string = f'[{i}]'
             DS_string_ = DS_string.replace('[]', i_idex_string)
-            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
-            #    break
             if self.ignoreDataStructure(DS_string_):
                 break
             print(DS_string_)
@@ -467,19 +465,11 @@ class PPMACHardwareWriteRead(object):
             j = 0
             i_idex_string = f'[{i}]'
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
-            #    break
-            #if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
-            #    break
             if self.ignoreDataStructure(DS_string_):
                 break
             while cmd_accepted:
                 j_idex_string = f'[{j}]'
                 DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                #if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
-                #    break
-                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
-                #    break
                 if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
                     break
                 print(DS_string__)
@@ -507,38 +497,17 @@ class PPMACHardwareWriteRead(object):
             last_j_accepted = j
             i_idex_string = f'[{i}]'
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            ###if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
-            ###    break
-            # The two if statements below are the ones to be interchanged
-            #if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
-            #    break
             if self.ignoreDataStructure(DS_string_):
                 break
             while cmd_accepted:
                 k = 0
                 j_idex_string = f'[{j}]'
                 DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                ###if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
-                ###    break
-                ###if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
-                ###    break
-                # The two if statements below are the ones to be interchanged
-                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, '[', 3)].replace(f'[{i}]', '[]', 1)):
-                #    break
                 if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
                     break
                 while cmd_accepted:
                     k_idex_string = f'[{k}]'
                     DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
-                    ###if DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1) \
-                    ###        in self.dataStructureIgnoreList:
-                    ###    break
-                    ###if self.ignoreDataStructure(
-                    ###        DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
-                    ###    break
-                    # The two if statements below are the ones to be interchanged
-                    #if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
-                    #    break
                     if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
                         break
                     print(DS_string___)
@@ -552,12 +521,10 @@ class PPMACHardwareWriteRead(object):
                         DSs.append(DS_string___)
                     k += 1
                 cmd_accepted = True
-                # print(last_i_accepted, i)
                 if j - last_j_accepted > 1:
                     cmd_accepted = False
                 j += 1
             cmd_accepted = True
-            # print(last_i_accepted, i)
             if i - last_i_accepted > 1:
                 cmd_accepted = False
             i += 1
