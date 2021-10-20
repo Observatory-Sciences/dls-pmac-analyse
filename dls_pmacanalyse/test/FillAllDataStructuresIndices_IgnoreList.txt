@@ -1,0 +1,5 @@
+# Ignore all indices of A1[i].A2.A3.A4[j]
+# where i >= 3 and j >= 5
+A1[].A2.A3.A4[5]
+A1[3]
+#

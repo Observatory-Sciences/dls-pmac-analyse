@@ -5,6 +5,7 @@ import re
 import warnings
 import os
 import numpy as np
+import logging
 
 
 def timer(func):
@@ -100,17 +101,20 @@ class PPMACRepositoryWriteRead(object):
             self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
 class PPMACHardwareWriteRead(object):
-    # Path to directory containing symbols tables files on PPMAC
-    remote_db_path = '/var/ftp/usrflash/Database'
-    # Path to directory containing symbols tables files on local
-    local_db_path = './tmp/Database'
-    # Standard Data Structure symbols tables
-    pp_swtlbs_files = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
-    # List of data structures to be ignored when reading active elements
-    dataStructureIgnoreList = set(['Sys.Uhex[]'])
-
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
+        # Path to directory containing symbols tables files on PPMAC
+        self.remote_db_path = '/var/ftp/usrflash/Database'
+        # Path to directory containing symbols tables files on local
+        self.local_db_path = './tmp/Database'
+        # File containing list of all base Data Structures
+        self.pp_swtbl0_txtfile = 'pp_swtbl0.txt'
+        # Standard Data Structure symbols tables
+        self.pp_swtlbs_symfiles = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
+        # List of data structures to be ignored when reading active elements
+        self.dataStructureIgnoreList = set(['Sys.Uhex[]'])
+        # Configure logger
+        logging.basicConfig(filename=f'logs/ppmacanalyse.log', level=logging.INFO)
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -420,17 +424,23 @@ class PPMACHardwareWriteRead(object):
         return symbols
 
     def ignoreDataStructure(self, substructure):
-        N = substructure.count('.')
-        for _ in range(N + 1):
-            print('Ignore this --> ' + substructure)
+        """
+        Determine whether a data structure or substructure should be ignored by checking if it or any of its parent,
+        grandparent, great-grandparent etc. structures are included in the ignore list.
+        :param substructure: name of data structure or substructure to check
+        :return: True if data structure or substructure should be ignored, False otherwise
+        """
+        n = substructure.count('.')
+        for _ in range(n + 1):
+            #print('Ignore this --> ' + substructure)
             if substructure in self.dataStructureIgnoreList:
-                print('Ignoring')
+                #print('Ignoring')
                 return True
             substructure = substructure[0:substructure.rfind('.')]
         return False
 
 
-    def fillDataStructures_1(self, DS_string, DSs):
+    def fillDataStructureIndices1(self, DS_string, DSs):
         i = 0
         cmd_accepted = True
         while cmd_accepted:
@@ -449,7 +459,7 @@ class PPMACHardwareWriteRead(object):
                 DSs.append(DS_string_)
             i += 1
 
-    def fillDataStructures_2(self, DS_string, DSs):
+    def fillDataStructureIndices2(self, DS_string, DSs):
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -486,7 +496,7 @@ class PPMACHardwareWriteRead(object):
             # print(cmd_accepted)
             i += 1
 
-    def fillDataStructures_3(self, DS_string, DSs):
+    def fillDataStructureIndices3(self, DS_string, DSs):
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -518,8 +528,7 @@ class PPMACHardwareWriteRead(object):
                     #if self.ignoreDataStructure(
                     #        DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
                     #    break
-                    if self.ignoreDataStructure(
-                            DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
                         break
                     print(DS_string___)
                     cmd_return = self.sendCommand(DS_string___)
@@ -552,14 +561,18 @@ class PPMACHardwareWriteRead(object):
         if not os.path.isdir(self.local_db_path):
             os.system('mkdir ' + self.local_db_path)
         scpFromPowerPMACtoLocal(source=self.remote_db_path, destination=self.local_db_path, recursive=True)
+        pp_swtbl0 = []
+        with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
+            for line in readFile:
+                pp_swtbl0.append(line)
         pp_swtbls = []
-        for pp_swtbl_file in self.pp_swtlbs_files:
+        for pp_swtbl_file in self.pp_swtlbs_symfiles:
             pp_swtbls.append(self.swtblFileToList(self.local_db_path + '/' + pp_swtbl_file))
         swtbl1_nparray = np.asarray(pp_swtbls[0])
         swtbl2_nparray = np.asarray(pp_swtbls[1])
         swtbl3_nparray = np.asarray(pp_swtbls[2])
         dataStructures = []
-        with open('tmp/master_swtbl_2.txt', 'w+') as writeFile:
+        with open('tmp/master_swtbl_3.txt', 'w+') as writeFile:
             for i in range(swtbl1_nparray.shape[0]):
                 substruct_12 = False
                 for j in range(swtbl2_nparray.shape[0]):
@@ -600,12 +613,14 @@ class PPMACHardwareWriteRead(object):
         for ds in dataStructures:
             print(ds)
             cmd_return = self.sendCommand(ds.replace('[]','[0]'))
-            if 'ILLEGAL CMD' not in cmd_return[0]:
+            if 'ILLEGAL' in cmd_return[0]:
+                logging.info(f"{ds.replace('[]','[0]')} not a valid ppmac command")
+            else:
                 acceptedDataStructures.append(ds)
         return acceptedDataStructures
 
 
-    def fillDataStructuresIndices(self, dataStructures):
+    def fillAllDataStructuresIndices(self, dataStructures):
         # Here we'll probably want to construct a big string of lots of commands to send
         # at once and then parse the response to see which were accepted, rather than
         # sending each command individually
@@ -613,11 +628,11 @@ class PPMACHardwareWriteRead(object):
         for ds in dataStructures:
             N_brackets = ds.count('[]')
             if N_brackets == 1:
-                self.fillDataStructures_1(ds, indexedDataStructures)
+                self.fillDataStructureIndices1(ds, indexedDataStructures)
             elif N_brackets == 2:
-                self.fillDataStructures_2(ds, indexedDataStructures)
+                self.fillDataStructureIndices2(ds, indexedDataStructures)
             elif N_brackets == 3:
-                self.fillDataStructures_3(ds, indexedDataStructures)
+                self.fillDataStructureIndices3(ds, indexedDataStructures)
             else:
                 continue
         return indexedDataStructures
@@ -626,10 +641,61 @@ class PPMACHardwareWriteRead(object):
     def generateActiveDataStructures(self):
         self.dataStructureIgnoreList = {'Sys.Uhex[0]', 'Sys.Cdata[10]', 'Motor[].New[5]', 'Motor[7]', 'Coord[4]',
                                         'Coord[].TPData[1]', 'Coord[].TPData[].Pos[27]', 'SubProg[0]',
-                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]'} #set
+                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]', 'Acc72EX[].Data8[0]'} #set
         DSs = self.createDataStructuresFromSymbolsTables()
         DSs_ = self.checkDataStructuresValidity(DSs)
-        DSs__ = self.fillDataStructuresIndices(DSs_)
+        DSs__ = self.fillAllDataStructuresIndices(DSs_)
+
+
+    def test_CreateDataStructuresFromSymbolsTables(self):
+        #dataStructuresFile = 'test/PPMACsoftwareRef_25102016_DataStructures.txt'
+        dataStructuresFile = 'test/PPMACsoftwareRef_22032021_DataStructures.txt'
+        softwareRefDataStructures = []
+        with open(dataStructuresFile, 'r') as readFile:
+            for line in readFile:
+                if line[0] == '#':
+                    continue
+                softwareRefDataStructures.append(line.replace('\n','').lower())
+        softwareRefDataStructures = set(softwareRefDataStructures)
+        ppmacActiveDataStructures = []
+        for ds in self.createDataStructuresFromSymbolsTables():
+            ppmacActiveDataStructures.append(ds.lower())
+        ppmacActiveDataStructures = set(ppmacActiveDataStructures)
+        diffA = softwareRefDataStructures - ppmacActiveDataStructures
+        print(f'{len(diffA)} Data structures in soft. ref. manual but NOT found from ppmac database: ', diffA)
+        diffB = ppmacActiveDataStructures - softwareRefDataStructures
+        print(f'{len(diffB)} Data structures found from ppmac database but NOT in soft. ref. manual:', diffB)
+
+    def test_fillAllDataStructuresIndices(self):
+        expectedOutputFilePath = 'test/FillAllDataStructuresIndices_ExpectedOutput.txt'
+        ignoreListFilePath = 'test/FillAllDataStructuresIndices_IgnoreList.txt'
+        unindexedDataFilePath = 'test/FillAllDataStructuresIndices_UnindexedDSs.txt'
+        unindexedDataStructures = []
+        with open(unindexedDataFilePath, 'r') as unindexedDataFile:
+            for line in unindexedDataFile:
+                if line[0] == '#':
+                    continue
+                unindexedDataStructures.append(line.replace('\n',''))
+        ignoreList = []
+        with open(ignoreListFilePath, 'r') as ignoreListFile:
+            for line in ignoreListFile:
+                if line[0] == '#':
+                    continue
+                ignoreList.append(line.replace('\n',''))
+        ignoreList = set(ignoreList)
+        expectedOutput = []
+        with open(expectedOutputFilePath, 'r') as expectedOutputFile:
+            for line in expectedOutputFile:
+                if line[0] == '#':
+                    continue
+                expectedOutput.append(line.replace('\n',''))
+        expectedOutput = set(expectedOutput)
+        self.dataStructureIgnoreList = ignoreList
+        self.sendCommand = lambda x: ['1', '1']
+        indexedDataStructures = set(self.fillAllDataStructuresIndices(unindexedDataStructures))
+        print('Expected: ', expectedOutput)
+        print('Actual: ', indexedDataStructures)
+        pass
 
 
 class PowerPMAC:
@@ -863,6 +929,9 @@ if __name__ == '__main__':
     #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
 
     hardwareWriteRead.generateActiveDataStructures()
+
+    #hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
+    #hardwareWriteRead.test_fillAllDataStructuresIndices()
 
     sshClient.disconnect()
 
