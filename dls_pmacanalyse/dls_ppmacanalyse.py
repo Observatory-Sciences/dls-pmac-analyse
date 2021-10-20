@@ -432,9 +432,9 @@ class PPMACHardwareWriteRead(object):
         """
         n = substructure.count('.')
         for _ in range(n + 1):
-            #print('Ignore this --> ' + substructure)
+            #print('Checking if the following structure is in the ignore list: ' + substructure)
             if substructure in self.dataStructureIgnoreList:
-                #print('Ignoring')
+                #print('Ignoring data structure')
                 return True
             substructure = substructure[0:substructure.rfind('.')]
         return False
@@ -469,7 +469,9 @@ class PPMACHardwareWriteRead(object):
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
             #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
             #    break
-            if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
+            #if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
+            #    break
+            if self.ignoreDataStructure(DS_string_):
                 break
             while cmd_accepted:
                 j_idex_string = f'[{j}]'
@@ -505,28 +507,37 @@ class PPMACHardwareWriteRead(object):
             last_j_accepted = j
             i_idex_string = f'[{i}]'
             DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            #if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
+            ###if DS_string_[0:DS_string_.find(']') + 1] in self.dataStructureIgnoreList:
+            ###    break
+            # The two if statements below are the ones to be interchanged
+            #if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
             #    break
-            if self.ignoreDataStructure(DS_string_[0:find_nth(DS_string_, '[', 2)]):
+            if self.ignoreDataStructure(DS_string_):
                 break
             while cmd_accepted:
                 k = 0
                 j_idex_string = f'[{j}]'
                 DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                #if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
+                ###if DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1) in self.dataStructureIgnoreList:
+                ###    break
+                ###if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
+                ###    break
+                # The two if statements below are the ones to be interchanged
+                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, '[', 3)].replace(f'[{i}]', '[]', 1)):
                 #    break
-                #if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, ']', 2) + 1].replace(f'[{i}]', '[]', 1)):
-                #    break
-                if self.ignoreDataStructure(DS_string__[0:find_nth(DS_string__, '[', 3)].replace(f'[{i}]', '[]', 1)):
+                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
                     break
                 while cmd_accepted:
                     k_idex_string = f'[{k}]'
                     DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
-                    #if DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1) \
-                    #        in self.dataStructureIgnoreList:
-                    #    break
-                    #if self.ignoreDataStructure(
-                    #        DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    ###if DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1) \
+                    ###        in self.dataStructureIgnoreList:
+                    ###    break
+                    ###if self.ignoreDataStructure(
+                    ###        DS_string___[0:find_nth(DS_string___, ']', 3) + 1].replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    ###    break
+                    # The two if statements below are the ones to be interchanged
+                    #if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
                     #    break
                     if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
                         break
@@ -551,6 +562,60 @@ class PPMACHardwareWriteRead(object):
                 cmd_accepted = False
             i += 1
 
+    def fillDataStructureIndices4(self, DS_string, DSs):
+        i = 0
+        last_i_accepted = i
+        cmd_accepted = True
+        while cmd_accepted:
+            j = 0
+            last_j_accepted = j
+            i_idex_string = f'[{i}]'
+            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
+            if self.ignoreDataStructure(DS_string_):
+                break
+            while cmd_accepted:
+                k = 0
+                last_k_accepted = k
+                j_idex_string = f'[{j}]'
+                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
+                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
+                    break
+                while cmd_accepted:
+                    l = 0
+                    k_idex_string = f'[{k}]'
+                    DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
+                    if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                        break
+                    while cmd_accepted:
+                        l_idex_string = f'[{l}]'
+                        DS_string____ = nthRepl(DS_string___, '[]', l_idex_string, 1)
+                        if self.ignoreDataStructure(DS_string____.replace(f'[{i}]', '[]', 1).replace(
+                                f'[{j}]', '[]', 1).replace(f'[{k}]', '[]', 1)):
+                            break
+                        print(DS_string____)
+                        cmd_return = self.sendCommand(DS_string____)
+                        print(cmd_return)
+                        if 'ILLEGAL' in cmd_return[0]:
+                            cmd_accepted = False
+                        else:
+                            last_k_accepted = k
+                            last_j_accepted = j
+                            last_i_accepted = i
+                            DSs.append(DS_string____)
+                        l += 1
+                    cmd_accepted = True
+                    if k - last_k_accepted > 1:
+                        cmd_accepted = False
+                    k += 1
+                cmd_accepted = True
+                if j - last_j_accepted > 1:
+                    cmd_accepted = False
+                j += 1
+            cmd_accepted = True
+            if i - last_i_accepted > 1:
+                cmd_accepted = False
+            i += 1
+
 
     def createDataStructuresFromSymbolsTables(self):
         """
@@ -561,10 +626,10 @@ class PPMACHardwareWriteRead(object):
         if not os.path.isdir(self.local_db_path):
             os.system('mkdir ' + self.local_db_path)
         scpFromPowerPMACtoLocal(source=self.remote_db_path, destination=self.local_db_path, recursive=True)
-        pp_swtbl0 = []
-        with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
-            for line in readFile:
-                pp_swtbl0.append(line)
+        #swtbl0 = []
+        #with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
+        #    for line in readFile:
+        #        swtbl0.append(line.replace('\n',''))
         pp_swtbls = []
         for pp_swtbl_file in self.pp_swtlbs_symfiles:
             pp_swtbls.append(self.swtblFileToList(self.local_db_path + '/' + pp_swtbl_file))
@@ -573,37 +638,46 @@ class PPMACHardwareWriteRead(object):
         swtbl3_nparray = np.asarray(pp_swtbls[2])
         dataStructures = []
         with open('tmp/master_swtbl_3.txt', 'w+') as writeFile:
-            for i in range(swtbl1_nparray.shape[0]):
-                substruct_12 = False
-                for j in range(swtbl2_nparray.shape[0]):
-                    if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
-                        if (swtbl1_nparray[i, 1].replace('[]','') != swtbl2_nparray[j, 5].replace('[]','')) and \
-                                (swtbl2_nparray[j, 5] != "NULL"):
-                            continue
-                        substruct_12 = True
-                        substruct_23 = False
-                        for k in range(swtbl3_nparray.shape[0]):
-                            if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
-                                if (swtbl1_nparray[i, 1].replace('[]','') != swtbl3_nparray[k, 5].replace('[]','')) and \
-                                        (swtbl3_nparray[k, 5] != "NULL"):
+            #for baseDS in swtbl0:
+            #    print(baseDS)
+            #    substruct_01 = False
+                for i in range(swtbl1_nparray.shape[0]):
+                #    if baseDS == swtbl1_nparray[i, 1]:
+                #        substruct_01 = True
+                        substruct_12 = False
+                        for j in range(swtbl2_nparray.shape[0]):
+                            if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
+                                if (swtbl1_nparray[i, 1].replace('[]','') != swtbl2_nparray[j, 5].replace('[]','')) and \
+                                        (swtbl2_nparray[j, 5] != "NULL"):
                                     continue
-                                substruct_23 = True
-                                ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
-                                      '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
-                                print(ds_)
-                                dataStructures.append(ds_)
-                                writeFile.write(ds_.__str__() + '\n')
-                        if substruct_23 == False:
-                            ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
-                                  '.' + swtbl2_nparray[j, 2]
+                                substruct_12 = True
+                                substruct_23 = False
+                                for k in range(swtbl3_nparray.shape[0]):
+                                    if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
+                                        if (swtbl1_nparray[i, 1].replace('[]','') != swtbl3_nparray[k, 5].replace('[]','')) and \
+                                                (swtbl3_nparray[k, 5] != "NULL"):
+                                            continue
+                                        substruct_23 = True
+                                        ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                              '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
+                                        print(ds_)
+                                        dataStructures.append(ds_)
+                                        writeFile.write(ds_.__str__() + '\n')
+                                if substruct_23 == False:
+                                    ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                          '.' + swtbl2_nparray[j, 2]
+                                    print(ds_)
+                                    dataStructures.append(ds_)
+                                    writeFile.write(ds_.__str__() + '\n')
+                        if substruct_12 == False:
+                            ds_ = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
                             print(ds_)
                             dataStructures.append(ds_)
                             writeFile.write(ds_.__str__() + '\n')
-                if substruct_12 == False:
-                    ds_ = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
-                    print(ds_)
-                    dataStructures.append(ds_)
-                    writeFile.write(ds_.__str__() + '\n')
+            #if substruct_01 == False:
+            #    print(baseDS)
+            #    dataStructures.append(baseDS)
+            #    writeFile.write(baseDS.__str__() + '\n')
         return dataStructures
 
 
@@ -626,22 +700,28 @@ class PPMACHardwareWriteRead(object):
         # sending each command individually
         indexedDataStructures = []
         for ds in dataStructures:
-            N_brackets = ds.count('[]')
-            if N_brackets == 1:
-                self.fillDataStructureIndices1(ds, indexedDataStructures)
-            elif N_brackets == 2:
-                self.fillDataStructureIndices2(ds, indexedDataStructures)
-            elif N_brackets == 3:
-                self.fillDataStructureIndices3(ds, indexedDataStructures)
-            else:
-                continue
+                N_brackets = ds.count('[]')
+                if N_brackets == 0:
+                    indexedDataStructures.append(ds)
+                elif N_brackets == 1:
+                   self.fillDataStructureIndices1(ds, indexedDataStructures)
+                elif N_brackets == 2:
+                    self.fillDataStructureIndices2(ds, indexedDataStructures)
+                elif N_brackets == 3:
+                    self.fillDataStructureIndices3(ds, indexedDataStructures)
+                elif N_brackets == 4:
+                    self.fillDataStructureIndices4(ds, indexedDataStructures)
+                else:
+                    logging.info('Too many indexed substructures in data structure. Ignoring.')
+                    continue
         return indexedDataStructures
 
 
     def generateActiveDataStructures(self):
         self.dataStructureIgnoreList = {'Sys.Uhex[0]', 'Sys.Cdata[10]', 'Motor[].New[5]', 'Motor[7]', 'Coord[4]',
                                         'Coord[].TPData[1]', 'Coord[].TPData[].Pos[27]', 'SubProg[0]',
-                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]', 'Acc72EX[].Data8[0]'} #set
+                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]', 'Acc72EX[].Data8[0]',
+                                        'CompTable[].Data[][10]', 'CompTable[].Data[10][]', 'CompTable[60]'} #set
         DSs = self.createDataStructuresFromSymbolsTables()
         DSs_ = self.checkDataStructuresValidity(DSs)
         DSs__ = self.fillAllDataStructuresIndices(DSs_)
@@ -653,7 +733,7 @@ class PPMACHardwareWriteRead(object):
         softwareRefDataStructures = []
         with open(dataStructuresFile, 'r') as readFile:
             for line in readFile:
-                if line[0] == '#':
+                if line[0] == '#' or line[0] == '\n':
                     continue
                 softwareRefDataStructures.append(line.replace('\n','').lower())
         softwareRefDataStructures = set(softwareRefDataStructures)
@@ -673,20 +753,20 @@ class PPMACHardwareWriteRead(object):
         unindexedDataStructures = []
         with open(unindexedDataFilePath, 'r') as unindexedDataFile:
             for line in unindexedDataFile:
-                if line[0] == '#':
+                if line[0] == '#' or line[0] == '\n':
                     continue
                 unindexedDataStructures.append(line.replace('\n',''))
         ignoreList = []
         with open(ignoreListFilePath, 'r') as ignoreListFile:
             for line in ignoreListFile:
-                if line[0] == '#':
+                if line[0] == '#' or line[0] == '\n':
                     continue
                 ignoreList.append(line.replace('\n',''))
         ignoreList = set(ignoreList)
         expectedOutput = []
         with open(expectedOutputFilePath, 'r') as expectedOutputFile:
             for line in expectedOutputFile:
-                if line[0] == '#':
+                if line[0] == '#' or line[0] == '\n':
                     continue
                 expectedOutput.append(line.replace('\n',''))
         expectedOutput = set(expectedOutput)
@@ -695,7 +775,10 @@ class PPMACHardwareWriteRead(object):
         indexedDataStructures = set(self.fillAllDataStructuresIndices(unindexedDataStructures))
         print('Expected: ', expectedOutput)
         print('Actual: ', indexedDataStructures)
-        pass
+        if expectedOutput == indexedDataStructures:
+            print('PASS')
+        else:
+            print('FAIL')
 
 
 class PowerPMAC:
@@ -928,10 +1011,10 @@ if __name__ == '__main__':
     #hardwareWriteRead.scpFromLocalToPowerPMAC(files='/home/dlscontrols/Workspace/repository/Project_01',
     #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
 
-    hardwareWriteRead.generateActiveDataStructures()
+    #hardwareWriteRead.generateActiveDataStructures()
 
     #hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
-    #hardwareWriteRead.test_fillAllDataStructuresIndices()
+    hardwareWriteRead.test_fillAllDataStructuresIndices()
 
     sshClient.disconnect()
 
