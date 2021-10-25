@@ -1,0 +1,143 @@
+# System stuff
+Sys.Uhex[0:]   Sys.Cdata[10:]
+Sys.TableFdata[0:]
+Sys.ModbusServerBuffer[0:]
+Sys.ioUdata[0:]
+Sys.ioIdata[0:]
+Sys.Sine16Table[0:]
+Sys.BufPos[10:][]
+Sys.BufPos[][10:]
+
+# Motors
+Motor[].New[5:]   Motor[7:]
+Motor[].TraceData[2:]
+
+# Coordinate systems
+Coord[8:] Coord[3:5]  Coord[].TPData[1:]   Coord[].TPData[].Pos[27:]
+Coord[].LHData[0:]
+Coord[0:].Ldata
+Coord[].CCData[0:]
+
+# Compensation Tables
+CompTable[].Data[0:]
+
+# Gate1
+Gate1[5:]
+
+# Gate3
+Gate3[5:]
+
+# ECAT
+ECAT[].LPDomainOutputRegs[0:]
+ECAT[].LPDomainRegs[0:]
+ECAT[].RTDomainOutputRegs[0:]
+ECAT[].RTDomainRegs[0:]
+ECAT[].LPIO[0:]
+ECAT[].Slave[0:]
+ECAT[].IO[0:]
+ECAT[].IOBuffer[0:]
+
+# Subprograms
+SubProg[0:]
+
+# Plc programs
+Plc[].Ldata.L[0:] Plc[1:].Ldata Plc[].Ldata.Stack[0:]
+
+# Accessory cards
+Acc72EX[0:]
+Acc84S[0:]
+Acc72E[0:]
+
+# Encoders
+EncTable[10:]
+
+# Compensation tables
+CompTable[].Data[][10:] CompTable[].Data[10:][] CompTable[60:]
+CompTable[].Data[10:][][]
+CompTable[].Data[][10:][]
+CompTable[].Data[][][10:]
+
+# MACRO
+Macro.RingTest[0:]
+Macro.Status[0:]
+
+# Prog
+Prog[20:]
+
+# Ldata
+Ldata.L[0:]
+Ldata.Stack[0:]
+
+# Longer than 10 seconds
+Sys.P[1000:]
+Sys.Ddata[1000:]
+Sys.Idata[1000:]
+Sys.Udata[1000:]
+Sys.M[1000:]
+Sys.Fdata[1000:]
+Sys.I[1000:]
+Coord[].Q[1000:]
+Coord[].SyncTable[0:].dtype
+Coord[].SyncTable[0:].control
+Coord[].SyncTable[0:].status
+Coord[].SyncTable[0:].ldata1
+Coord[].SyncTable[0:].ldata0
+Coord[].SyncTable[0:].pdata
+Coord[].SyncTable[0:].ddata
+Coord[].SyncTable[0:].opcode
+Gate2[].Macro[0:][]
+Gate2[].Macro[][0:]
+Eip[].Input.Cdata[0:]
+Eip[].OutCipAddr[0:]
+Eip[].Output.Cdata[0:]
+Eip[].InAddr[0:] 
+Eip[].InCipType[0:]
+Eip[].OutItem[0:]
+Eip[].InCipAddr[0:]
+Eip[].OutCipSize[0:]
+Eip[].Input.Sdata[0:]
+Eip[].InCipSize[0:]
+Eip[].OutType[0:]
+Eip[].Input[0:]
+Eip[].Output[0:]
+Eip[].OutAddr[0:]
+Eip[].InItem[0:]
+Eip[].Output.Sdata[0:]
+Eip[].OutCipType[0:]
+Eip[].InType[0:]
+Tdata[].Diag[0:]
+Tdata[].Bias[0:]
+CamTable[].OutData[0:]
+CamTable[].DacData[0:]
+CamTable[].PosData[0:]
+Gather.Udata[0:]
+Gather.Idata[0:]
+Gather.PhaseDdata[0:]
+Gather.Fdata[0:]
+Gather.PhaseUdata[0:]
+Gather.PhaseIdata[0:]
+Gather.Ddata[0:]
+Gather.PhaseFdata[0:]
+CompTable[].Data[0:][][]
+CompTable[].Data[][0:][]
+CompTable[].Data[][][0:]
+CompTable[].Data[0:][]
+CompTable[].Data[][0:]
+
+# A few seconds
+Tdata[].UVW[0:]   #time: 2.9303112030029297 sec
+Eip[].Input.Ddata[0:]   #time: 3.052229881286621 sec
+Eip[].Output.Ddata[0:]   #time: 3.095587968826294 sec
+Tdata[].XXYYZZ[10:]   #time: 3.2771706581115723 sec
+Tdata[].XYZ[10:]   #time: 3.441685914993286 sec
+Sys.SineTable[10:]   #time: 3.5099380016326904 sec
+Tdata[].UUVVWW[10:]   #time: 3.807443141937256 sec
+Eip[].Output.Fdata[0:]   #time: 5.858438014984131 sec
+Eip[].Output.Idata[0:]   #time: 6.607996702194214 sec
+Eip[].Output.Udata[0:]   #time: 6.875249862670898 sec
+Eip[].Input.Udata[0:]  # time: 7.458090305328369 sec
+Eip[].Input.Idata[0:]  # time: 7.922552824020386 sec
+Eip[].Input.Fdata[0:]  # time: 8.379107236862183 sec
+Gate2[].Macro[10:][]  # time: 8.685230731964111 sec
+Gate2[].Macro[][10:]  # time: 8.685230731964111 sec
+

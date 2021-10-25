@@ -111,10 +111,11 @@ class PPMACHardwareWriteRead(object):
         self.pp_swtbl0_txtfile = 'pp_swtbl0.txt'
         # Standard Data Structure symbols tables
         self.pp_swtlbs_symfiles = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
-        # List of data structures to be ignored when reading active elements
-        self.dataStructureIgnoreList = set(['Sys.Uhex[]'])
         # Configure logger
-        logging.basicConfig(filename=f'logs/ppmacanalyse.log', level=logging.INFO)
+        logfile = 'logs/ppmacanalyse.log'
+        if os.path.isfile(logfile):
+            os.system(f'rm {logfile}')
+        logging.basicConfig(filename=logfile, level=logging.INFO)
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -403,7 +404,8 @@ class PPMACHardwareWriteRead(object):
         """
         Generate a list of symbols from a symbols table file.
         :param pp_swtbl_file: full path to symbols table file.
-        :return: swtbl_DSs: list of symbols.
+        :return: swtbl_DSs: list of symbols, where each 'symbol' is represented by the contents of one row of the
+        symbols table file.
         """
         try:
             file = open(file=pp_swtbl_file, mode="r", encoding='ISO-8859-1')
@@ -423,7 +425,7 @@ class PPMACHardwareWriteRead(object):
             print(e)
         return symbols
 
-    def ignoreDataStructure(self, substructure):
+    def ignoreDataStructure(self, substructure, elementsToIgnore):
         """
         Determine whether a data structure or substructure should be ignored by checking if it or any of its parent,
         grandparent, great-grandparent etc. structures are included in the ignore list.
@@ -433,53 +435,100 @@ class PPMACHardwareWriteRead(object):
         n = substructure.count('.')
         for _ in range(n + 1):
             #print('Checking if the following structure is in the ignore list: ' + substructure)
-            if substructure in self.dataStructureIgnoreList:
+            if substructure in elementsToIgnore:
                 #print('Ignoring data structure')
                 return True
             substructure = substructure[0:substructure.rfind('.')]
         return False
 
-
-    def fillDataStructureIndices1(self, DS_string, DSs):
+    def fillDataStructureIndices_i(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
+        """
+        Incrementally increase the index of a singly-indexed data structure and send the resulting command to the ppmac
+        until the maximum accepted index is reached. Add the command string and return value of all commands accepted by
+        the ppmac to the dictionary of active elements.
+        :param dataStructure: String containing the data structure name.
+        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
+        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :return:
+        """
+        applyTimeout = False
+        if isinstance(timeout, int) or isinstance(timeout, float):
+            applyTimeout = True
+            startTime = time.time()
         i = 0
         cmd_accepted = True
         while cmd_accepted:
             i_idex_string = f'[{i}]'
-            DS_string_ = DS_string.replace('[]', i_idex_string)
-            if self.ignoreDataStructure(DS_string_):
+            dataStructure_i = dataStructure.replace('[]', i_idex_string)
+            if self.ignoreDataStructure(dataStructure_i.replace(i_idex_string, f'[{i}:]'), elementsToIgnore):
                 break
-            print(DS_string_)
-            cmd_return = self.sendCommand(DS_string_)
+            if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+                i += 1
+                continue
+            print(dataStructure_i)
+            cmd_return = self.sendCommand(dataStructure_i)
             print(cmd_return)
             if 'ILLEGAL' in cmd_return[0]:
                 cmd_accepted = False
             else:
-                DSs.append(DS_string_)
+                activeElements[dataStructure_i] = (cmd_return[0], dataStructure_i)
+            if applyTimeout and time.time() - startTime > timeout:
+                logging.info(f'Timed-out generating active elements for {dataStructure}. '
+                             f'Last i = {i}.')
+                return
             i += 1
+        #print(activeElements)
 
-    def fillDataStructureIndices2(self, DS_string, DSs):
+    def fillDataStructureIndices_ij(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
+        """
+        Incrementally increase the indices of a doubly-indexed data structure and send the resulting command to the ppmac
+        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
+        the ppmac to the dictionary of active elements.
+        :param dataStructure: String containing the data structure name.
+        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
+        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :return:
+        """
+        applyTimeout = False
+        if isinstance(timeout, int) or isinstance(timeout, float):
+            applyTimeout = True
+            startTime = time.time()
         i = 0
         last_i_accepted = i
         cmd_accepted = True
         while cmd_accepted:
             j = 0
             i_idex_string = f'[{i}]'
-            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            if self.ignoreDataStructure(DS_string_):
+            dataStructure_i = nthRepl(dataStructure, '[]', i_idex_string, 1)
+            if self.ignoreDataStructure(dataStructure_i.replace(i_idex_string, f'[{i}:]'), elementsToIgnore):
                 break
+            if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+                last_i_accepted = i
+                i += 1
+                continue
             while cmd_accepted:
                 j_idex_string = f'[{j}]'
-                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
+                dataStructure_ij = nthRepl(dataStructure_i, '[]', j_idex_string, 1)
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1).replace(
+                        j_idex_string, f'[{j}:]', 1), elementsToIgnore):
                     break
-                print(DS_string__)
-                cmd_return = self.sendCommand(DS_string__)
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1), elementsToIgnore):
+                    j += 1
+                    continue
+                print(dataStructure_ij)
+                cmd_return = self.sendCommand(dataStructure_ij)
                 print(cmd_return)
                 if 'ILLEGAL' in cmd_return[0]:
                     cmd_accepted = False
                 else:
                     last_i_accepted = i
-                    DSs.append(DS_string__)
+                    activeElements[dataStructure_ij] = (cmd_return[0], dataStructure_ij)
+                if applyTimeout and time.time() - startTime > timeout:
+                    logging.info(f'Timed-out generating active elements for {dataStructure}. '
+                                 f'Last i,j = {i},{j}.')
+                    return
                 j += 1
             cmd_accepted = True
             # print(last_i_accepted, i)
@@ -487,38 +536,76 @@ class PPMACHardwareWriteRead(object):
                 cmd_accepted = False
             # print(cmd_accepted)
             i += 1
+        #print(activeElements)
 
-    def fillDataStructureIndices3(self, DS_string, DSs):
+    def fillDataStructureIndices_ijk(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
+        """
+        Incrementally increase the indices of a triply-indexed data structure and send the resulting command to the ppmac
+        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
+        the ppmac to the dictionary of active elements.
+        :param dataStructure: String containing the data structure name.
+        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
+        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :return:
+        """
+        applyTimeout = False
+        if isinstance(timeout, int) or isinstance(timeout, float):
+            applyTimeout = True
+            startTime = time.time()
         i = 0
         last_i_accepted = i
         cmd_accepted = True
+        print(dataStructure)
         while cmd_accepted:
             j = 0
             last_j_accepted = j
             i_idex_string = f'[{i}]'
-            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            if self.ignoreDataStructure(DS_string_):
+            dataStructure_i = nthRepl(dataStructure, '[]', i_idex_string, 1)
+            if self.ignoreDataStructure(dataStructure_i.replace(i_idex_string, f'[{i}:]'), elementsToIgnore):
                 break
+            if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+                last_i_accepted = i
+                i += 1
+                continue
+            #    break
             while cmd_accepted:
                 k = 0
                 j_idex_string = f'[{j}]'
-                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
+                dataStructure_ij = nthRepl(dataStructure_i, '[]', j_idex_string, 1)
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1).replace(
+                        j_idex_string, f'[{j}:]', 1), elementsToIgnore):
                     break
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1), elementsToIgnore):
+                    last_j_accepted = j
+                    j += 1
+                    continue
+                #    break
                 while cmd_accepted:
                     k_idex_string = f'[{k}]'
-                    DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
-                    if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    dataStructure_ijk = nthRepl(dataStructure_ij, '[]', k_idex_string, 1)
+                    if self.ignoreDataStructure(dataStructure_ijk.replace(
+                            f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1).replace(
+                        k_idex_string, f'[{k}:]', 1), elementsToIgnore):
                         break
-                    print(DS_string___)
-                    cmd_return = self.sendCommand(DS_string___)
+                    if self.ignoreDataStructure(dataStructure_ijk.replace(
+                            f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1), elementsToIgnore):
+                    #    break
+                        k += 1
+                        continue
+                    print(dataStructure_ijk)
+                    cmd_return = self.sendCommand(dataStructure_ijk)
                     print(cmd_return)
                     if 'ILLEGAL' in cmd_return[0]:
                         cmd_accepted = False
                     else:
                         last_j_accepted = j
                         last_i_accepted = i
-                        DSs.append(DS_string___)
+                        activeElements[dataStructure_ijk] = (cmd_return[0], dataStructure_ijk)
+                    if applyTimeout and time.time() - startTime > timeout:
+                        logging.info(f'Timed-out generating active elements for {dataStructure}. '
+                                     f'Last i,j,k = {i},{j},{k}.')
+                        return
                     k += 1
                 cmd_accepted = True
                 if j - last_j_accepted > 1:
@@ -528,8 +615,23 @@ class PPMACHardwareWriteRead(object):
             if i - last_i_accepted > 1:
                 cmd_accepted = False
             i += 1
+        #print(activeElements)
 
-    def fillDataStructureIndices4(self, DS_string, DSs):
+    def fillDataStructureIndices_ijkl(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
+        """
+        Incrementally increase the indices of a quadruply-indexed data structure and send the resulting command to the ppmac
+        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
+        the ppmac to the dictionary of active elements.
+        :param dataStructure: String containing the data structure name.
+        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
+        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :return:
+        """
+        applyTimeout = False
+        if isinstance(timeout, int) or isinstance(timeout, float):
+            applyTimeout = True
+            startTime = time.time()
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -537,30 +639,54 @@ class PPMACHardwareWriteRead(object):
             j = 0
             last_j_accepted = j
             i_idex_string = f'[{i}]'
-            DS_string_ = nthRepl(DS_string, '[]', i_idex_string, 1)
-            if self.ignoreDataStructure(DS_string_):
+            dataStructure_i = nthRepl(dataStructure, '[]', i_idex_string, 1)
+            #if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+            #    break
+            if self.ignoreDataStructure(dataStructure_i.replace(i_idex_string, f'[{i}:]'), elementsToIgnore):
                 break
+            if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+                last_i_accepted = i
+                i += 1
+                continue
             while cmd_accepted:
                 k = 0
                 last_k_accepted = k
                 j_idex_string = f'[{j}]'
-                DS_string__ = nthRepl(DS_string_, '[]', j_idex_string, 1)
-                if self.ignoreDataStructure(DS_string__.replace(f'[{i}]', '[]', 1)):
+                dataStructure_ij = nthRepl(dataStructure_i, '[]', j_idex_string, 1)
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1).replace(
+                        j_idex_string, f'[{j}:]', 1), elementsToIgnore):
                     break
+                if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1), elementsToIgnore):
+                    last_j_accepted = j
+                    j += 1
+                    continue
                 while cmd_accepted:
                     l = 0
                     k_idex_string = f'[{k}]'
-                    DS_string___ = nthRepl(DS_string__, '[]', k_idex_string, 1)
-                    if self.ignoreDataStructure(DS_string___.replace(f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1)):
+                    dataStructure_ijk = nthRepl(dataStructure_ij, '[]', k_idex_string, 1)
+                    if self.ignoreDataStructure(dataStructure_ijk.replace(
+                            f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1).replace(
+                        k_idex_string, f'[{k}:]', 1), elementsToIgnore):
                         break
+                    if self.ignoreDataStructure(dataStructure_ijk.replace(
+                            f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1), elementsToIgnore):
+                    #    break
+                        last_k_accepted = k
+                        k += 1
+                        continue
                     while cmd_accepted:
                         l_idex_string = f'[{l}]'
-                        DS_string____ = nthRepl(DS_string___, '[]', l_idex_string, 1)
-                        if self.ignoreDataStructure(DS_string____.replace(f'[{i}]', '[]', 1).replace(
-                                f'[{j}]', '[]', 1).replace(f'[{k}]', '[]', 1)):
+                        dataStructure_ijkl = nthRepl(dataStructure_ijk, '[]', l_idex_string, 1)
+                        if self.ignoreDataStructure(dataStructure_ijkl.replace(f'[{i}]', '[]', 1).replace(
+                                f'[{j}]', '[]', 1).replace(f'[{k}]', '[]', 1).replace(
+                            l_idex_string, f'[{l}:]', 1), elementsToIgnore):
                             break
-                        print(DS_string____)
-                        cmd_return = self.sendCommand(DS_string____)
+                        if self.ignoreDataStructure(dataStructure_ijkl.replace(f'[{i}]', '[]', 1).replace(
+                                f'[{j}]', '[]', 1).replace(f'[{k}]', '[]', 1), elementsToIgnore):
+                            l += 1
+                            continue
+                        print(dataStructure_ijkl)
+                        cmd_return = self.sendCommand(dataStructure_ijkl)
                         print(cmd_return)
                         if 'ILLEGAL' in cmd_return[0]:
                             cmd_accepted = False
@@ -568,7 +694,11 @@ class PPMACHardwareWriteRead(object):
                             last_k_accepted = k
                             last_j_accepted = j
                             last_i_accepted = i
-                            DSs.append(DS_string____)
+                            activeElements[dataStructure_ijkl] = (cmd_return[0], dataStructure_ijkl)
+                        if applyTimeout and time.time() - startTime > timeout:
+                            logging.info(f'Timed-out generating active elements for {dataStructure}. '
+                                         f'Last i,j,k,l = {i},{j},{k},{l}.')
+                            return
                         l += 1
                     cmd_accepted = True
                     if k - last_k_accepted > 1:
@@ -582,28 +712,30 @@ class PPMACHardwareWriteRead(object):
             if i - last_i_accepted > 1:
                 cmd_accepted = False
             i += 1
+        #print(activeElements)
 
+    def scpPPMACDatabaseToLocal(self, remote_db_path, local_db_path):
+        if not os.path.isdir(local_db_path):
+            os.system('mkdir ' + local_db_path)
+        scpFromPowerPMACtoLocal(source=remote_db_path, destination=local_db_path, recursive=True)
 
-    def createDataStructuresFromSymbolsTables(self):
+    def createDataStructuresFromSymbolsTables(self, pp_swtlbs_symfiles, local_db_path):
         """
         Read the symbols tables and create a list of data structure names contained within them.
         :return: dataStructures: list of data structure names
         """
-        # delete old dict
-        if not os.path.isdir(self.local_db_path):
-            os.system('mkdir ' + self.local_db_path)
-        scpFromPowerPMACtoLocal(source=self.remote_db_path, destination=self.local_db_path, recursive=True)
+        # Clear current data structure dictionary
+        dataStructures = {}
         #swtbl0 = []
         #with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
         #    for line in readFile:
         #        swtbl0.append(line.replace('\n',''))
         pp_swtbls = []
-        for pp_swtbl_file in self.pp_swtlbs_symfiles:
-            pp_swtbls.append(self.swtblFileToList(self.local_db_path + '/' + pp_swtbl_file))
+        for pp_swtbl_file in pp_swtlbs_symfiles:
+            pp_swtbls.append(self.swtblFileToList(local_db_path + '/' + pp_swtbl_file))
         swtbl1_nparray = np.asarray(pp_swtbls[0])
         swtbl2_nparray = np.asarray(pp_swtbls[1])
         swtbl3_nparray = np.asarray(pp_swtbls[2])
-        dataStructures = []
         with open('tmp/master_swtbl_3.txt', 'w+') as writeFile:
             #for baseDS in swtbl0:
             #    print(baseDS)
@@ -625,22 +757,22 @@ class PPMACHardwareWriteRead(object):
                                                 (swtbl3_nparray[k, 5] != "NULL"):
                                             continue
                                         substruct_23 = True
-                                        ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                        dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                               '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
-                                        print(ds_)
-                                        dataStructures.append(ds_)
-                                        writeFile.write(ds_.__str__() + '\n')
+                                        print(dsName)
+                                        dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl3_nparray[k, 3:].tolist())]
+                                        writeFile.write(dataStructures[dsName].__str__() + '\n')
                                 if substruct_23 == False:
-                                    ds_ = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                    dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                           '.' + swtbl2_nparray[j, 2]
-                                    print(ds_)
-                                    dataStructures.append(ds_)
-                                    writeFile.write(ds_.__str__() + '\n')
+                                    print(dsName)
+                                    dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl2_nparray[j, 3:].tolist())]
+                                    writeFile.write(dataStructures[dsName].__str__() + '\n')
                         if substruct_12 == False:
-                            ds_ = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
-                            print(ds_)
-                            dataStructures.append(ds_)
-                            writeFile.write(ds_.__str__() + '\n')
+                            dsName = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
+                            print(dsName)
+                            dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl1_nparray[i, 3:].tolist())]
+                            writeFile.write(dataStructures[dsName].__str__() + '\n')
             #if substruct_01 == False:
             #    print(baseDS)
             #    dataStructures.append(baseDS)
@@ -649,49 +781,105 @@ class PPMACHardwareWriteRead(object):
 
 
     def checkDataStructuresValidity(self, dataStructures):
-        # Check that data structure names have been accepted
-        acceptedDataStructures = []
-        for ds in dataStructures:
-            print(ds)
+        """
+        Remove invalid data structures from a dictionary of data structures. A data structure is defined as invalid
+        if the ppmac rejects it when its indices are filled-in as zero.
+        :param dataStructures:
+        :return:
+        """
+        logging.info(f"checkDataStructuresValidity: checking if all data structures are valid, "
+                     f"and removing any invalid data structures...")
+        invalidCount = 0
+        for ds in list(dataStructures):
             cmd_return = self.sendCommand(ds.replace('[]','[0]'))
             if 'ILLEGAL' in cmd_return[0]:
-                logging.info(f"{ds.replace('[]','[0]')} not a valid ppmac command")
-            else:
-                acceptedDataStructures.append(ds)
-        return acceptedDataStructures
+                logging.debug(f"{ds.replace('[]','[0]')} not a valid ppmac command, deleting from"
+                             f" dictionary of data structures.")
+                del dataStructures[ds]
+                invalidCount += 1
+        logging.info(f"checkDataStructuresValidity: removed {invalidCount} invalid data structures.")
+        return dataStructures
 
 
-    def fillAllDataStructuresIndices(self, dataStructures):
-        # Here we'll probably want to construct a big string of lots of commands to send
-        # at once and then parse the response to see which were accepted, rather than
-        # sending each command individually
-        indexedDataStructures = []
+    def getActiveElementsFromDataStructures(self, dataStructures, elementsToIgnore,
+                                            recordTimings=False, timeout=None):
+        """
+        Generate a dictionary of active elements from an iterable containing data structure names.
+        :param dataStructures: Iterable containing data structure names
+        :param elementsToIgnore: Set of data structures not to be added to included in the active elements read from
+        the ppmac.
+        :return: Dictionary containing the current set of active elements, where the key is the active element
+        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        """
+        logging.info('getActiveElementsFromDataStructures: generating dictionary of active elements...')
+        fncStartTime = time.time()
+        activeElements = {}
         for ds in dataStructures:
+                loopStartTime = time.time()
                 N_brackets = ds.count('[]')
                 if N_brackets == 0:
-                    indexedDataStructures.append(ds)
+                    value = self.sendCommand(ds)[0]
+                    activeElements[ds] = (value, ds)
                 elif N_brackets == 1:
-                   self.fillDataStructureIndices1(ds, indexedDataStructures)
+                   self.fillDataStructureIndices_i(ds, activeElements, elementsToIgnore, timeout=timeout)
                 elif N_brackets == 2:
-                    self.fillDataStructureIndices2(ds, indexedDataStructures)
+                    self.fillDataStructureIndices_ij(ds, activeElements, elementsToIgnore, timeout=timeout)
                 elif N_brackets == 3:
-                    self.fillDataStructureIndices3(ds, indexedDataStructures)
+                    self.fillDataStructureIndices_ijk(ds, activeElements, elementsToIgnore, timeout=timeout)
                 elif N_brackets == 4:
-                    self.fillDataStructureIndices4(ds, indexedDataStructures)
+                    self.fillDataStructureIndices_ijkl(ds, activeElements, elementsToIgnore, timeout=timeout)
                 else:
                     logging.info('Too many indexed substructures in data structure. Ignoring.')
                     continue
-        return indexedDataStructures
+                if recordTimings:
+                    logging.info(ds + f'   time: {time.time() - loopStartTime} sec')
+        logging.info('Finished generating dictionary of active elements. ')
+        logging.info(f'Total time = {time.time() - fncStartTime} sec')
+        return activeElements
 
+    def expandSplicedIndices(self, splicedDataStructure):
+        if splicedDataStructure.count(':') > 1:
+            raise('Too many indices')
+        elif ':' not in splicedDataStructure:
+            return [splicedDataStructure]
+        else:
+            splicedIndices = re.search('\[([0-9]+):([0-9]+)\]', splicedDataStructure)
+            if splicedIndices == None:
+                return [splicedDataStructure]
+            startIndex = int(splicedIndices.group(1))
+            endIndex = int(splicedIndices.group(2))
+            expandedDataStructure = [re.sub('([0-9]+:[0-9]+)', str(i), splicedDataStructure)
+                         for i in range(startIndex, endIndex + 1)]
+            return expandedDataStructure
 
+    def generateIgnoreSet(self, ignoreFile):
+        ignore = []
+        with open(ignoreFile, 'r') as readFile:
+            for line in readFile:
+                line = line.split('#', 1)[0]
+                line = line.strip()
+                ignore += line.split()
+        expandedIgnore = [item for dataStructure in ignore for item in self.expandSplicedIndices(dataStructure)]
+        return set(expandedIgnore)
+
+    @timer
     def generateActiveDataStructures(self):
-        self.dataStructureIgnoreList = {'Sys.Uhex[0]', 'Sys.Cdata[10]', 'Motor[].New[5]', 'Motor[7]', 'Coord[4]',
-                                        'Coord[].TPData[1]', 'Coord[].TPData[].Pos[27]', 'SubProg[0]',
-                                        'Plc[].Ldata.L[0]', 'Plc[1].Ldata', 'Plc[].Ldata.Stack[0]', 'Acc72EX[].Data8[0]',
-                                        'CompTable[].Data[][10]', 'CompTable[].Data[10][]', 'CompTable[60]'} #set
-        DSs = self.createDataStructuresFromSymbolsTables()
-        DSs_ = self.checkDataStructuresValidity(DSs)
-        DSs__ = self.fillAllDataStructuresIndices(DSs_)
+        elementsToIgnore = self.generateIgnoreSet('ignore/ignore')
+        self.scpPPMACDatabaseToLocal(self.remote_db_path, self.local_db_path)
+        dataStructures = self.createDataStructuresFromSymbolsTables(self.pp_swtlbs_symfiles, self.local_db_path)
+        validDataStructures = self.checkDataStructuresValidity(dataStructures)
+        activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
+                                                                  recordTimings=True, timeout=10.0)
+
+    def getBufferedPrograms(self):
+        programBuffers = self.sendCommand('buffer')
+        print(programBuffers)
+        for progBuffInfo in programBuffers:
+            progName = progBuffInfo.split()[0]
+            print(progName)
+            progCode = self.sendCommand(f'list {progName}')
+            print(progCode)
+
 
 
     def test_CreateDataStructuresFromSymbolsTables(self):
@@ -713,7 +901,7 @@ class PPMACHardwareWriteRead(object):
         diffB = ppmacActiveDataStructures - softwareRefDataStructures
         print(f'{len(diffB)} Data structures found from ppmac database but NOT in soft. ref. manual:', diffB)
 
-    def test_fillAllDataStructuresIndices(self):
+    def test_getActiveElementsFromDataStructures(self):
         expectedOutputFilePath = 'test/FillAllDataStructuresIndices_ExpectedOutput.txt'
         ignoreListFilePath = 'test/FillAllDataStructuresIndices_IgnoreList.txt'
         unindexedDataFilePath = 'test/FillAllDataStructuresIndices_UnindexedDSs.txt'
@@ -723,13 +911,7 @@ class PPMACHardwareWriteRead(object):
                 if line[0] == '#' or line[0] == '\n':
                     continue
                 unindexedDataStructures.append(line.replace('\n',''))
-        ignoreList = []
-        with open(ignoreListFilePath, 'r') as ignoreListFile:
-            for line in ignoreListFile:
-                if line[0] == '#' or line[0] == '\n':
-                    continue
-                ignoreList.append(line.replace('\n',''))
-        ignoreList = set(ignoreList)
+        elementsToIgnore = self.generateIgnoreSet(ignoreListFilePath)
         expectedOutput = []
         with open(expectedOutputFilePath, 'r') as expectedOutputFile:
             for line in expectedOutputFile:
@@ -737,9 +919,12 @@ class PPMACHardwareWriteRead(object):
                     continue
                 expectedOutput.append(line.replace('\n',''))
         expectedOutput = set(expectedOutput)
-        self.dataStructureIgnoreList = ignoreList
-        self.sendCommand = lambda x: ['1', '1']
-        indexedDataStructures = set(self.fillAllDataStructuresIndices(unindexedDataStructures))
+        self.sendCommand_ = self.sendCommand
+        try:
+            self.sendCommand = lambda x: ['1', '1']
+            indexedDataStructures = set(self.getActiveElementsFromDataStructures(unindexedDataStructures, elementsToIgnore))
+        finally:
+            self.sendCommand = self.sendCommand_
         print('Expected: ', expectedOutput)
         print('Actual: ', indexedDataStructures)
         if expectedOutput == indexedDataStructures:
@@ -749,6 +934,27 @@ class PPMACHardwareWriteRead(object):
 
 
 class PowerPMAC:
+    class DataStructure:
+        def __init__(self, name='', base='', field1='', field2='', field3='', field4='',
+                     field5='', field6='', field7='', field8='', field9=''):
+            self.name = name
+            self.base = base
+            self.field1 = field1
+            self.field2 = field2
+            self.field3 = field3
+            self.field4 = field4
+            self.field5 = field5
+            self.field6 = field6
+            self.field7 = field7
+            self.field8 = field8
+            self.field9 = field9
+
+        def __str__(self):
+            s = self.name + ', ' + self.base + ', ' + self.field1 + ', ' + self.field2 + ', ' + self.field3 + \
+                ', ' + self.field4 + ', ' + self.field5 + ', ' + self.field6 + ', ' + self.field7 + ', ' + self.field8
+            return s
+
+
     class Variable:
         '''
         Super-class for all P,Q,M,I,L,R,C,D variables
@@ -801,6 +1007,8 @@ class PowerPMAC:
         pass
 
     def __init__(self):
+        # Dictionary mapping DS names to dataStructure objects
+        self.dataStructures = {}
         # 16384 total I variables, values range from I0 to I16383
         self.numberOfIVariables = 16384
         # 16384 total P variables, values range from P0 to P65535
@@ -979,9 +1187,14 @@ if __name__ == '__main__':
     #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
 
     #hardwareWriteRead.generateActiveDataStructures()
+    #hardwareWriteRead.getBufferedPrograms()
 
     #hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
-    hardwareWriteRead.test_fillAllDataStructuresIndices()
+    #hardwareWriteRead.test_getActiveElementsFromDataStructures()
+    hardwareWriteRead.generateActiveDataStructures()
+
+    #print(hardwareWriteRead.expandSplicedIndices('a[0:10]'))
+    #print(hardwareWriteRead.expandSplicedIndices('b[5:]'))
 
     sshClient.disconnect()
 
