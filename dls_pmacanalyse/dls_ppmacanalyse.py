@@ -6,6 +6,8 @@ import warnings
 import os
 import numpy as np
 import logging
+import difflib
+import filecmp
 
 
 def timer(func):
@@ -14,6 +16,7 @@ def timer(func):
         result = func(*args, **kwargs)
         print("Processing time of %s(): %.2f seconds." % (func.__qualname__, time.time() - startTime))
         return result
+
     return measureExecutionTime
 
 
@@ -21,6 +24,7 @@ def exitGpascii():
     (exitGpascii, status) = sshClient.sendCommand('\x03')
     if not status:
         raise IOError("Failed to exit gpascii.")
+
 
 def scpFromPowerPMACtoLocal(source, destination, recursive):
     try:
@@ -30,6 +34,7 @@ def scpFromPowerPMACtoLocal(source, destination, recursive):
     except Exception as e:
         print(f"Error: {e}, unable to get directory from remote host: {source}")
 
+
 def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
     try:
         scp = SCPClient(sshClient.client.get_transport())
@@ -37,6 +42,7 @@ def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
         scp.close()
     except Exception as e:
         print(f"Error: {e}, unable to copy files {files} to remote path: {remote_path}")
+
 
 def nthRepl(s, sub, repl, nth):
     find = s.find(sub)
@@ -52,12 +58,14 @@ def nthRepl(s, sub, repl, nth):
         return s[:find] + repl + s[find + len(sub):]
     return s
 
+
 def find_nth(s, sub, n):
     start = s.find(sub)
     while start >= 0 and n > 1:
-        start = s.find(sub, start+len(sub))
+        start = s.find(sub, start + len(sub))
         n -= 1
     return start
+
 
 def responseListToDict(responseList, splitChars='='):
     responseDict = {}
@@ -67,13 +75,171 @@ def responseListToDict(responseList, splitChars='='):
             responseDict[nameVal[0]] = nameVal[1]
     return responseDict
 
+class PPMACProject(object):
+    """
+    Class containing files and directories included in a project
+    """
+    class Directory(object):
+        def __init__(self, path, files):
+            self.path = path
+            #self.subdirs = {}  # dict of directory objects
+            self.files = files  # dict of files
+
+    class File(object):
+        def __init__(self, name, dir, proj):
+            self.name = name
+            self.dir = dir  # directory object
+            filePath = f'{dir}/{name}'
+            self.extension = os.path.splitext(filePath)[1]
+            self.contents = proj.getFileContents(filePath)
+            self.sha256 = None  # calculate sha256sum of file
+
+    def __init__(self, root):
+        self.root = root # absolute path the project directory
+        print(root)
+        self.files = {}
+        self.dirs = {}
+        self.buildProjectTree(root)
+
+    def buildProjectTree(self, start):
+        for root, dirs, files in os.walk(start):
+            root_ = root.replace(start, '', 1)
+            for name in dirs:
+                dirName = os.path.join(root_, name)
+                self.dirs[dirName] = self.Directory(dirName, files)
+            for name in files:
+                fileName = os.path.join(root_, name)
+                self.files[fileName] = self.File(name, root_, self)
+
+    def getFileContents(self, file):
+        contents = []
+        file = f'{self.root}/{file}'
+        with open(file, 'r', encoding='ISO-8859-1') as readFile:
+            for line in readFile:
+                contents.append(line.strip())
+        return contents
+
+
+class ProjectCompare(object):
+    """
+    Compare two project filesystems
+    """
+    class FileDiffs(object):
+        """
+        Object holding the differences between two project files
+        """
+        def __init__(self, fileA, fileB):
+            self.fileA = fileA
+            self.fileB = fileB
+            self.same = (fileA.sha256 == fileB.sha256)
+            # plus some object to hold the line-by-line differences
+
+    def __init__(self, projectA, projectB, ignore=None):
+        self.projectA = projectA
+        self.projectB = projectB
+        self.filesOnlyInA = {}
+        self.filesOnlyInB = {}
+        self.commonFiles = {}
+        #self.dirComp = filecmp.dircmp(projectA, projectB, ignore)
+        #self.dirComp.report_full_closure()
+        #print(self.dirComp.diff_files)
+        #print(self.dirComp.common_dirs)
+
+    def setProjectA(self, project):
+        self.projectA = project
+
+    def setprojectB(self, project):
+        self.projectB = project
+
+    def compareProjectFiles(self):
+        fileNamesA = set(self.projectA.files.keys())
+        fileNamesB = set(self.projectB.files.keys())
+        diffAB = fileNamesA - fileNamesB
+        diffBA = fileNamesB - fileNamesA
+        self.filesOnlyInA = {key: self.projectA.files[key] for key in diffAB}
+        self.filesOnlyInB = {key: self.projectB.files[key] for key in diffBA}
+        print("Files only in A:", self.filesOnlyInA)
+        print("Files only in B:", self.filesOnlyInB)
+
+
+
+class PPMACCompare(object):
+    """
+    Compare two PowerPMAC objects
+    """
+    def __init__(self, ppmacA, ppmacB):
+        self.ppmacInstanceA = ppmacA
+        self.ppmacInstanceB = ppmacB
+        self.activeElementsMissingFromA = {}
+        self.activeElementsMissingFromB = {}
+        self.elementsInAandB = {}
+
+    def setPPMACInstanceA(self, ppmacA):
+        self.ppmacInstanceA = ppmacA
+
+    def setPPMACInstanceB(self, ppmacB):
+        self.ppmacInstanceB = ppmacB
+
+    def findAndStoreDifferences(self):
+        pass
+
+    def compareActiveElements(self):
+        elementNamesA = set(self.ppmacInstanceA.activeElements.keys())
+        elementNamesB = set(self.ppmacInstanceB.activeElements.keys())
+        diffAB = elementNamesA - elementNamesB
+        diffBA = elementNamesB - elementNamesA
+        intersectAB = elementNamesA & elementNamesB
+        categoriesA = set([elem.category for elem in list(self.ppmacInstanceA.activeElements.values())])
+        categoriesB = set([elem.category for elem in list(self.ppmacInstanceB.activeElements.values())])
+        filePrefixes = categoriesA.union(categoriesB)
+        filePaths = ['compare/' + prefix + '.diff' for prefix in filePrefixes]
+        diffFiles = {}
+        try:
+            sourceA = self.ppmacInstanceA.source
+            sourceB = self.ppmacInstanceB.source
+            for file in filePaths:
+                diffFiles[file] = open(file, 'w+')
+            print(diffFiles)
+            # write first set of headers
+            for file in diffFiles:
+                diffFiles[file].write(f'@@ Active elements in source \'{sourceA}\' but not source \'{sourceB}\' @@\n')
+            # write to file elements that are in ppmacA but not ppmacB
+            for diffABElem in [self.ppmacInstanceA.activeElements[elem] for elem in diffAB]:
+                file = f'compare/{diffABElem.category}.diff'
+                diffFiles[file].write('>> ' + diffABElem.name + ' = ' + diffABElem.value + '\n')
+            # write second set of headers
+            for file in diffFiles:
+                diffFiles[file].write(f'@@ Active elements in source \'{sourceB}\' but not source \'{sourceA}\' @@\n')
+            # write to file elements that are in ppmacB but not ppmacA
+            for diffBAElem in [self.ppmacInstanceB.activeElements[elem] for elem in diffBA]:
+                file = f'compare/{diffBAElem.category}.diff'
+                diffFiles[file].write('>> ' + diffBAElem.name + ' = ' + diffBAElem.value + '\n')
+            # write to file elements that in ppmacB but not ppmacA but whose values differ
+            for file in diffFiles:
+                diffFiles[file].write(f'@@ Active elements in source \'{sourceA}\' and source \'{sourceB}\' with '
+                                      f'different values @@\n')
+            for elem in intersectAB:
+                valA = self.ppmacInstanceA.activeElements[elem].value
+                valB = self.ppmacInstanceB.activeElements[elem].value
+                if valA != valB:
+                    file = 'compare/' + self.ppmacInstanceA.activeElements[elem].category + '.diff'
+                    diffFiles[file].write(f'@@ {elem} @@\n{self.ppmacInstanceA.source} value >> {valA}\n'
+                          f'{self.ppmacInstanceB.source} value >> {valB}\n')
+        finally:
+            for file in diffFiles:
+                diffFiles[file].close()
+
+
 class PPMACRepositoryWriteRead(object):
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
+        # source - will be set somewhere else
+        self.ppmacInstance.source = 'repository'
         self.repositoryPath = os.environ['PWD'] + '/repository'
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
+        self.ppmacInstance.source = 'repository'
 
     def setRepositoryPath(self, path):
         self.repositoryPath = path
@@ -100,9 +266,28 @@ class PPMACRepositoryWriteRead(object):
             file = self.repositoryPath + f'/Qvars_CS{i}.txt'
             self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
+    def writeActiveElements(self):
+        file = self.repositoryPath + '/activeElements.txt'
+        with open(file, 'w+') as writeFile:
+            for elem in self.ppmacInstance.activeElements:
+                writeFile.write(self.ppmacInstance.activeElements[elem].__str__() + '\n')
+
+    def readAndStoreActiveElements(self):
+        file = self.repositoryPath + '/activeElements.txt'
+        with open(file, 'r') as readFile:
+            for line in readFile:
+                line = line.split()
+                line = [item.strip() for item in line]
+                key = line[0]
+                value = line[0:] # need to deal with the list of indices which is tha last column(s)
+                self.ppmacInstance.activeElements[key] = self.ppmacInstance.ActiveElement(*value[0:5])
+
+
 class PPMACHardwareWriteRead(object):
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
+        # Set PPMAC source to hardware
+        self.ppmacInstance.source = 'hardware'
         # Path to directory containing symbols tables files on PPMAC
         self.remote_db_path = '/var/ftp/usrflash/Database'
         # Path to directory containing symbols tables files on local
@@ -185,8 +370,8 @@ class PPMACHardwareWriteRead(object):
             raise IOError('Cannot retrieve data structure: error communicating with PMAC')
         else:
             data = data.split("\r")[:-1]
-            #print(data)
-        #if 'error' in data[0]:
+            # print(data)
+        # if 'error' in data[0]:
         #    errMessage = 'Error reading data.'
         #    raise IOError(errMessage + data[0])
         return data
@@ -228,7 +413,7 @@ class PPMACHardwareWriteRead(object):
             varValues = self.sendCommand(cmd)
             cmd = cmd + '->'
             elementNames = self.sendCommand(cmd)
-            #print(elementNames)
+            # print(elementNames)
             for i in range(0, upperIndex - lowerIndex + 1):
                 index = lowerIndex + i
                 if i > indexEnd:  # - 1:
@@ -281,7 +466,6 @@ class PPMACHardwareWriteRead(object):
                 self.readVariables('Q', self.ppmacInstance.Qvariables[coordSystem], indexStart, indexEnd, varsPerBlock)
             else:
                 warnings.warn('Unrecognised coordinate system number')
-
 
     def readDataStructure(self, cmd, ppmacDataStructure):
         '''
@@ -418,12 +602,20 @@ class PPMACHardwareWriteRead(object):
                 else:
                     line = multi_line_ + line
                     symbol = line.split('\x01')
+                    symbol = [col.strip() for col in symbol]
                     multi_line = ''
                     symbols.append(symbol)
             file.close()
         except IOError as e:
             print(e)
         return symbols
+
+    def getDataStructureCategory(self, dataStructure):
+        if dataStructure.find('.') == -1:
+            dataStructureCategory = dataStructure
+        else:
+            dataStructureCategory = dataStructure[0:dataStructure.find('.')]
+        return dataStructureCategory.replace('[]','')
 
     def ignoreDataStructure(self, substructure, elementsToIgnore):
         """
@@ -434,9 +626,9 @@ class PPMACHardwareWriteRead(object):
         """
         n = substructure.count('.')
         for _ in range(n + 1):
-            #print('Checking if the following structure is in the ignore list: ' + substructure)
+            # print('Checking if the following structure is in the ignore list: ' + substructure)
             if substructure in elementsToIgnore:
-                #print('Ignoring data structure')
+                # print('Ignoring data structure')
                 return True
             substructure = substructure[0:substructure.rfind('.')]
         return False
@@ -456,6 +648,7 @@ class PPMACHardwareWriteRead(object):
         if isinstance(timeout, int) or isinstance(timeout, float):
             applyTimeout = True
             startTime = time.time()
+        dataStructureCategory = self.getDataStructureCategory(dataStructure)
         i = 0
         cmd_accepted = True
         while cmd_accepted:
@@ -472,13 +665,14 @@ class PPMACHardwareWriteRead(object):
             if 'ILLEGAL' in cmd_return[0]:
                 cmd_accepted = False
             else:
-                activeElements[dataStructure_i] = (cmd_return[0], dataStructure_i)
+                activeElements[dataStructure_i] = (dataStructure_i, cmd_return[0], dataStructureCategory,
+                                                   dataStructure, [i])
             if applyTimeout and time.time() - startTime > timeout:
                 logging.info(f'Timed-out generating active elements for {dataStructure}. '
                              f'Last i = {i}.')
                 return
             i += 1
-        #print(activeElements)
+        # print(activeElements)
 
     def fillDataStructureIndices_ij(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
         """
@@ -495,6 +689,7 @@ class PPMACHardwareWriteRead(object):
         if isinstance(timeout, int) or isinstance(timeout, float):
             applyTimeout = True
             startTime = time.time()
+        dataStructureCategory = self.getDataStructureCategory(dataStructure)
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -524,7 +719,8 @@ class PPMACHardwareWriteRead(object):
                     cmd_accepted = False
                 else:
                     last_i_accepted = i
-                    activeElements[dataStructure_ij] = (cmd_return[0], dataStructure_ij)
+                    activeElements[dataStructure_ij] = (dataStructure_ij, cmd_return[0],
+                                                        dataStructureCategory, dataStructure, [i, j])
                 if applyTimeout and time.time() - startTime > timeout:
                     logging.info(f'Timed-out generating active elements for {dataStructure}. '
                                  f'Last i,j = {i},{j}.')
@@ -536,7 +732,7 @@ class PPMACHardwareWriteRead(object):
                 cmd_accepted = False
             # print(cmd_accepted)
             i += 1
-        #print(activeElements)
+        # print(activeElements)
 
     def fillDataStructureIndices_ijk(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
         """
@@ -553,6 +749,7 @@ class PPMACHardwareWriteRead(object):
         if isinstance(timeout, int) or isinstance(timeout, float):
             applyTimeout = True
             startTime = time.time()
+        dataStructureCategory = self.getDataStructureCategory(dataStructure)
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -590,7 +787,7 @@ class PPMACHardwareWriteRead(object):
                         break
                     if self.ignoreDataStructure(dataStructure_ijk.replace(
                             f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1), elementsToIgnore):
-                    #    break
+                        #    break
                         k += 1
                         continue
                     print(dataStructure_ijk)
@@ -601,7 +798,8 @@ class PPMACHardwareWriteRead(object):
                     else:
                         last_j_accepted = j
                         last_i_accepted = i
-                        activeElements[dataStructure_ijk] = (cmd_return[0], dataStructure_ijk)
+                        activeElements[dataStructure_ijk] = (dataStructure_ijk, cmd_return[0],
+                                                             dataStructureCategory, dataStructure, [i, j, k])
                     if applyTimeout and time.time() - startTime > timeout:
                         logging.info(f'Timed-out generating active elements for {dataStructure}. '
                                      f'Last i,j,k = {i},{j},{k}.')
@@ -615,7 +813,7 @@ class PPMACHardwareWriteRead(object):
             if i - last_i_accepted > 1:
                 cmd_accepted = False
             i += 1
-        #print(activeElements)
+        # print(activeElements)
 
     def fillDataStructureIndices_ijkl(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
         """
@@ -632,6 +830,7 @@ class PPMACHardwareWriteRead(object):
         if isinstance(timeout, int) or isinstance(timeout, float):
             applyTimeout = True
             startTime = time.time()
+        dataStructureCategory = self.getDataStructureCategory(dataStructure)
         i = 0
         last_i_accepted = i
         cmd_accepted = True
@@ -640,7 +839,7 @@ class PPMACHardwareWriteRead(object):
             last_j_accepted = j
             i_idex_string = f'[{i}]'
             dataStructure_i = nthRepl(dataStructure, '[]', i_idex_string, 1)
-            #if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
+            # if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
             #    break
             if self.ignoreDataStructure(dataStructure_i.replace(i_idex_string, f'[{i}:]'), elementsToIgnore):
                 break
@@ -670,7 +869,7 @@ class PPMACHardwareWriteRead(object):
                         break
                     if self.ignoreDataStructure(dataStructure_ijk.replace(
                             f'[{i}]', '[]', 1).replace(f'[{j}]', '[]', 1), elementsToIgnore):
-                    #    break
+                        #    break
                         last_k_accepted = k
                         k += 1
                         continue
@@ -694,7 +893,8 @@ class PPMACHardwareWriteRead(object):
                             last_k_accepted = k
                             last_j_accepted = j
                             last_i_accepted = i
-                            activeElements[dataStructure_ijkl] = (cmd_return[0], dataStructure_ijkl)
+                            activeElements[dataStructure_ijkl] = (dataStructure_ijkl, cmd_return[0],
+                                                                  dataStructureCategory, dataStructure, [i, j, k, l])
                         if applyTimeout and time.time() - startTime > timeout:
                             logging.info(f'Timed-out generating active elements for {dataStructure}. '
                                          f'Last i,j,k,l = {i},{j},{k},{l}.')
@@ -712,7 +912,7 @@ class PPMACHardwareWriteRead(object):
             if i - last_i_accepted > 1:
                 cmd_accepted = False
             i += 1
-        #print(activeElements)
+        # print(activeElements)
 
     def scpPPMACDatabaseToLocal(self, remote_db_path, local_db_path):
         if not os.path.isdir(local_db_path):
@@ -726,8 +926,8 @@ class PPMACHardwareWriteRead(object):
         """
         # Clear current data structure dictionary
         dataStructures = {}
-        #swtbl0 = []
-        #with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
+        # swtbl0 = []
+        # with open(self.local_db_path + '/' + self.pp_swtbl0_txtfile, 'r') as readFile:
         #    for line in readFile:
         #        swtbl0.append(line.replace('\n',''))
         pp_swtbls = []
@@ -737,48 +937,49 @@ class PPMACHardwareWriteRead(object):
         swtbl2_nparray = np.asarray(pp_swtbls[1])
         swtbl3_nparray = np.asarray(pp_swtbls[2])
         with open('tmp/master_swtbl_3.txt', 'w+') as writeFile:
-            #for baseDS in swtbl0:
+            # for baseDS in swtbl0:
             #    print(baseDS)
             #    substruct_01 = False
-                for i in range(swtbl1_nparray.shape[0]):
+            for i in range(swtbl1_nparray.shape[0]):
                 #    if baseDS == swtbl1_nparray[i, 1]:
                 #        substruct_01 = True
-                        substruct_12 = False
-                        for j in range(swtbl2_nparray.shape[0]):
-                            if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
-                                if (swtbl1_nparray[i, 1].replace('[]','') != swtbl2_nparray[j, 5].replace('[]','')) and \
-                                        (swtbl2_nparray[j, 5] != "NULL"):
+                substruct_12 = False
+                for j in range(swtbl2_nparray.shape[0]):
+                    if swtbl1_nparray[i, 2] == swtbl2_nparray[j, 1]:
+                        if (swtbl1_nparray[i, 1].replace('[]', '') != swtbl2_nparray[j, 5].replace('[]', '')) and \
+                                (swtbl2_nparray[j, 5] != "NULL"):
+                            continue
+                        substruct_12 = True
+                        substruct_23 = False
+                        for k in range(swtbl3_nparray.shape[0]):
+                            if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
+                                if (swtbl1_nparray[i, 1].replace('[]', '') != swtbl3_nparray[k, 5].replace('[]',
+                                                                                                           '')) and \
+                                        (swtbl3_nparray[k, 5] != "NULL"):
                                     continue
-                                substruct_12 = True
-                                substruct_23 = False
-                                for k in range(swtbl3_nparray.shape[0]):
-                                    if swtbl2_nparray[j, 2] == swtbl3_nparray[k, 1]:
-                                        if (swtbl1_nparray[i, 1].replace('[]','') != swtbl3_nparray[k, 5].replace('[]','')) and \
-                                                (swtbl3_nparray[k, 5] != "NULL"):
-                                            continue
-                                        substruct_23 = True
-                                        dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
-                                              '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
-                                        print(dsName)
-                                        dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl3_nparray[k, 3:].tolist())]
-                                        writeFile.write(dataStructures[dsName].__str__() + '\n')
-                                if substruct_23 == False:
-                                    dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
-                                          '.' + swtbl2_nparray[j, 2]
-                                    print(dsName)
-                                    dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl2_nparray[j, 3:].tolist())]
-                                    writeFile.write(dataStructures[dsName].__str__() + '\n')
-                        if substruct_12 == False:
-                            dsName = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
+                                substruct_23 = True
+                                dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                         '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
+                                print(dsName)
+                                dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1],
+                                                          *(swtbl3_nparray[k, 3:].tolist())]
+                                writeFile.write(dataStructures[dsName].__str__() + '\n')
+                        if substruct_23 == False:
+                            dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
+                                     '.' + swtbl2_nparray[j, 2]
                             print(dsName)
-                            dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl1_nparray[i, 3:].tolist())]
+                            dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl2_nparray[j, 3:].tolist())]
                             writeFile.write(dataStructures[dsName].__str__() + '\n')
-            #if substruct_01 == False:
-            #    print(baseDS)
-            #    dataStructures.append(baseDS)
-            #    writeFile.write(baseDS.__str__() + '\n')
+                if substruct_12 == False:
+                    dsName = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
+                    print(dsName)
+                    dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl1_nparray[i, 3:].tolist())]
+                    writeFile.write(dataStructures[dsName].__str__() + '\n')
+        # if substruct_01 == False:
+        #    print(baseDS)
+        #    dataStructures.append(baseDS)
+        #    writeFile.write(baseDS.__str__() + '\n')
         return dataStructures
-
 
     def checkDataStructuresValidity(self, dataStructures):
         """
@@ -791,15 +992,14 @@ class PPMACHardwareWriteRead(object):
                      f"and removing any invalid data structures...")
         invalidCount = 0
         for ds in list(dataStructures):
-            cmd_return = self.sendCommand(ds.replace('[]','[0]'))
+            cmd_return = self.sendCommand(ds.replace('[]', '[0]'))
             if 'ILLEGAL' in cmd_return[0]:
-                logging.debug(f"{ds.replace('[]','[0]')} not a valid ppmac command, deleting from"
-                             f" dictionary of data structures.")
+                logging.debug(f"{ds.replace('[]', '[0]')} not a valid ppmac command, deleting from"
+                              f" dictionary of data structures.")
                 del dataStructures[ds]
                 invalidCount += 1
         logging.info(f"checkDataStructuresValidity: removed {invalidCount} invalid data structures.")
         return dataStructures
-
 
     def getActiveElementsFromDataStructures(self, dataStructures, elementsToIgnore,
                                             recordTimings=False, timeout=None):
@@ -815,31 +1015,38 @@ class PPMACHardwareWriteRead(object):
         fncStartTime = time.time()
         activeElements = {}
         for ds in dataStructures:
-                loopStartTime = time.time()
-                N_brackets = ds.count('[]')
-                if N_brackets == 0:
-                    value = self.sendCommand(ds)[0]
-                    activeElements[ds] = (value, ds)
-                elif N_brackets == 1:
-                   self.fillDataStructureIndices_i(ds, activeElements, elementsToIgnore, timeout=timeout)
-                elif N_brackets == 2:
-                    self.fillDataStructureIndices_ij(ds, activeElements, elementsToIgnore, timeout=timeout)
-                elif N_brackets == 3:
-                    self.fillDataStructureIndices_ijk(ds, activeElements, elementsToIgnore, timeout=timeout)
-                elif N_brackets == 4:
-                    self.fillDataStructureIndices_ijkl(ds, activeElements, elementsToIgnore, timeout=timeout)
-                else:
-                    logging.info('Too many indexed substructures in data structure. Ignoring.')
-                    continue
-                if recordTimings:
-                    logging.info(ds + f'   time: {time.time() - loopStartTime} sec')
+            loopStartTime = time.time()
+            N_brackets = ds.count('[]')
+            if N_brackets == 0:
+                value = self.sendCommand(ds)[0]
+                category = self.getDataStructureCategory(ds)
+                activeElements[ds] = (ds, value, category, ds, None)
+            elif N_brackets == 1:
+                self.fillDataStructureIndices_i(ds, activeElements, elementsToIgnore, timeout=timeout)
+            elif N_brackets == 2:
+                self.fillDataStructureIndices_ij(ds, activeElements, elementsToIgnore, timeout=timeout)
+            elif N_brackets == 3:
+                self.fillDataStructureIndices_ijk(ds, activeElements, elementsToIgnore, timeout=timeout)
+            elif N_brackets == 4:
+                self.fillDataStructureIndices_ijkl(ds, activeElements, elementsToIgnore, timeout=timeout)
+            else:
+                logging.info('Too many indexed substructures in data structure. Ignoring.')
+                continue
+            if recordTimings:
+                logging.info(ds + f'   time: {time.time() - loopStartTime} sec')
         logging.info('Finished generating dictionary of active elements. ')
         logging.info(f'Total time = {time.time() - fncStartTime} sec')
         return activeElements
 
     def expandSplicedIndices(self, splicedDataStructure):
+        """
+        Stuff
+        :param splicedDataStructure: String containing a data structure name with one
+        filled index that may or may not be spliced to indicate a range of values
+        :return:
+        """
         if splicedDataStructure.count(':') > 1:
-            raise('Too many indices')
+            raise ('Too many indices')
         elif ':' not in splicedDataStructure:
             return [splicedDataStructure]
         else:
@@ -849,7 +1056,7 @@ class PPMACHardwareWriteRead(object):
             startIndex = int(splicedIndices.group(1))
             endIndex = int(splicedIndices.group(2))
             expandedDataStructure = [re.sub('([0-9]+:[0-9]+)', str(i), splicedDataStructure)
-                         for i in range(startIndex, endIndex + 1)]
+                                     for i in range(startIndex, endIndex + 1)]
             return expandedDataStructure
 
     def generateIgnoreSet(self, ignoreFile):
@@ -863,13 +1070,19 @@ class PPMACHardwareWriteRead(object):
         return set(expandedIgnore)
 
     @timer
-    def generateActiveDataStructures(self):
-        elementsToIgnore = self.generateIgnoreSet('ignore/ignore')
+    def readAndStoreActiveState(self):
         self.scpPPMACDatabaseToLocal(self.remote_db_path, self.local_db_path)
+        # Store data structures in ppmac object
         dataStructures = self.createDataStructuresFromSymbolsTables(self.pp_swtlbs_symfiles, self.local_db_path)
         validDataStructures = self.checkDataStructuresValidity(dataStructures)
+        self.ppmacInstance.dataStructures = \
+            {key: self.ppmacInstance.DataStructure(*value) for key, value in validDataStructures.items()}
+        # Store active elements in ppmac object
+        elementsToIgnore = self.generateIgnoreSet('ignore/ignore')
         activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
                                                                   recordTimings=True, timeout=10.0)
+        self.ppmacInstance.activeElements = \
+            {key: self.ppmacInstance.ActiveElement(*value) for key, value in activeElements.items()}
 
     def getBufferedPrograms(self):
         programBuffers = self.sendCommand('buffer')
@@ -880,17 +1093,15 @@ class PPMACHardwareWriteRead(object):
             progCode = self.sendCommand(f'list {progName}')
             print(progCode)
 
-
-
     def test_CreateDataStructuresFromSymbolsTables(self):
-        #dataStructuresFile = 'test/PPMACsoftwareRef_25102016_DataStructures.txt'
+        # dataStructuresFile = 'test/PPMACsoftwareRef_25102016_DataStructures.txt'
         dataStructuresFile = 'test/PPMACsoftwareRef_22032021_DataStructures.txt'
         softwareRefDataStructures = []
         with open(dataStructuresFile, 'r') as readFile:
             for line in readFile:
                 if line[0] == '#' or line[0] == '\n':
                     continue
-                softwareRefDataStructures.append(line.replace('\n','').lower())
+                softwareRefDataStructures.append(line.replace('\n', '').lower())
         softwareRefDataStructures = set(softwareRefDataStructures)
         ppmacActiveDataStructures = []
         for ds in self.createDataStructuresFromSymbolsTables():
@@ -910,19 +1121,20 @@ class PPMACHardwareWriteRead(object):
             for line in unindexedDataFile:
                 if line[0] == '#' or line[0] == '\n':
                     continue
-                unindexedDataStructures.append(line.replace('\n',''))
+                unindexedDataStructures.append(line.replace('\n', ''))
         elementsToIgnore = self.generateIgnoreSet(ignoreListFilePath)
         expectedOutput = []
         with open(expectedOutputFilePath, 'r') as expectedOutputFile:
             for line in expectedOutputFile:
                 if line[0] == '#' or line[0] == '\n':
                     continue
-                expectedOutput.append(line.replace('\n',''))
+                expectedOutput.append(line.replace('\n', ''))
         expectedOutput = set(expectedOutput)
         self.sendCommand_ = self.sendCommand
         try:
             self.sendCommand = lambda x: ['1', '1']
-            indexedDataStructures = set(self.getActiveElementsFromDataStructures(unindexedDataStructures, elementsToIgnore))
+            indexedDataStructures = set(
+                self.getActiveElementsFromDataStructures(unindexedDataStructures, elementsToIgnore))
         finally:
             self.sendCommand = self.sendCommand_
         print('Expected: ', expectedOutput)
@@ -936,7 +1148,7 @@ class PPMACHardwareWriteRead(object):
 class PowerPMAC:
     class DataStructure:
         def __init__(self, name='', base='', field1='', field2='', field3='', field4='',
-                     field5='', field6='', field7='', field8='', field9=''):
+                     field5='', field6='', field7='', field8='', field9='', field10='', field11='', field12=''):
             self.name = name
             self.base = base
             self.field1 = field1
@@ -948,17 +1160,34 @@ class PowerPMAC:
             self.field7 = field7
             self.field8 = field8
             self.field9 = field9
+            self.field10 = field10
+            self.field11 = field11
+            self.field12 = field12
 
         def __str__(self):
             s = self.name + ', ' + self.base + ', ' + self.field1 + ', ' + self.field2 + ', ' + self.field3 + \
-                ', ' + self.field4 + ', ' + self.field5 + ', ' + self.field6 + ', ' + self.field7 + ', ' + self.field8
+                ', ' + self.field4 + ', ' + self.field5 + ', ' + self.field6 + ', ' + self.field7 + ', ' + \
+                self.field8 + ', ' + self.field9 + ', ' + self.field10 + ', ' + self.field11 + ', ' + self.field12
             return s
 
+    class ActiveElement:
+        def __init__(self, name='', value='', category='', dataStructure='', indices=[]):
+            self.name = name
+            self.value = value
+            self.category = category
+            self.dataStructure = dataStructure
+            self.indices = indices
+
+        def __str__(self):
+            s = self.name + '  ' + self.value + '  ' + self.category + '  ' + \
+                self.dataStructure + '  ' + str(self.indices)
+            return s
 
     class Variable:
         '''
         Super-class for all P,Q,M,I,L,R,C,D variables
         '''
+
         def __init__(self, index=None, name=None, value=None):
             self.index = index
             self.name = name
@@ -1007,8 +1236,12 @@ class PowerPMAC:
         pass
 
     def __init__(self):
+        # Source: hardware or respository
+        self.source = ''
         # Dictionary mapping DS names to dataStructure objects
         self.dataStructures = {}
+        # Dictionary of active elements
+        self.activeElements = {}
         # 16384 total I variables, values range from I0 to I16383
         self.numberOfIVariables = 16384
         # 16384 total P variables, values range from P0 to P65535
@@ -1064,10 +1297,10 @@ class PowerPMAC:
         # L,D,C,R
         # L variables local to a communication thread do not need to be backed-up
         # L variables local to plc programs probably do not need to be backed-up
-        #self.PlcLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
+        # self.PlcLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
         #                   for _ in range(self.numberOfPlcPrograms)]
         # L variables local to coordinate systems...
-        #self.CoordSystemLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
+        # self.CoordSystemLvariables = [[self.Variable() for _ in range(self.numberOfLVariables)]
         #                   for _ in range(self.numberOfCoordSystems)]
 
         # Data structures
@@ -1098,8 +1331,8 @@ class PowerPMAC:
             self.elementToVariable[ivar.element] = ivar.name
         self.elementToVariable['*'] = None
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     start = time.time()
 
     sshClient = dls_pmacremote.PPmacSshInterface()
@@ -1108,27 +1341,51 @@ if __name__ == '__main__':
     sshClient.hostname = '192.168.56.10'
     sshClient.connect()
 
-    ppmac = PowerPMAC()
+    ppmacA = PowerPMAC()
+    ppmacB = PowerPMAC()
 
-    hardwareWriteRead = PPMACHardwareWriteRead(ppmac)
-    hardwareWriteRead.readSysMaxes()
+    """
+    # read current state of ppmac and store in ppmacA object
+    hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
+    hardwareWriteRead.readAndStoreActiveState()
 
-    ppmac.initDataStructures()
+    # write current state of ppmacA object to repository
+    #repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
+    #repositoryWriteRead.writeActiveElements()
 
-    #hardwareWriteRead.readAllMotorsSetupData()
-    #hardwareWriteRead.readAllCSSetupData()
-    #hardwareWriteRead.readBrickACData()
-    #hardwareWriteRead.readBrickLVData()
-    #hardwareWriteRead.readAllBufIOSetupData()
-    #hardwareWriteRead.readAllCamTableSetupData()
-    #hardwareWriteRead.readAllCompTableSetupData()
-    #hardwareWriteRead.readAllECATsSetupData()
-    #hardwareWriteRead.readAllEncTableSetupData()
-    #hardwareWriteRead.readGate1SetupData()
-    #hardwareWriteRead.readGate2SetupData()
-    #hardwareWriteRead.readGate3SetupData()
-    #hardwareWriteRead.readAllGateIoSetupData()
-    #hardwareWriteRead.readMacroSetupData()
+    # read state from repository and store in ppmacB object
+    repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB)
+    #repositoryWriteRead.setPPMACInstance(ppmacB)
+    repositoryWriteRead.readAndStoreActiveElements()
+
+    # compare ppmacA and ppmacB objects
+    ppmacComparison = PPMACCompare(ppmacA, ppmacB)
+    ppmacComparison.compareActiveElements()
+    """
+
+    projectA = PPMACProject('tmp/var-ftp')
+    projectB = PPMACProject('tmp/opt')
+    projComparison = ProjectCompare(projectA, projectB)
+    projComparison.compareProjectFiles()
+
+
+    #hardwareWriteRead.readSysMaxes()
+    #ppmac.initDataStructures()
+
+    # hardwareWriteRead.readAllMotorsSetupData()
+    # hardwareWriteRead.readAllCSSetupData()
+    # hardwareWriteRead.readBrickACData()
+    # hardwareWriteRead.readBrickLVData()
+    # hardwareWriteRead.readAllBufIOSetupData()
+    # hardwareWriteRead.readAllCamTableSetupData()
+    # hardwareWriteRead.readAllCompTableSetupData()
+    # hardwareWriteRead.readAllECATsSetupData()
+    # hardwareWriteRead.readAllEncTableSetupData()
+    # hardwareWriteRead.readGate1SetupData()
+    # hardwareWriteRead.readGate2SetupData()
+    # hardwareWriteRead.readGate3SetupData()
+    # hardwareWriteRead.readAllGateIoSetupData()
+    # hardwareWriteRead.readMacroSetupData()
     '''
     for i in range(0, ppmac.numberOfMotors):
         print(ppmac.Motors[i].setupData)
@@ -1153,12 +1410,12 @@ if __name__ == '__main__':
         print(ppmac.GateIOs[i].setupData)
     print(ppmac.Macro.setupData)
     '''
-    #lw = 0 #16000
-    #up = 250 #ppmac.numberOfIVariables - 1
-    #hardwareWriteRead.readIVariables(lw, ppmac.numberOfIVariables - 1, 100)
-    #hardwareWriteRead.readPVariables(lw, ppmac.numberOfPVariables - 1, 100)
-    #hardwareWriteRead.readMVariables(lw, ppmac.numberOfMVariables - 1, 100)
-    #hardwareWriteRead.readQVariables('all', lw, ppmac.numberOfQVariables - 1, 100)
+    # lw = 0 #16000
+    # up = 250 #ppmac.numberOfIVariables - 1
+    # hardwareWriteRead.readIVariables(lw, ppmac.numberOfIVariables - 1, 100)
+    # hardwareWriteRead.readPVariables(lw, ppmac.numberOfPVariables - 1, 100)
+    # hardwareWriteRead.readMVariables(lw, ppmac.numberOfMVariables - 1, 100)
+    # hardwareWriteRead.readQVariables('all', lw, ppmac.numberOfQVariables - 1, 100)
 
     '''
     for i in range(0, up + 1):
@@ -1177,24 +1434,25 @@ if __name__ == '__main__':
     repositoryWriteRead.writeQvars()
     repositoryWriteRead.writeMvars()
     '''
-    #ppmac.buildVariable2Element()
-    #ppmac.buildElement2Variable()
+    # ppmac.buildVariable2Element()
+    # ppmac.buildElement2Variable()
 
-    scpFromPowerPMACtoLocal(source='/var/ftp/usrflash/Database',
-                        destination='/home/dlscontrols/Workspace/repository/Database', recursive=True)
+    #scpFromPowerPMACtoLocal(source='/var/ftp/usrflash/Database',
+    #                        destination='/home/dlscontrols/Workspace/repository/Database', recursive=True)
 
-    #hardwareWriteRead.scpFromLocalToPowerPMAC(files='/home/dlscontrols/Workspace/repository/Project_01',
+    # hardwareWriteRead.scpFromLocalToPowerPMAC(files='/home/dlscontrols/Workspace/repository/Project_01',
     #                    remote_path='/var/ftp/usrflash/Project', recursive=True)
 
-    #hardwareWriteRead.generateActiveDataStructures()
-    #hardwareWriteRead.getBufferedPrograms()
+    # hardwareWriteRead.readAndStoreActiveState()
+    # hardwareWriteRead.getBufferedPrograms()
 
-    #hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
-    #hardwareWriteRead.test_getActiveElementsFromDataStructures()
-    hardwareWriteRead.generateActiveDataStructures()
+    # hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
+    # hardwareWriteRead.test_getActiveElementsFromDataStructures()
+    # hardwareWriteRead.readAndStoreActiveState()
+    # repositoryWriteRead.writeActiveElements()
 
-    #print(hardwareWriteRead.expandSplicedIndices('a[0:10]'))
-    #print(hardwareWriteRead.expandSplicedIndices('b[5:]'))
+    # print(hardwareWriteRead.expandSplicedIndices('a[0:10]'))
+    # print(hardwareWriteRead.expandSplicedIndices('b[5:]'))
 
     sshClient.disconnect()
 
