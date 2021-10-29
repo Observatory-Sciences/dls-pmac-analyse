@@ -94,11 +94,24 @@ class PPMACProject(object):
             self.contents = proj.getFileContents(filePath)
             self.sha256 = None  # calculate sha256sum of file
 
-    def __init__(self, root):
-        self.root = root # absolute path the project directory
-        print(root)
+    def __init__(self, source, root):
+        # absolute path the project directory
+        self.root = root
+        # Source of project (hardware or repo)
+        self.source = source
+        # Dictionary of files contained in the project
         self.files = {}
+        # Dictionary of directories contained in the project
         self.dirs = {}
+        if self.source == 'hardware':
+            if root.find('usrflash') == -1:
+                raise RuntimeError(f'Root directory "{root}" invalid: not a project directory.')
+            self.root = f'tmp/hardware{root}'
+            os.system(f'rm -rf tmp/hardware')
+            os.makedirs(self.root[0:self.root.rfind('/')])
+            scpFromPowerPMACtoLocal(source=root, destination=self.root, recursive=True)
+        elif self.source != 'repository':
+            raise RuntimeError('Invalid project source: should be "hardware" or "repository".')
         self.buildProjectTree(root)
 
     def buildProjectTree(self, start):
@@ -116,7 +129,7 @@ class PPMACProject(object):
         file = f'{self.root}/{file}'
         with open(file, 'r', encoding='ISO-8859-1') as readFile:
             for line in readFile:
-                contents.append(line.strip())
+                contents.append(line)
         return contents
 
 
@@ -139,11 +152,7 @@ class ProjectCompare(object):
         self.projectB = projectB
         self.filesOnlyInA = {}
         self.filesOnlyInB = {}
-        self.commonFiles = {}
-        #self.dirComp = filecmp.dircmp(projectA, projectB, ignore)
-        #self.dirComp.report_full_closure()
-        #print(self.dirComp.diff_files)
-        #print(self.dirComp.common_dirs)
+        self.filesInAandB = {}
 
     def setProjectA(self, project):
         self.projectA = project
@@ -154,13 +163,28 @@ class ProjectCompare(object):
     def compareProjectFiles(self):
         fileNamesA = set(self.projectA.files.keys())
         fileNamesB = set(self.projectB.files.keys())
-        diffAB = fileNamesA - fileNamesB
-        diffBA = fileNamesB - fileNamesA
-        self.filesOnlyInA = {key: self.projectA.files[key] for key in diffAB}
-        self.filesOnlyInB = {key: self.projectB.files[key] for key in diffBA}
-        print("Files only in A:", self.filesOnlyInA)
-        print("Files only in B:", self.filesOnlyInB)
-
+        fileNamesOnlyInA = fileNamesA - fileNamesB
+        fileNamesOnlyInB = fileNamesB - fileNamesA
+        fileNamesInAandB = fileNamesA & fileNamesB
+        self.filesOnlyInA = {fileName: self.projectA.files[fileName] for fileName in fileNamesOnlyInA}
+        self.filesOnlyInB = {fileName: self.projectB.files[fileName] for fileName in fileNamesOnlyInB}
+        with open('compare/Project/Project.diff', 'w+') as projCompFile:
+            projCompFile.write(f'@@ Project files in source \'{self.projectA.source}\' but not source '
+                               f'\'{self.projectB.source}\' @@\n')
+            for projFileName in fileNamesOnlyInA:
+                projCompFile.write(f'>> {projFileName}\n')
+            projCompFile.write(f'@@ Project files in source \'{self.projectB.source}\' but not source '
+                               f'\'{self.projectA.source}\' @@\n')
+            for projFileName in fileNamesOnlyInB:
+                projCompFile.write(f'>> {projFileName}\n')
+            projCompFile.write(f'@@ Project files in source \'{self.projectB.source}\' and source '
+                               f'\'{self.projectA.source}\' with different contents @@\n')
+            for projFileName in fileNamesInAandB:
+                projCompFile.writelines(difflib.unified_diff(projectA.files[projFileName].contents,
+                                                        projectB.files[projFileName].contents,
+                                                        fromfile=f'{projectA.source}: {projFileName}',
+                                                        tofile=f'{projectB.source}: {projFileName}',
+                                                        lineterm='\n'))
 
 
 class PPMACCompare(object):
@@ -170,9 +194,21 @@ class PPMACCompare(object):
     def __init__(self, ppmacA, ppmacB):
         self.ppmacInstanceA = ppmacA
         self.ppmacInstanceB = ppmacB
-        self.activeElementsMissingFromA = {}
-        self.activeElementsMissingFromB = {}
-        self.elementsInAandB = {}
+        # Set of element names only in A
+        self.elemNamesOnlyInA = {}
+        # Set of element names only in B
+        self.elemNamesOnlyInB = {}
+        # Set of element names in both A and B
+        self.elemNamesInAandB = {}
+        # Dictionary of active elements only in A. Keys refer to the active elem names, the values are
+        # PowerPMAC.activeElement objects.
+        self.activeElemsOnlyInA = {}
+        # Dictionary of active elements only in B. Keys refer to the active elem names, the values are
+        # PowerPMAC.activeElement objects.
+        self.activeElemsOnlyInB = {}
+        # A nested dictionary. The outer keys refer to the active elem names, the inner keys refer to ppmac
+        # instance (A or B), the values are PowerPMAC.activeElement objects.
+        self.activeElemsInAandB = {}
 
     def setPPMACInstanceA(self, ppmacA):
         self.ppmacInstanceA = ppmacA
@@ -180,18 +216,25 @@ class PPMACCompare(object):
     def setPPMACInstanceB(self, ppmacB):
         self.ppmacInstanceB = ppmacB
 
-    def findAndStoreDifferences(self):
-        pass
-
     def compareActiveElements(self):
         elementNamesA = set(self.ppmacInstanceA.activeElements.keys())
         elementNamesB = set(self.ppmacInstanceB.activeElements.keys())
-        diffAB = elementNamesA - elementNamesB
-        diffBA = elementNamesB - elementNamesA
-        intersectAB = elementNamesA & elementNamesB
-        categoriesA = set([elem.category for elem in list(self.ppmacInstanceA.activeElements.values())])
-        categoriesB = set([elem.category for elem in list(self.ppmacInstanceB.activeElements.values())])
-        filePrefixes = categoriesA.union(categoriesB)
+        self.elemNamesOnlyInA = elementNamesA - elementNamesB
+        self.elemNamesOnlyInB = elementNamesB - elementNamesA
+        self.elemNamesInAandB = elementNamesA & elementNamesB
+        self.activeElemsOnlyInA = {elemName: self.ppmacInstanceA.activeElements[elemName]
+                                   for elemName in self.elemNamesOnlyInA}
+        self.activeElemsOnlyInB = {elemName: self.ppmacInstanceB.activeElements[elemName]
+                                   for elemName in self.elemNamesOnlyInB}
+        for elemName in self.elemNamesInAandB:
+            self.activeElemsInAandB[elemName] = {'A':self.ppmacInstanceA.activeElements[elemName],
+                                                 'B':self.ppmacInstanceB.activeElements[elemName]}
+        self.writeActiveElemDifferencesToFile()
+
+    def writeActiveElemDifferencesToFile(self):
+        dataStructCategoriesInA = set([elem.category for elem in list(self.ppmacInstanceA.activeElements.values())])
+        dataStructCategoriesInB = set([elem.category for elem in list(self.ppmacInstanceB.activeElements.values())])
+        filePrefixes = dataStructCategoriesInA.union(dataStructCategoriesInB)
         filePaths = ['compare/' + prefix + '.diff' for prefix in filePrefixes]
         diffFiles = {}
         try:
@@ -204,26 +247,28 @@ class PPMACCompare(object):
             for file in diffFiles:
                 diffFiles[file].write(f'@@ Active elements in source \'{sourceA}\' but not source \'{sourceB}\' @@\n')
             # write to file elements that are in ppmacA but not ppmacB
-            for diffABElem in [self.ppmacInstanceA.activeElements[elem] for elem in diffAB]:
-                file = f'compare/{diffABElem.category}.diff'
-                diffFiles[file].write('>> ' + diffABElem.name + ' = ' + diffABElem.value + '\n')
+            for elemName in self.elemNamesOnlyInA:
+                file = f'compare/{self.activeElemsOnlyInA[elemName].category}.diff'
+                diffFiles[file].write('>> ' + self.activeElemsOnlyInA[elemName].name + ' = '
+                                      + self.activeElemsOnlyInA[elemName].value + '\n')
             # write second set of headers
             for file in diffFiles:
                 diffFiles[file].write(f'@@ Active elements in source \'{sourceB}\' but not source \'{sourceA}\' @@\n')
             # write to file elements that are in ppmacB but not ppmacA
-            for diffBAElem in [self.ppmacInstanceB.activeElements[elem] for elem in diffBA]:
-                file = f'compare/{diffBAElem.category}.diff'
-                diffFiles[file].write('>> ' + diffBAElem.name + ' = ' + diffBAElem.value + '\n')
+            for elemName in self.elemNamesOnlyInB:
+                file = f'compare/{self.activeElemsOnlyInB[elemName].category}.diff'
+                diffFiles[file].write('>> ' + self.activeElemsOnlyInB[elemName].name + ' = '
+                                      + self.activeElemsOnlyInB[elemName].value + '\n')
             # write to file elements that in ppmacB but not ppmacA but whose values differ
             for file in diffFiles:
                 diffFiles[file].write(f'@@ Active elements in source \'{sourceA}\' and source \'{sourceB}\' with '
                                       f'different values @@\n')
-            for elem in intersectAB:
-                valA = self.ppmacInstanceA.activeElements[elem].value
-                valB = self.ppmacInstanceB.activeElements[elem].value
+            for elemName in self.elemNamesInAandB:
+                valA = self.activeElemsInAandB[elemName]['A'].value
+                valB = self.activeElemsInAandB[elemName]['B'].value
                 if valA != valB:
-                    file = 'compare/' + self.ppmacInstanceA.activeElements[elem].category + '.diff'
-                    diffFiles[file].write(f'@@ {elem} @@\n{self.ppmacInstanceA.source} value >> {valA}\n'
+                    file = 'compare/' + self.ppmacInstanceA.activeElements[elemName].category + '.diff'
+                    diffFiles[file].write(f'@@ {elemName} @@\n{self.ppmacInstanceA.source} value >> {valA}\n'
                           f'{self.ppmacInstanceB.source} value >> {valB}\n')
         finally:
             for file in diffFiles:
@@ -936,7 +981,7 @@ class PPMACHardwareWriteRead(object):
         swtbl1_nparray = np.asarray(pp_swtbls[0])
         swtbl2_nparray = np.asarray(pp_swtbls[1])
         swtbl3_nparray = np.asarray(pp_swtbls[2])
-        with open('tmp/master_swtbl_3.txt', 'w+') as writeFile:
+        with open('active/dataStructures.txt', 'w+') as writeFile:
             # for baseDS in swtbl0:
             #    print(baseDS)
             #    substruct_01 = False
@@ -1362,9 +1407,9 @@ if __name__ == '__main__':
     ppmacComparison = PPMACCompare(ppmacA, ppmacB)
     ppmacComparison.compareActiveElements()
     """
-
-    projectA = PPMACProject('tmp/var-ftp')
-    projectB = PPMACProject('tmp/opt')
+    projectA = PPMACProject('repository', 'tmp/opt')
+    projectB = PPMACProject('hardware', '/opt/ppmac/usrflash')
+    #projectB = PPMACProject('repository', 'tmp/var-ftp')
     projComparison = ProjectCompare(projectA, projectB)
     projComparison.compareProjectFiles()
 
