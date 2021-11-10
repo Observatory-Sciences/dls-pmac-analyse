@@ -112,7 +112,7 @@ class PPMACProject(object):
             scpFromPowerPMACtoLocal(source=root, destination=self.root, recursive=True)
         elif self.source != 'repository':
             raise RuntimeError('Invalid project source: should be "hardware" or "repository".')
-        self.buildProjectTree(root)
+        self.buildProjectTree(self.root)
 
     def buildProjectTree(self, start):
         for root, dirs, files in os.walk(start):
@@ -166,8 +166,11 @@ class ProjectCompare(object):
         fileNamesOnlyInA = fileNamesA - fileNamesB
         fileNamesOnlyInB = fileNamesB - fileNamesA
         fileNamesInAandB = fileNamesA & fileNamesB
+        self.filesOnlyInA = self.filesOnlyInB = {}
         self.filesOnlyInA = {fileName: self.projectA.files[fileName] for fileName in fileNamesOnlyInA}
         self.filesOnlyInB = {fileName: self.projectB.files[fileName] for fileName in fileNamesOnlyInB}
+        for fileName in fileNamesInAandB:
+            self.filesInAandB[fileName] = {'A': self.projectA.files[fileName], 'B': self.projectB.files[fileName]}
         with open('compare/Project/Project.diff', 'w+') as projCompFile:
             projCompFile.write(f'@@ Project files in source \'{self.projectA.source}\' but not source '
                                f'\'{self.projectB.source}\' @@\n')
@@ -180,6 +183,7 @@ class ProjectCompare(object):
             projCompFile.write(f'@@ Project files in source \'{self.projectB.source}\' and source '
                                f'\'{self.projectA.source}\' with different contents @@\n')
             for projFileName in fileNamesInAandB:
+                print(projFileName)
                 projCompFile.writelines(difflib.unified_diff(projectA.files[projFileName].contents,
                                                         projectB.files[projFileName].contents,
                                                         fromfile=f'{projectA.source}: {projFileName}',
@@ -346,6 +350,8 @@ class PPMACHardwareWriteRead(object):
         if os.path.isfile(logfile):
             os.system(f'rm {logfile}')
         logging.basicConfig(filename=logfile, level=logging.INFO)
+        # Read maximum values for the various configuration parameters
+        self.readSysMaxes
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -358,52 +364,21 @@ class PPMACHardwareWriteRead(object):
             raise IOError("Cannot retrieve variable value: error communicating with PMAC")
         return cmdReturnInt
 
-    def getMaxNumberOfCoordSystems(self):
-        '''
-        returns: an int representing the largest number of potentially active coordinate
-          systems. Note, a CS usually becomes active when a motor is assigned to it.
-        '''
-        return self.getCommandReturnInt('Sys.MaxCoords')
-
-    def getNumberOfMotors(self):
-        '''
-        returns: an int representing the number of active motors.
-        '''
-        return self.getCommandReturnInt('Sys.MaxMotors')
-
-    def getNumberOfCompTables(self):
-        '''
-        returns: an int representing the number of active compensation tables.
-        '''
-        return self.getCommandReturnInt('Sys.CompEnable')
-
-    def getNumberOfCamTables(self):
-        '''
-        returns: an int representing the number of active compensation tables.
-        '''
-        return self.getCommandReturnInt('Sys.CamEnable')
-
-    def getNumberOfECATs(self):
-        '''
-        returns: an int representing the number EtherCAT networks that can be enabled.
-        '''
-        return self.getCommandReturnInt('Sys.MaxEcats')
-
-    def getNumberOfEncTables(self):
-        '''
-        returns: an int representing the number of available encoder conversion tables.
-        '''
-        return self.getCommandReturnInt('Sys.MaxEncoders')
-
     def readSysMaxes(self):
         if self.ppmacInstance == None:
             raise RuntimeError('No Power PMAC object has been specified')
-        self.ppmacInstance.numberOfMotors = self.getNumberOfMotors()
-        self.ppmacInstance.numberOfCoordSystems = self.getMaxNumberOfCoordSystems()
-        self.ppmacInstance.numberOfCompTables = self.getNumberOfCompTables()
-        self.ppmacInstance.numberOfCamTables = self.getNumberOfCamTables()
-        self.ppmacInstance.numberOfECATs = self.getNumberOfECATs()
-        # self.ppmacInstance.numberOfEncTables = self.getNumberOfEncTables()
+        # number of active motors
+        self.ppmacInstance.numberOfMotors = self.getCommandReturnInt('Sys.MaxMotors')
+        # number of active coordinate systems
+        self.ppmacInstance.numberOfCoordSystems = self.getCommandReturnInt('Sys.MaxCoords')
+        # number of active compensation tables.
+        self.ppmacInstance.numberOfCompTables = self.getCommandReturnInt('Sys.CompEnable')
+        # number of active cam tables
+        self.ppmacInstance.numberOfCamTables = self.getCommandReturnInt('Sys.CamEnable')
+        # number EtherCAT networks that can be enabled
+        self.ppmacInstance.numberOfECATs = self.getCommandReturnInt('Sys.MaxEcats')
+        # Number of available encoder tables
+        self.ppmacInstance.numberOfEncTables = self.getCommandReturnInt('Sys.MaxEncoders')
 
     def sendCommand(self, cmd):
         start = time.time()
@@ -1114,6 +1089,9 @@ class PPMACHardwareWriteRead(object):
         expandedIgnore = [item for dataStructure in ignore for item in self.expandSplicedIndices(dataStructure)]
         return set(expandedIgnore)
 
+    def copyDict(self, destValueType, sourceDict):
+        return {key: destValueType(*value) for key, value in sourceDict.items()}
+
     @timer
     def readAndStoreActiveState(self):
         self.scpPPMACDatabaseToLocal(self.remote_db_path, self.local_db_path)
@@ -1121,22 +1099,58 @@ class PPMACHardwareWriteRead(object):
         dataStructures = self.createDataStructuresFromSymbolsTables(self.pp_swtlbs_symfiles, self.local_db_path)
         validDataStructures = self.checkDataStructuresValidity(dataStructures)
         self.ppmacInstance.dataStructures = \
-            {key: self.ppmacInstance.DataStructure(*value) for key, value in validDataStructures.items()}
+            self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
         elementsToIgnore = self.generateIgnoreSet('ignore/ignore')
-        activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
-                                                                  recordTimings=True, timeout=10.0)
-        self.ppmacInstance.activeElements = \
-            {key: self.ppmacInstance.ActiveElement(*value) for key, value in activeElements.items()}
+        #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
+        #                                                          recordTimings=True, timeout=10.0)
+        #self.ppmacInstance.activeElements = \
+        #    self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
+        bufferedProgramsInfo = self.getBufferedProgramsInfo()
+        self.appendBufferedProgramsInfoWithListings(bufferedProgramsInfo)
+        self.ppmacInstance.forwardPrograms = \
+            self.copyDict(self.ppmacInstance.KinematicTransform, bufferedProgramsInfo['Forward'])
+        self.ppmacInstance.inversePrograms = \
+            self.copyDict(self.ppmacInstance.KinematicTransform, bufferedProgramsInfo['Inverse'])
+        self.ppmacInstance.subPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['SubProg'])
+        self.ppmacInstance.programs = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Prog'])
+        self.ppmacInstance.plcPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Plc'])
 
-    def getBufferedPrograms(self):
+
+    def appendBufferedProgramsInfoWithListings(self, bufferedProgramsInfo):
+        for programType in bufferedProgramsInfo.keys():
+            for programInfo in bufferedProgramsInfo[programType].values():
+                programName = programInfo[0]
+                if programType == 'Forward' or programType == 'Inverse':
+                    progCoordSystem = programInfo[4]
+                    programListing = self.sendCommand(f'&{progCoordSystem} list {programType}')
+                    programInfo.append(programListing)
+                else:
+                    programListing = self.sendCommand(f'list {programName}')
+                    programInfo.append(programListing)
+
+    def getBufferedProgramsInfo(self):
+        progs, subProgs, plcs, inverse, forward = ({} for _ in range(5))
         programBuffers = self.sendCommand('buffer')
-        print(programBuffers)
         for progBuffInfo in programBuffers:
-            progName = progBuffInfo.split()[0]
-            print(progName)
-            progCode = self.sendCommand(f'list {progName}')
-            print(progCode)
+            progBuffInfo = progBuffInfo.split()
+            progName = progBuffInfo[0].strip('., ')
+            progOffset = progBuffInfo[2].strip('., ')
+            progSize = progBuffInfo[4].strip('., ')
+            if 'SubProg' in progName:
+                subProgs[progName] = [progName, progOffset, progSize, 'SubProg']
+            elif 'Prog' in progName:
+                progs[progName] = [progName, progOffset, progSize, 'Prog']
+            elif 'Plc' in progName:
+                plcs[progName] = [progName, progOffset, progSize, 'Plc']
+            elif 'Inverse' in progName:
+                progCoordSystem = progName.rstrip('Inverse').lstrip('&')
+                inverse[progName] = [progName, progOffset, progSize, 'Inverse', progCoordSystem]
+            elif 'Forward' in progName:
+                progCoordSystem = progName.rstrip('Forward').lstrip('&')
+                forward[progName] = [progName, progOffset, progSize, 'Forward', progCoordSystem]
+        return {'SubProg': subProgs, 'Prog': progs, 'Plc': plcs, 'Inverse': inverse, 'Forward': forward}
+
 
     def test_CreateDataStructuresFromSymbolsTables(self):
         # dataStructuresFile = 'test/PPMACsoftwareRef_25102016_DataStructures.txt'
@@ -1228,6 +1242,26 @@ class PowerPMAC:
                 self.dataStructure + '  ' + str(self.indices)
             return s
 
+    class CoordSystemDefinition:
+        def __init__(self, index=None, axis=None, forward=None, inverse=None):
+            self.index = index
+            self.axis = axis
+            self.forward = forward
+            self.inverse = inverse
+
+    class Program:
+        def __init__(self, name, size, offset, type, listing):
+            self.name = name
+            self.size = size
+            self.offset = offset
+            self.type = type
+            self.listing = listing
+
+    class KinematicTransform(Program):
+        def __init__(self, name, size, offset, type, coordSystem, listing):
+            super().__init__(name, size, offset, type, listing)
+            self.coodSystem = coordSystem
+
     class Variable:
         '''
         Super-class for all P,Q,M,I,L,R,C,D variables
@@ -1287,6 +1321,16 @@ class PowerPMAC:
         self.dataStructures = {}
         # Dictionary of active elements
         self.activeElements = {}
+        # Dictionary of programs
+        self.programs = {}
+        # Dictionary of sub-programs
+        self.subPrograms = {}
+        # Dictionary of plc-programs
+        self.plcPrograms = {}
+        # Dictionary of programs
+        self.forwardPrograms = {}
+        # Dictionary of programs
+        self.inversePrograms = {}
         # 16384 total I variables, values range from I0 to I16383
         self.numberOfIVariables = 16384
         # 16384 total P variables, values range from P0 to P65535
@@ -1382,18 +1426,18 @@ if __name__ == '__main__':
 
     sshClient = dls_pmacremote.PPmacSshInterface()
     sshClient.port = 1025
-    # sshClient.hostname = '10.2.2.77'
+    #sshClient.hostname = '10.2.2.77'
     sshClient.hostname = '192.168.56.10'
     sshClient.connect()
 
     ppmacA = PowerPMAC()
     ppmacB = PowerPMAC()
 
-    """
+
     # read current state of ppmac and store in ppmacA object
     hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
     hardwareWriteRead.readAndStoreActiveState()
-
+    """
     # write current state of ppmacA object to repository
     #repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
     #repositoryWriteRead.writeActiveElements()
@@ -1406,13 +1450,13 @@ if __name__ == '__main__':
     # compare ppmacA and ppmacB objects
     ppmacComparison = PPMACCompare(ppmacA, ppmacB)
     ppmacComparison.compareActiveElements()
-    """
+
     projectA = PPMACProject('repository', 'tmp/opt')
     projectB = PPMACProject('hardware', '/opt/ppmac/usrflash')
     #projectB = PPMACProject('repository', 'tmp/var-ftp')
     projComparison = ProjectCompare(projectA, projectB)
     projComparison.compareProjectFiles()
-
+    """
 
     #hardwareWriteRead.readSysMaxes()
     #ppmac.initDataStructures()
