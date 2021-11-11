@@ -7,8 +7,6 @@ import os
 import numpy as np
 import logging
 import difflib
-import filecmp
-
 
 def timer(func):
     def measureExecutionTime(*args, **kwargs):
@@ -16,7 +14,6 @@ def timer(func):
         result = func(*args, **kwargs)
         print("Processing time of %s(): %.2f seconds." % (func.__qualname__, time.time() - startTime))
         return result
-
     return measureExecutionTime
 
 
@@ -46,14 +43,10 @@ def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
 
 def nthRepl(s, sub, repl, nth):
     find = s.find(sub)
-    # if find is not p1 we have found at least one match for the substring
     i = find != -1
-    # loop util we find the nth or we find no match
     while find != -1 and i != nth:
-        # find + 1 means we start at the last match start index + 1
         find = s.find(sub, find + 1)
         i += 1
-    # if i  is equal to nth we found nth matches so replace
     if i == nth:
         return s[:find] + repl + s[find + len(sub):]
     return s
@@ -283,12 +276,14 @@ class PPMACRepositoryWriteRead(object):
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
         # source - will be set somewhere else
-        self.ppmacInstance.source = 'repository'
+        if self.ppmacInstance.source == 'unknown':
+            self.ppmacInstance.source = 'repository'
         self.repositoryPath = os.environ['PWD'] + '/repository'
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
-        self.ppmacInstance.source = 'repository'
+        if self.ppmacInstance.source == 'unknown':
+            self.ppmacInstance.source = 'repository'
 
     def setRepositoryPath(self, path):
         self.repositoryPath = path
@@ -321,6 +316,26 @@ class PPMACRepositoryWriteRead(object):
             for elem in self.ppmacInstance.activeElements:
                 writeFile.write(self.ppmacInstance.activeElements[elem].__str__() + '\n')
 
+    def writePrograms(self, ppmacProgs):
+        """
+        Write contents of dictionary of PPMAC programs to files. Each dict key corresponds to separate file written.
+        :param ppmacProgs: dictionary of programs.
+        :return:
+        """
+        progNames = ppmacProgs.keys()
+        for progName in progNames:
+            fileName = self.repositoryPath + '/programs/' + progName.replace('&', 'CS')
+            with open(fileName, 'w+') as writeFile:
+                writeFile.write(ppmacProgs[progName].printInfo())
+                writeFile.write('\n'.join(ppmacProgs[progName].listing))
+
+    def writeAllPrograms(self):
+        self.writePrograms(self.ppmacInstance.motionPrograms)
+        self.writePrograms(self.ppmacInstance.subPrograms)
+        self.writePrograms(self.ppmacInstance.plcPrograms)
+        self.writePrograms(self.ppmacInstance.forwardPrograms)
+        self.writePrograms(self.ppmacInstance.inversePrograms)
+
     def readAndStoreActiveElements(self):
         file = self.repositoryPath + '/activeElements.txt'
         with open(file, 'r') as readFile:
@@ -331,12 +346,45 @@ class PPMACRepositoryWriteRead(object):
                 value = line[0:] # need to deal with the list of indices which is tha last column(s)
                 self.ppmacInstance.activeElements[key] = self.ppmacInstance.ActiveElement(*value[0:5])
 
+    def readAndStoreBufferedPrograms(self):
+        progsPath = self.repositoryPath + '/programs'
+        progFileNames = [file for file in os.listdir(progsPath) if os.path.isfile(f'{progsPath}/{file}')]
+        for fileName in progFileNames:
+            fileName = f'{progsPath}/{fileName}'
+            with open(fileName, 'r') as readFile:
+                header = readFile.readline().split()
+                header = [item.strip(',') for item in header]
+                progType, progName, progSize, progOffset = (header[i] for i in [0, 1, 3, 5])
+                progListing = []
+                for line in readFile:
+                    progListing.append(line.rstrip('\n'))
+            if progType == 'Motion':
+                self.ppmacInstance.motionPrograms[progName] = \
+                    self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
+            elif progType == 'SubProg':
+                self.ppmacInstance.subPrograms[progName] = \
+                    self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
+            elif progType == 'PlcProg':
+                self.ppmacInstance.plcPrograms[progName] = \
+                    self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
+            elif progType == 'Forward':
+                progCoordSystem = header[7]
+                self.ppmacInstance.forwardPrograms[progName] = \
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType,
+                                                          progCoordSystem, progListing)
+            elif progType == 'Inverse':
+                progCoordSystem = header[7]
+                self.ppmacInstance.inversePrograms[progName] = \
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType,
+                                                          progCoordSystem, progListing)
+
 
 class PPMACHardwareWriteRead(object):
     def __init__(self, ppmac=None):
         self.ppmacInstance = ppmac
         # Set PPMAC source to hardware
-        self.ppmacInstance.source = 'hardware'
+        if self.ppmacInstance.source == 'unknown':
+            self.ppmacInstance.source = 'hardware'
         # Path to directory containing symbols tables files on PPMAC
         self.remote_db_path = '/var/ftp/usrflash/Database'
         # Path to directory containing symbols tables files on local
@@ -355,6 +403,8 @@ class PPMACHardwareWriteRead(object):
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
+        if self.ppmacInstance.source == 'unknown':
+            self.ppmacInstance.source = 'hardware'
 
     def getCommandReturnInt(self, cmd):
         (cmdReturn, status) = sshClient.sendCommand(cmd)
@@ -384,8 +434,6 @@ class PPMACHardwareWriteRead(object):
         start = time.time()
         (data, status) = sshClient.sendCommand(cmd)
         tdiff = time.time() - start
-        if tdiff > 0.07:
-            print(cmd, tdiff)
         if not status:
             raise IOError('Cannot retrieve data structure: error communicating with PMAC')
         else:
@@ -1113,9 +1161,9 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.inversePrograms = \
             self.copyDict(self.ppmacInstance.KinematicTransform, bufferedProgramsInfo['Inverse'])
         self.ppmacInstance.subPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['SubProg'])
-        self.ppmacInstance.programs = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Prog'])
+        self.ppmacInstance.motionPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Motion'])
         self.ppmacInstance.plcPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Plc'])
-
+        #coordSystemDefs = self.getCoordSystemDefinitions()
 
     def appendBufferedProgramsInfoWithListings(self, bufferedProgramsInfo):
         for programType in bufferedProgramsInfo.keys():
@@ -1130,7 +1178,7 @@ class PPMACHardwareWriteRead(object):
                     programInfo.append(programListing)
 
     def getBufferedProgramsInfo(self):
-        progs, subProgs, plcs, inverse, forward = ({} for _ in range(5))
+        motion, subProgs, plcs, inverse, forward = ({} for _ in range(5))
         programBuffers = self.sendCommand('buffer')
         for progBuffInfo in programBuffers:
             progBuffInfo = progBuffInfo.split()
@@ -1140,16 +1188,18 @@ class PPMACHardwareWriteRead(object):
             if 'SubProg' in progName:
                 subProgs[progName] = [progName, progOffset, progSize, 'SubProg']
             elif 'Prog' in progName:
-                progs[progName] = [progName, progOffset, progSize, 'Prog']
+                motion[progName] = [progName, progOffset, progSize, 'Motion']
             elif 'Plc' in progName:
                 plcs[progName] = [progName, progOffset, progSize, 'Plc']
             elif 'Inverse' in progName:
                 progCoordSystem = progName.rstrip('Inverse').lstrip('&')
+                #progName = f'InverseKinCS{progCoordSystem}'
                 inverse[progName] = [progName, progOffset, progSize, 'Inverse', progCoordSystem]
             elif 'Forward' in progName:
                 progCoordSystem = progName.rstrip('Forward').lstrip('&')
+                #progName = f'ForwardKinCS{progCoordSystem}'
                 forward[progName] = [progName, progOffset, progSize, 'Forward', progCoordSystem]
-        return {'SubProg': subProgs, 'Prog': progs, 'Plc': plcs, 'Inverse': inverse, 'Forward': forward}
+        return {'SubProg': subProgs, 'Motion': motion, 'Plc': plcs, 'Inverse': inverse, 'Forward': forward}
 
 
     def test_CreateDataStructuresFromSymbolsTables(self):
@@ -1257,10 +1307,16 @@ class PowerPMAC:
             self.type = type
             self.listing = listing
 
+        def printInfo(self):
+            return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n'
+
     class KinematicTransform(Program):
         def __init__(self, name, size, offset, type, coordSystem, listing):
             super().__init__(name, size, offset, type, listing)
             self.coodSystem = coordSystem
+
+        def printInfo(self):
+            return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}, cs {self.coodSystem}\n'
 
     class Variable:
         '''
@@ -1316,13 +1372,13 @@ class PowerPMAC:
 
     def __init__(self):
         # Source: hardware or respository
-        self.source = ''
+        self.source = 'unknown'
         # Dictionary mapping DS names to dataStructure objects
         self.dataStructures = {}
         # Dictionary of active elements
         self.activeElements = {}
         # Dictionary of programs
-        self.programs = {}
+        self.motionPrograms = {}
         # Dictionary of sub-programs
         self.subPrograms = {}
         # Dictionary of plc-programs
@@ -1331,6 +1387,8 @@ class PowerPMAC:
         self.forwardPrograms = {}
         # Dictionary of programs
         self.inversePrograms = {}
+        # Dictionary of coord system definitions
+        self.coordSystemDefs = {}
         # 16384 total I variables, values range from I0 to I16383
         self.numberOfIVariables = 16384
         # 16384 total P variables, values range from P0 to P65535
@@ -1361,7 +1419,7 @@ class PowerPMAC:
         # Gate1[i] can have i = 4,...,19 (software reference manual p.237)
         # currently these are all stored in one instance of SetupDataStructure()
         # self.numberOfGate1ICs = 16
-        # Gate2[i] has an UNKNOWN range of indices i
+        # Gate2[i] has an unknown range of indices i
         # currently these are all stored in one instance of SetupDataStructure()
         # self.numberOfGate2ICs = ???
         # Gate3[i] can have i = 0,..,15 (software reference manual p.289)
@@ -1437,11 +1495,13 @@ if __name__ == '__main__':
     # read current state of ppmac and store in ppmacA object
     hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
     hardwareWriteRead.readAndStoreActiveState()
-    """
-    # write current state of ppmacA object to repository
-    #repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
-    #repositoryWriteRead.writeActiveElements()
 
+    # write current state of ppmacA object to repository
+    repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
+    #repositoryWriteRead.writeActiveElements()
+    repositoryWriteRead.writeAllPrograms()
+    repositoryWriteRead.readAndStoreBufferedPrograms()
+    """
     # read state from repository and store in ppmacB object
     repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB)
     #repositoryWriteRead.setPPMACInstance(ppmacB)
