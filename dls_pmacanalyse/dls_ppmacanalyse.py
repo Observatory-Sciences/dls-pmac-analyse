@@ -7,6 +7,7 @@ import os
 import numpy as np
 import logging
 import difflib
+import argparse
 
 def timer(func):
     def measureExecutionTime(*args, **kwargs):
@@ -15,6 +16,30 @@ def timer(func):
         print("Processing time of %s(): %.2f seconds." % (func.__qualname__, time.time() - startTime))
         return result
     return measureExecutionTime
+
+def createEmptyDir(dir):
+    if dir[0] == '/':
+        if os.environ['PWD'] not in dir:
+            raise IOError(f"Unable to delete directory {dir} as it is not in PWD")
+    os.system(f'rm -rf {dir}')
+    os.mkdir(dir)
+
+def removeFile(file):
+    if file[0] == '/':
+        if os.environ['PWD'] not in file:
+            raise IOError(f"Unable to delete directory {file} as it is not in PWD")
+    os.system(f'rm -rf {file}')
+
+def parseArgs():
+    parser = argparse.ArgumentParser(description="Interact with a Power PMAC")
+    parser.add_argument('-i', '--interface', nargs=1, help='Network interface address of Power PMAC <ip>:<port>')
+    parser.add_argument('-b', '--backup', nargs='*', help='Back-up configuration of Power PMAC')
+    parser.add_argument('-r', '--restore', nargs='*', help='Restore configuration of Power PMAC')
+    parser.add_argument('-c', '--compare', nargs='*', help='Compare configuration of two Power PMACs')
+    parser.add_argument('-d', '--resultsdir', nargs='*', help='Directory in which to place output of analysis')
+    parser.add_argument('-v', '--verbosity', nargs=1, help='Verbosity level of output')
+    parser.add_argument('-n', '--name', nargs=1, help='Name of Power PMAC')
+    return parser.parse_args()
 
 
 def exitGpascii():
@@ -273,12 +298,12 @@ class PPMACCompare(object):
 
 
 class PPMACRepositoryWriteRead(object):
-    def __init__(self, ppmac=None):
+    def __init__(self, ppmac=None, repositoryPath='repository'):
         self.ppmacInstance = ppmac
         # source - will be set somewhere else
         if self.ppmacInstance.source == 'unknown':
             self.ppmacInstance.source = 'repository'
-        self.repositoryPath = os.environ['PWD'] + '/repository'
+        self.repositoryPath = repositoryPath #os.environ['PWD'] + '/repository'
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -310,13 +335,24 @@ class PPMACRepositoryWriteRead(object):
             file = self.repositoryPath + f'/Qvars_CS{i}.txt'
             self.writeVars(self.ppmacInstance.Qvariables[i], file)
 
+    def writeActiveState(self):
+        self.writeDataStructures()
+        self.writeActiveElements()
+        self.writeAllPrograms()
+
+    def writeDataStructures(self):
+        file = self.repositoryPath + '/dataStructures.txt'
+        with open(file, 'w+') as writeFile:
+            for dataStructure in self.ppmacInstance.dataStructures:
+                writeFile.write(self.ppmacInstance.dataStructures[dataStructure].__str__() + '\n')
+
     def writeActiveElements(self):
         file = self.repositoryPath + '/activeElements.txt'
         with open(file, 'w+') as writeFile:
             for elem in self.ppmacInstance.activeElements:
                 writeFile.write(self.ppmacInstance.activeElements[elem].__str__() + '\n')
 
-    def writePrograms(self, ppmacProgs):
+    def writePrograms(self, ppmacProgs, progsDir):
         """
         Write contents of dictionary of PPMAC programs to files. Each dict key corresponds to separate file written.
         :param ppmacProgs: dictionary of programs.
@@ -324,17 +360,19 @@ class PPMACRepositoryWriteRead(object):
         """
         progNames = ppmacProgs.keys()
         for progName in progNames:
-            fileName = self.repositoryPath + '/programs/' + progName.replace('&', 'CS')
+            fileName = progsDir + '/' + progName.replace('&', 'CS')
             with open(fileName, 'w+') as writeFile:
                 writeFile.write(ppmacProgs[progName].printInfo())
                 writeFile.write('\n'.join(ppmacProgs[progName].listing))
 
     def writeAllPrograms(self):
-        self.writePrograms(self.ppmacInstance.motionPrograms)
-        self.writePrograms(self.ppmacInstance.subPrograms)
-        self.writePrograms(self.ppmacInstance.plcPrograms)
-        self.writePrograms(self.ppmacInstance.forwardPrograms)
-        self.writePrograms(self.ppmacInstance.inversePrograms)
+        progsDir = self.repositoryPath + '/programs'
+        createEmptyDir(progsDir)
+        self.writePrograms(self.ppmacInstance.motionPrograms, progsDir)
+        self.writePrograms(self.ppmacInstance.subPrograms, progsDir)
+        self.writePrograms(self.ppmacInstance.plcPrograms, progsDir)
+        self.writePrograms(self.ppmacInstance.forwardPrograms, progsDir)
+        self.writePrograms(self.ppmacInstance.inversePrograms, progsDir)
 
     def readAndStoreActiveElements(self):
         file = self.repositoryPath + '/activeElements.txt'
@@ -393,11 +431,6 @@ class PPMACHardwareWriteRead(object):
         self.pp_swtbl0_txtfile = 'pp_swtbl0.txt'
         # Standard Data Structure symbols tables
         self.pp_swtlbs_symfiles = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
-        # Configure logger
-        logfile = 'logs/ppmacanalyse.log'
-        if os.path.isfile(logfile):
-            os.system(f'rm {logfile}')
-        logging.basicConfig(filename=logfile, level=logging.INFO)
         # Read maximum values for the various configuration parameters
         self.readSysMaxes
 
@@ -408,6 +441,7 @@ class PPMACHardwareWriteRead(object):
 
     def getCommandReturnInt(self, cmd):
         (cmdReturn, status) = sshClient.sendCommand(cmd)
+        print('here')
         if status:
             cmdReturnInt = int(cmdReturn[0:])
         else:
@@ -444,7 +478,7 @@ class PPMACHardwareWriteRead(object):
         #    raise IOError(errMessage + data[0])
         return data
 
-     def swtblFileToList(self, pp_swtbl_file):
+    def swtblFileToList(self, pp_swtbl_file):
         """
         Generate a list of symbols from a symbols table file.
         :param pp_swtbl_file: full path to symbols table file.
@@ -823,18 +857,18 @@ class PPMACHardwareWriteRead(object):
                                 print(dsName)
                                 dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1],
                                                           *(swtbl3_nparray[k, 3:].tolist())]
-                                writeFile.write(dataStructures[dsName].__str__() + '\n')
+                                #writeFile.write(dataStructures[dsName].__str__() + '\n')
                         if substruct_23 == False:
                             dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                      '.' + swtbl2_nparray[j, 2]
                             print(dsName)
                             dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl2_nparray[j, 3:].tolist())]
-                            writeFile.write(dataStructures[dsName].__str__() + '\n')
+                            #writeFile.write(dataStructures[dsName].__str__() + '\n')
                 if substruct_12 == False:
                     dsName = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
                     print(dsName)
                     dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl1_nparray[i, 3:].tolist())]
-                    writeFile.write(dataStructures[dsName].__str__() + '\n')
+                    #writeFile.write(dataStructures[dsName].__str__() + '\n')
         # if substruct_01 == False:
         #    print(baseDS)
         #    dataStructures.append(baseDS)
@@ -933,7 +967,7 @@ class PPMACHardwareWriteRead(object):
         return {key: destValueType(*value) for key, value in sourceDict.items()}
 
     @timer
-    def readAndStoreActiveState(self):
+    def readAndStoreActiveState(self, pathToIgnoreFile):
         self.scpPPMACDatabaseToLocal(self.remote_db_path, self.local_db_path)
         # Store data structures in ppmac object
         dataStructures = self.createDataStructuresFromSymbolsTables(self.pp_swtlbs_symfiles, self.local_db_path)
@@ -941,7 +975,7 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.dataStructures = \
             self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
-        elementsToIgnore = self.generateIgnoreSet('ignore/ignore')
+        elementsToIgnore = self.generateIgnoreSet(pathToIgnoreFile)
         #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
         #                                                          recordTimings=True, timeout=10.0)
         #self.ppmacInstance.activeElements = \
@@ -1110,9 +1144,9 @@ class PowerPMAC:
         def printInfo(self):
             return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}, cs {self.coodSystem}\n'
 
-    def __init__(self):
+    def __init__(self, name='unknown'):
         # Source: hardware or respository
-        self.source = 'unknown'
+        self.source = name
         # Dictionary mapping DS names to dataStructure objects
         self.dataStructures = {}
         # Dictionary of active elements
@@ -1150,8 +1184,55 @@ class PowerPMAC:
         # GateIo[i] can have i = 0,..,15 (software reference manual p.360), although
         # for some reason i > 15 does not return an error
 
+class PPMACanalyse:
+    def __init__(self, ppmacArgs):
+        self.resultsDir = 'ppmacAnalysis'
+        self.verbosity = 'info'
+        self.ipAddress = '192.168.56.10'
+        self.port = 1025
+        # Configure logger
+        if ppmacArgs.resultsdir is not None:
+            self.resultsDir = ppmacArgs.resultsdir
+        logfile = self.resultsDir + '/' + 'ppmacanalyse.log'
+        removeFile(logfile)
+        logging.basicConfig(filename=logfile, level=logging.INFO)
+        if ppmacArgs.backup is not None:
+            if ppmacArgs.interface is not None:
+                self.ipAddress = ppmacArgs.interface.split(':')[0]
+                self.port = ppmacArgs.interface.split(':')[1]
+            createEmptyDir(self.resultsDir)
+            self.name = 'hardware'
+            if ppmacArgs.name is not None:
+                self.name = ppmacArgs.name
+            self.backupDir = f'{self.resultsDir}/repository'
+            createEmptyDir(self.backupDir)
+            self.ignoreFile = 'ignore/ignore'
+            if len(ppmacArgs.backup) > 0:
+                self.backupDir = f'{self.resultsDir}/{ppmacArgs.backup[0]}'
+            if len(ppmacArgs.backup) > 1:
+                self.ignoreFile = ppmacArgs.backup[1]
+            sshClient.port = self.port
+            sshClient.hostname = self.ipAddress
+            sshClient.connect()
+            self.backup()
+            sshClient.disconnect()
+
+    def backup(self):
+        ppmacA = PowerPMAC(self.name)
+        # read current state of ppmac and store in ppmacA object
+        hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
+        hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
+        # write current state of ppmacA object to repository
+        repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, self.backupDir)
+        repositoryWriteRead.writeActiveState()
+
+
 if __name__ == '__main__':
     start = time.time()
+
+    ppmacArgs = parseArgs()
+    sshClient = dls_pmacremote.PPmacSshInterface()
+    analysis = PPMACanalyse(ppmacArgs)
 
     sshClient = dls_pmacremote.PPmacSshInterface()
     sshClient.port = 1025
@@ -1159,6 +1240,7 @@ if __name__ == '__main__':
     sshClient.hostname = '192.168.56.10'
     sshClient.connect()
 
+    """
     ppmacA = PowerPMAC()
     ppmacB = PowerPMAC()
 
@@ -1171,7 +1253,7 @@ if __name__ == '__main__':
     #repositoryWriteRead.writeActiveElements()
     repositoryWriteRead.writeAllPrograms()
     repositoryWriteRead.readAndStoreBufferedPrograms()
-    """
+
     # read state from repository and store in ppmacB object
     repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB)
     #repositoryWriteRead.setPPMACInstance(ppmacB)
