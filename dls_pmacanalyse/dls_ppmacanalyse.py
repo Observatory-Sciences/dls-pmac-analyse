@@ -72,8 +72,12 @@ def exitGpascii():
     if not status:
         raise IOError("Failed to exit gpascii.")
 
+def executeRemoteShellCommand(cmd):
+    stdin, stdout, stderr = sshClient.client.exec_command(cmd)
+    if stdout.channel.recv_exit_status() != 0:
+        raise RuntimeError(f'Error executing command {cmd} on remote machine.')
 
-def scpFromPowerPMACtoLocal(source, destination, recursive):
+def scpFromPowerPMACtoLocal(source, destination, recursive=True):
     try:
         scp = SCPClient(sshClient.client.get_transport(), sanitize=lambda x: x)
         scp.get(source, destination, recursive)
@@ -84,7 +88,7 @@ def scpFromPowerPMACtoLocal(source, destination, recursive):
 
 def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
     try:
-        scp = SCPClient(sshClient.client.get_transport())
+        scp = SCPClient(sshClient.client.get_transport(), sanitize=lambda x: x)
         scp.put(files, remote_path, recursive)
         scp.close()
     except Exception as e:
@@ -109,7 +113,6 @@ def find_nth(s, sub, n):
         n -= 1
     return start
 
-
 def responseListToDict(responseList, splitChars='='):
     responseDict = {}
     if responseList != ['', '']:
@@ -117,6 +120,34 @@ def responseListToDict(responseList, splitChars='='):
             nameVal = element.split(splitChars)
             responseDict[nameVal[0]] = nameVal[1]
     return responseDict
+
+restoreOptCmds = \
+'''
+#!/bin/bash
+
+echo "Entering /tmp/restore." > /tmp/restore.log 2>&1
+cd /tmp/restore
+if [[ $? -ne 0 ]] ; then
+    echo "Unable to cd into /tmp/restore. Exiting." >> /tmp/restore.log 2>&1
+    exit 1
+fi
+
+echo "Starting sync." >> /tmp/restore.log 2>&1
+echo "Mounting /opt file system as read/write" >> /tmp/restore.log 2>&1
+mount -o remount,rw /opt/ >> /tmp/restore.log 2>&1
+
+# Copy backup files into /opt/ppmac/usrflash
+echo "Copying backup files into /opt/ppmac/usrflash/" >> /tmp/restore.log
+cp -a * /opt/ppmac/usrflash/ >> /tmp/restore.log 2>&1
+
+echo "Syncing file system." >> /tmp/restore.log 2>&1
+sync >> /tmp/restore.log 2>&1
+
+echo "Mounting /opt file system as read only." >> /tmp/restore.log 2>&1
+mount -o remount,ro /opt/ >> /tmp/restore.log 2>&1
+
+echo "Sync completed." >> /tmp/restore.log 2>&1
+'''
 
 class PPMACProject(object):
     """
@@ -1227,7 +1258,8 @@ class PPMACanalyse:
         self.verbosity = 'info'
         self.ipAddress = '192.168.56.10'
         self.port = 1025
-        self.backupType = 'all'
+        self.operationType = 'all'
+        self.operationTypes = ['all', 'active', 'project']
         # Configure logger
         if ppmacArgs.resultsdir is not None:
             self.resultsDir = ppmacArgs.resultsdir[0]
@@ -1236,11 +1268,14 @@ class PPMACanalyse:
         logging.basicConfig(filename=logfile, level=logging.INFO)
         if ppmacArgs.backup is not None:
             self.processBackupOptions(ppmacArgs)
-            self.backup(self.backupType)
+            self.backup(self.operationType)
             sshClient.disconnect()
         if ppmacArgs.compare is not None:
             self.processCompareOptions(ppmacArgs)
             self.compare()
+        if ppmacArgs.restore is not None:
+            self.processRestoreOptions(ppmacArgs)
+            self.restore()
 
     def processCompareOptions(self, ppmacArgs):
         if len(ppmacArgs.compare) < 2:
@@ -1305,12 +1340,11 @@ class PPMACanalyse:
         self.name = 'hardware'
         if ppmacArgs.name is not None:
             self.name = ppmacArgs.name[0]
-        backupTypes = ['all', 'active', 'project']
         if len(ppmacArgs.backup) > 0:
-            if ppmacArgs.backup[0] not in backupTypes:
+            if ppmacArgs.backup[0] not in self.operationTypes:
                 raise IOError(f'Unrecognised backup option {ppmacArgs.backup[0]}, '
                               f'should be "all","active" or "project".')
-        self.backupType = ppmacArgs.backup[0]
+        self.operationType = ppmacArgs.backup[0]
         self.backupDir = f'{self.resultsDir}/repository'
         if len(ppmacArgs.backup) > 1:
             self.backupDir = f'{self.resultsDir}/{ppmacArgs.backup[1]}'
@@ -1346,6 +1380,40 @@ class PPMACanalyse:
             scpFromPowerPMACtoLocal('/opt/ppmac/usrflash/*', projectDir, recursive=True)
             sshClient.disconnect()
 
+    def processRestoreOptions(self, ppmacArgs):
+        if ppmacArgs.interface is not None:
+            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
+            self.port = ppmacArgs.interface[0].split(':')[1]
+        if len(ppmacArgs.restore) < 1:
+            raise IOError(f'Insufficient arguments, please specify the repository directory')
+        # Specify directory containing backup
+        self.backupDir = ppmacArgs.restore[0]
+        if not os.path.isdir(self.backupDir):
+            raise IOError(f'Repository directory {self.backupDir} does not exist.')
+        if len(ppmacArgs.restore) > 1:
+            if ppmacArgs.restore[1] not in self.operationTypes:
+                raise IOError(f'Unrecognised backup option {ppmacArgs.restore[1]}, '
+                              f'should be "all","active" or "project".')
+            self.operationType = ppmacArgs.restore[1]
+
+    def restore(self):
+        sshClient.port = self.port
+        sshClient.hostname = self.ipAddress
+        sshClient.connect()
+        restoreScript = 'restoreOpt.sh'
+        with open(restoreScript, 'w+') as writeFile:
+            writeFile.write(restoreOptCmds)
+        scpFromLocalToPowerPMAC(restoreScript, '/tmp/')
+        os.system('rm restoreOpt.sh')
+        executeRemoteShellCommand(f'chmod 777 /tmp/{restoreScript}')
+        executeRemoteShellCommand('mkdir /tmp/restore')
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Project', '/tmp/restore/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Database', '/tmp/restore/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Temp', '/tmp/restore/', recursive=True)
+        executeRemoteShellCommand('/tmp/restoreOpt.sh')
+        scpFromPowerPMACtoLocal('/tmp/restore.log', f'{self.resultsDir}/', recursive=False)
+        sshClient.client.exec_command('reboot')
+        sshClient.disconnect()
 
 if __name__ == '__main__':
     start = time.time()
