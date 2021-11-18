@@ -149,6 +149,88 @@ mount -o remount,ro /opt/ >> /tmp/restore.log 2>&1
 echo "Sync completed." >> /tmp/restore.log 2>&1
 '''
 
+
+class PPMACLexer(object):
+    tokens = []
+    spaces = ' \n\t\r'
+    mathsSymbols = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
+    operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^']}
+    assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
+    comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
+    mathsDict = {**operators, **assignment, **comparators}
+    maths = set(mathsDict)
+    leftCurly = '{'
+    rightCurly = '}'
+    leftParen = ')'
+
+    class Chars(object):
+        def __init__(self, chars):
+            self.chars = chars
+
+        def isEmpty(self):
+            if len(self.chars) == 0:
+                return True
+            else:
+                return False
+
+        def peekNext(self):
+            return self.chars[1]
+
+        def peek(self):
+            return self.chars[0]
+
+        def moveNext(self):
+            c = self.chars[0]
+            self.chars = self.chars[1:]
+            return c
+
+    def __init__(self, chars):
+        chars = "a s 0.234 67 += df>>=>>>="
+        self.chars = self.Chars(chars)
+        print(f'Text is \"{chars}\"')
+        for token in self.lex(self.chars):
+            print(f'Adding token: {token}')
+            self.tokens.append(token)
+
+    def lex(self, chars):
+        while not chars.isEmpty():
+            c = chars.moveNext()
+            if c in PPMACLexer.spaces:
+                pass
+            elif c in PPMACLexer.mathsSymbols:
+                yield (self.scanMathsSymbol(c, chars))
+            elif c == '(){}':
+                yield (c, "")
+            elif re.match("[.0-9]", c):
+                yield("number", self.scanNumber(c, chars, "[.0-9]"))
+            elif re.match("[a-zA-Z]", c):
+                yield("symbol", self.scanSymbol(c, chars))
+
+    def scanSymbol(self, c, chars):
+        ret = c
+        next = chars.peek()
+        if next == '['
+
+    def scanNumber(self, c, chars, allowed):
+        ret = c
+        next = chars.peek()
+        while re.match(allowed, next) != None:
+            ret += chars.moveNext()
+            if chars.isEmpty():
+                break
+            next = chars.peek()
+        return ret
+
+    def scanMathsSymbol(self, c, chars):
+        ret = c
+        while ret + chars.peek() in PPMACLexer.maths:
+            c = chars.moveNext()
+            ret += c
+            if chars.isEmpty():
+                break
+        return (self.mathsDict[ret], ret)
+
+
 class PPMACProject(object):
     """
     Class containing files and directories included in a project
@@ -1057,7 +1139,7 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.subPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['SubProg'])
         self.ppmacInstance.motionPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Motion'])
         self.ppmacInstance.plcPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Plc'])
-        #coordSystemDefs = self.getCoordSystemDefinitions()
+        #coordSystemAxisDefs = self.getCoordSystemAxisDefinitions()
 
     def appendBufferedProgramsInfoWithListings(self, bufferedProgramsInfo):
         for programType in bufferedProgramsInfo.keys():
@@ -1254,7 +1336,7 @@ class PowerPMAC:
 
 class PPMACanalyse:
     def __init__(self, ppmacArgs):
-        self.resultsDir = 'ppmacAnalysis'
+        self.resultsDir = 'ppmacAnalyse'
         self.verbosity = 'info'
         self.ipAddress = '192.168.56.10'
         self.port = 1025
@@ -1421,7 +1503,8 @@ if __name__ == '__main__':
     ppmacArgs = parseArgs()
     sshClient = dls_pmacremote.PPmacSshInterface()
     analysis = PPMACanalyse(ppmacArgs)
-
+    #'+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=', '++', '--'
+    PPMACLexer('a s += df>>=>>>=')
     #sshClient = dls_pmacremote.PPmacSshInterface()
     #sshClient.port = 1025
     ##sshClient.hostname = '10.2.2.77'
