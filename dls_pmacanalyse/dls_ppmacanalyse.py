@@ -151,7 +151,7 @@ echo "Sync completed." >> /tmp/restore.log 2>&1
 
 
 class PPMACLexer(object):
-    tokens = []
+    tokens = {'bpclear','bpclearall','bpset','disable','plc'}
     spaces = ' \n\t\r'
     mathsSymbols = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
     operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^']}
@@ -159,13 +159,11 @@ class PPMACLexer(object):
     comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
     mathsDict = {**operators, **assignment, **comparators}
     maths = set(mathsDict)
-    leftCurly = '{'
-    rightCurly = '}'
-    leftParen = ')'
 
     class Chars(object):
         def __init__(self, chars):
             self.chars = chars
+            self._chars = ''
 
         def isEmpty(self):
             if len(self.chars) == 0:
@@ -181,11 +179,71 @@ class PPMACLexer(object):
 
         def moveNext(self):
             c = self.chars[0]
+            self._chars += self.chars[0]
             self.chars = self.chars[1:]
             return c
 
+        def rewind(self, pos):
+            if pos > 0:
+                self.chars = self._chars[-pos:] + self.chars
+                self._chars = self._chars[0:-pos]
+
     def __init__(self, chars):
-        chars = "a s 0.234 67 += df>>=>>>="
+        #chars = "a s[] 0.234 67 += df>>=>>>="
+        #chars = "if(P1701==0){Q7=((P(5)*P(100+5)+P(300+5)+P(6)*P(100+6)+P(300+6))/2)+Motor[10].JogSpeed}"
+        chars = """
+        IF(P1701=0)
+        P(5)=(Q7-P(300+5))/P(100+5)
+        P(6)=(Q7-P(300+6))/P(100+6)
+        ENDIF
+        IF(P1701=1)
+        IF(P1753<1)
+        P1753=1
+        ENDIF
+        P1771=Q7/P1753
+        P1772=P1720+P1771*(P1721+P1771*(P1722+P1771*(P1723+P1771*(P1724
+        +P1771*(P1725+P1771*(P1726+P1771*(P1727+P1771*(P1728+P1771*(P
+        1729+P1771*P1730)))))))))
+        P(5)=(P1772*1000-P(300+5))/P(100+5)
+        P(6)=(P1772*1000-P(300+6))/P(100+6)
+        ENDIF
+        RETURN
+        """
+        chars = """
+        Sys.WDTReset=5000/(Sys.ServoPeriod*2.258)
+        R0=5call100000.010001
+        BrickLV.Reset=1
+        R0=5call100000.010001
+        while(BrickLV.Reset==1){}
+        if(BrickLV.Reset==0)
+        {
+        PowerBrick[0].Chan[0].CountError=0
+        PowerBrick[0].Chan[1].CountError=0
+        PowerBrick[0].Chan[2].CountError=0
+        PowerBrick[0].Chan[3].CountError=0
+        Sys.MaxPhaseTime=0
+        Sys.MaxServoTime=0
+        Sys.MaxRtIntTime=0
+        Sys.MaxBgTime=0
+        R0=5call100000.010001
+        bpclearallb
+        bpclear
+        bpset
+        Sys.WDTReset=0
+        disableplc2
+        R0=5call100000.010001
+        }
+        else
+        {
+        kill1..4
+        disableplc0,2..31
+        send1"BRICK LV RESET FAILED !!!"
+        Sys.WDTReset=0
+        disableplc2
+        R0=5call100000.010001
+        }
+        """
+        self.tokens = []
         self.chars = self.Chars(chars)
         print(f'Text is \"{chars}\"')
         for token in self.lex(self.chars):
@@ -199,8 +257,12 @@ class PPMACLexer(object):
                 pass
             elif c in PPMACLexer.mathsSymbols:
                 yield (self.scanMathsSymbol(c, chars))
-            elif c == '(){}':
+            elif c in '(){},':
                 yield (c, "")
+            elif c in '.':
+                yield (self.scanDots(c, chars), "")
+            elif c in ("'", '"'):
+                yield("string", self.scanString(c, chars))
             elif re.match("[.0-9]", c):
                 yield("number", self.scanNumber(c, chars, "[.0-9]"))
             elif re.match("[a-zA-Z]", c):
@@ -208,13 +270,48 @@ class PPMACLexer(object):
 
     def scanSymbol(self, c, chars):
         ret = c
+        existingToken = ''
         next = chars.peek()
-        if next == '['
+        if c in "PLQRCM" and next.isdigit():
+            # We have a P/L/Q/M/R/C variable
+            allowed = "[0-9]"
+            while re.match(allowed, next) != None:
+                ret += chars.moveNext()
+                if chars.isEmpty():
+                    break
+                next = chars.peek()
+        else:
+            # Check to see if we can find an existing token in the subsequent
+            # characters. If we do, take the longest existing token we find.
+            # If we don't, assume the token can take the form of an active element name.
+            tokenLen = 1
+            allowed_ = "[a-zA-Z.\[]"
+            allowed = allowed_
+            while re.match(allowed, next) != None:
+                if next == "[":
+                    allowed = "[0-9\]]"
+                if next == "]":
+                    allowed = allowed_
+                ret += chars.moveNext()
+                if ret in PPMACLexer.tokens:
+                    existingToken = ret
+                if chars.isEmpty():
+                    break
+                next = chars.peek()
+                tokenLen += 1
+            if len(existingToken) > 0:
+                ret = existingToken
+                chars.rewind(tokenLen - len(existingToken))
+        return ret
 
     def scanNumber(self, c, chars, allowed):
         ret = c
         next = chars.peek()
         while re.match(allowed, next) != None:
+            # to catch 2..31 and whatnot
+            if next == '.':
+                if chars.peekNext() == '.':
+                    break
             ret += chars.moveNext()
             if chars.isEmpty():
                 break
@@ -229,6 +326,23 @@ class PPMACLexer(object):
             if chars.isEmpty():
                 break
         return (self.mathsDict[ret], ret)
+
+    def scanString(self, delim, chars):
+        ret = ''
+        next = chars.peek()
+        while next != delim:
+            ret += chars.moveNext()
+            if chars.isEmpty():
+                break
+            next = chars.peek()
+        chars.moveNext()
+        return ret
+
+    def scanDots(self, c, chars):
+        if chars.peek() == '.':
+            return c + chars.moveNext()
+        else:
+            return f'Error with chars {c + next}'
 
 
 class PPMACProject(object):
