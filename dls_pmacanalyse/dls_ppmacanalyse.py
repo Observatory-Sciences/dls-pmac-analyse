@@ -34,17 +34,30 @@ def fileExists(file):
     return os.path.isfile(file)
 
 def parseArgs():
-    parser = argparse.ArgumentParser(description="Interact with a Power PMAC")
-    parser.add_argument('-i', '--interface', metavar='', nargs=1, help='Network interface address of Power PMAC <ip>:<port>')
+    parser = argparse.ArgumentParser(description="Interact with a Power PMAC", formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-i', '--interface', metavar='', nargs=1, help='Network interface address of Power PMAC.\n'
+                                                                       '--interface <ip address>:<port>.')
     parser.add_argument('-b', '--backup', metavar='', nargs='*',
                         help='Back-up configuration of Power PMAC.\n'
-                             '--backup <type>/<type><dir>/<type><dir><ignore>\n'
-                             'type = all/active/project\ndir = output dir\nignore = path to ignore file')
-    parser.add_argument('-r', '--restore', metavar='', nargs='*', help='Restore configuration of Power PMAC')
-    parser.add_argument('-c', '--compare', metavar='', nargs='*', help='Compare configuration of two Power PMACs')
-    parser.add_argument('-d', '--resultsdir', metavar='', nargs=1, help='Directory in which to place output of analysis')
+                             '--backup <type>/<type> <dir>/<type> <dir> <ignore>\n'
+                             'type = all/active/project\n'
+                             'dir = output dir\n'
+                             'ignore = path to ignore file')
+    parser.add_argument('-r', '--recover', metavar='', nargs='*', help='Recover configuration of Power PMAC using the recovery'
+                                                                       'stick method.\n'
+                                                                       '--recover <dir>/<dir> reboot\n'
+                                                                       'dir = directory containing backed-up Project, '
+                                                                       'Database, and Temp directories.\n'
+                                                                       'reboot reboots the PPMAC to apply the recovered '
+                                                                       'configuration.')
+    parser.add_argument('-c', '--compare', metavar='', nargs='*', help='Compare configuration of two Power PMACs.')
+    parser.add_argument('-d', '--download', metavar='', nargs=1, help='Download configuration onto Power PMAC.\n'
+                                                                      '--download <dir>\n'
+                                                                      'dir = directory containing Project, Database and '
+                                                                      'Temp directories.')
+    parser.add_argument('-f', '--resultsdir', metavar='', nargs=1, help='Directory in which to place output of analysis.')
     parser.add_argument('-v', '--verbosity', metavar='', nargs=1, help='Verbosity level of output')
-    parser.add_argument('-n', '--name', metavar='', nargs=1, help='Name of Power PMAC')
+    parser.add_argument('-n', '--name', metavar='', nargs=1, help='Name of Power PMAC.')
     return parser.parse_args()
 
 def isValidNetworkInterface(interface):
@@ -73,11 +86,20 @@ def exitGpascii():
         raise IOError("Failed to exit gpascii.")
 
 def executeRemoteShellCommand(cmd):
+    """
+    Execute a command on a remote server. The call to stdout.channel.recv_exit_status() blocks until the resulting
+    process on the remote server has finished.
+    :param cmd: string containing command to be executed.
+    :return:
+    """
+    logging.info(f"Executing \'{cmd}\' on remote server...")
     stdin, stdout, stderr = sshClient.client.exec_command(cmd)
     if stdout.channel.recv_exit_status() != 0:
         raise RuntimeError(f'Error executing command {cmd} on remote machine.')
+    logging.info(f'Command wrote to stdout \'{stdout.read()}\'.')
 
 def scpFromPowerPMACtoLocal(source, destination, recursive=True):
+    logging.info(f'scp files/dirs \'{source}\' from remote server into local dir \'{destination}\'.')
     try:
         scp = SCPClient(sshClient.client.get_transport(), sanitize=lambda x: x)
         scp.get(source, destination, recursive)
@@ -87,6 +109,7 @@ def scpFromPowerPMACtoLocal(source, destination, recursive=True):
 
 
 def scpFromLocalToPowerPMAC(files, remote_path, recursive=False):
+    logging.info(f'scp files/dirs \'{files}\' into remote server directory \'{remote_path}\'.')
     try:
         scp = SCPClient(sshClient.client.get_transport(), sanitize=lambda x: x)
         scp.put(files, remote_path, recursive)
@@ -121,39 +144,39 @@ def responseListToDict(responseList, splitChars='='):
             responseDict[nameVal[0]] = nameVal[1]
     return responseDict
 
-restoreOptCmds = \
+recoveryCmds = \
 '''
 #!/bin/bash
 
-echo "Entering /tmp/restore." > /tmp/restore.log 2>&1
-cd /tmp/restore
+echo "Entering /tmp/recover." > /tmp/recover.log 2>&1
+cd /tmp/recover
 if [[ $? -ne 0 ]] ; then
-    echo "Unable to cd into /tmp/restore. Exiting." >> /tmp/restore.log 2>&1
+    echo "Unable to cd into /tmp/recover. Exiting." >> /tmp/recover.log 2>&1
     exit 1
 fi
 
-echo "Starting sync." >> /tmp/restore.log 2>&1
-echo "Mounting /opt file system as read/write" >> /tmp/restore.log 2>&1
-mount -o remount,rw /opt/ >> /tmp/restore.log 2>&1
+echo "Starting sync." >> /tmp/recover.log 2>&1
+echo "Mounting /opt file system as read/write" >> /tmp/recover.log 2>&1
+mount -o remount,rw /opt/ >> /tmp/recover.log 2>&1
 
 # Copy backup files into /opt/ppmac/usrflash
-echo "Copying backup files into /opt/ppmac/usrflash/" >> /tmp/restore.log
-cp -a * /opt/ppmac/usrflash/ >> /tmp/restore.log 2>&1
+echo "Copying backup files into /opt/ppmac/usrflash/" >> /tmp/recover.log
+cp -a * /opt/ppmac/usrflash/ >> /tmp/recover.log 2>&1
 
-echo "Syncing file system." >> /tmp/restore.log 2>&1
-sync >> /tmp/restore.log 2>&1
+echo "Syncing file system." >> /tmp/recover.log 2>&1
+sync >> /tmp/recover.log 2>&1
 
-echo "Mounting /opt file system as read only." >> /tmp/restore.log 2>&1
-mount -o remount,ro /opt/ >> /tmp/restore.log 2>&1
+echo "Mounting /opt file system as read only." >> /tmp/recover.log 2>&1
+mount -o remount,ro /opt/ >> /tmp/recover.log 2>&1
 
-echo "Sync completed." >> /tmp/restore.log 2>&1
+echo "Sync completed." >> /tmp/recover.log 2>&1
 '''
 
 
 class PPMACLexer(object):
     tokens = {'bpclear','bpclearall','bpset','disable','plc'}
     spaces = ' \n\t\r'
-    mathsSymbols = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
+    mathsChars = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
     operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^']}
     assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
     comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
@@ -255,8 +278,8 @@ class PPMACLexer(object):
             c = chars.moveNext()
             if c in PPMACLexer.spaces:
                 pass
-            elif c in PPMACLexer.mathsSymbols:
-                yield (self.scanMathsSymbol(c, chars))
+            elif c in PPMACLexer.mathsChars:
+                yield (self.scanMathsChars(c, chars))
             elif c in '(){},':
                 yield (c, "")
             elif c in '.':
@@ -272,7 +295,7 @@ class PPMACLexer(object):
         ret = c
         existingToken = ''
         next = chars.peek()
-        if c in "PLQRCM" and next.isdigit():
+        if c in "PLQRCMD" and next.isdigit():
             # We have a P/L/Q/M/R/C variable
             allowed = "[0-9]"
             while re.match(allowed, next) != None:
@@ -284,7 +307,6 @@ class PPMACLexer(object):
             # Check to see if we can find an existing token in the subsequent
             # characters. If we do, take the longest existing token we find.
             # If we don't, assume the token can take the form of an active element name.
-            tokenLen = 1
             allowed_ = "[a-zA-Z.\[]"
             allowed = allowed_
             while re.match(allowed, next) != None:
@@ -298,10 +320,9 @@ class PPMACLexer(object):
                 if chars.isEmpty():
                     break
                 next = chars.peek()
-                tokenLen += 1
             if len(existingToken) > 0:
+                chars.rewind(len(ret) - len(existingToken))
                 ret = existingToken
-                chars.rewind(tokenLen - len(existingToken))
         return ret
 
     def scanNumber(self, c, chars, allowed):
@@ -318,7 +339,7 @@ class PPMACLexer(object):
             next = chars.peek()
         return ret
 
-    def scanMathsSymbol(self, c, chars):
+    def scanMathsChars(self, c, chars):
         ret = c
         while ret + chars.peek() in PPMACLexer.maths:
             c = chars.moveNext()
@@ -1456,6 +1477,8 @@ class PPMACanalyse:
         self.port = 1025
         self.operationType = 'all'
         self.operationTypes = ['all', 'active', 'project']
+        self.backupDir = None
+        self.reboot = False
         # Configure logger
         if ppmacArgs.resultsdir is not None:
             self.resultsDir = ppmacArgs.resultsdir[0]
@@ -1465,13 +1488,15 @@ class PPMACanalyse:
         if ppmacArgs.backup is not None:
             self.processBackupOptions(ppmacArgs)
             self.backup(self.operationType)
-            sshClient.disconnect()
         if ppmacArgs.compare is not None:
             self.processCompareOptions(ppmacArgs)
             self.compare()
-        if ppmacArgs.restore is not None:
-            self.processRestoreOptions(ppmacArgs)
-            self.restore()
+        if ppmacArgs.recover is not None:
+            self.processRecoverOptions(ppmacArgs)
+            self.recover()
+        if ppmacArgs.download is not None:
+            self.processDownloadOptions(ppmacArgs)
+            self.download()
 
     def processCompareOptions(self, ppmacArgs):
         if len(ppmacArgs.compare) < 2:
@@ -1540,7 +1565,8 @@ class PPMACanalyse:
             if ppmacArgs.backup[0] not in self.operationTypes:
                 raise IOError(f'Unrecognised backup option {ppmacArgs.backup[0]}, '
                               f'should be "all","active" or "project".')
-        self.operationType = ppmacArgs.backup[0]
+        if len(ppmacArgs.backup) > 0:
+            self.operationType = ppmacArgs.backup[0]
         self.backupDir = f'{self.resultsDir}/repository'
         if len(ppmacArgs.backup) > 1:
             self.backupDir = f'{self.resultsDir}/{ppmacArgs.backup[1]}'
@@ -1574,42 +1600,75 @@ class PPMACanalyse:
             sshClient.hostname = self.ipAddress
             sshClient.connect()
             scpFromPowerPMACtoLocal('/opt/ppmac/usrflash/*', projectDir, recursive=True)
-            sshClient.disconnect()
+        sshClient.disconnect()
 
-    def processRestoreOptions(self, ppmacArgs):
+    def processRecoverOptions(self, ppmacArgs):
         if ppmacArgs.interface is not None:
             self.ipAddress = ppmacArgs.interface[0].split(':')[0]
             self.port = ppmacArgs.interface[0].split(':')[1]
-        if len(ppmacArgs.restore) < 1:
-            raise IOError(f'Insufficient arguments, please specify the repository directory')
         # Specify directory containing backup
-        self.backupDir = ppmacArgs.restore[0]
+        if len(ppmacArgs.recover) < 1:
+            raise IOError(f'Unspecified directory to use for recovery.')
+        self.backupDir = ppmacArgs.recover[0]
         if not os.path.isdir(self.backupDir):
             raise IOError(f'Repository directory {self.backupDir} does not exist.')
-        if len(ppmacArgs.restore) > 1:
-            if ppmacArgs.restore[1] not in self.operationTypes:
-                raise IOError(f'Unrecognised backup option {ppmacArgs.restore[1]}, '
-                              f'should be "all","active" or "project".')
-            self.operationType = ppmacArgs.restore[1]
+        if len(ppmacArgs.recover) > 1:
+            if ppmacArgs.recover[1] is not 'reboot':
+                raise IOError(f'Unknown option {ppmacArgs.recover[1]}. Should be \'reboot\' or nothing.')
 
-    def restore(self):
+    def recover(self):
         sshClient.port = self.port
         sshClient.hostname = self.ipAddress
         sshClient.connect()
-        restoreScript = 'restoreOpt.sh'
-        with open(restoreScript, 'w+') as writeFile:
-            writeFile.write(restoreOptCmds)
-        scpFromLocalToPowerPMAC(restoreScript, '/tmp/')
-        os.system('rm restoreOpt.sh')
-        executeRemoteShellCommand(f'chmod 777 /tmp/{restoreScript}')
-        executeRemoteShellCommand('mkdir /tmp/restore')
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Project', '/tmp/restore/', recursive=True)
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Database', '/tmp/restore/', recursive=True)
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/project/Temp', '/tmp/restore/', recursive=True)
-        executeRemoteShellCommand('/tmp/restoreOpt.sh')
-        scpFromPowerPMACtoLocal('/tmp/restore.log', f'{self.resultsDir}/', recursive=False)
-        sshClient.client.exec_command('reboot')
+        recoverScript = 'recover.sh'
+        with open(recoverScript, 'w+') as writeFile:
+            writeFile.write(recoveryCmds)
+        scpFromLocalToPowerPMAC(recoverScript, '/tmp/')
+        os.system('rm recover.sh')
+        executeRemoteShellCommand(f'chmod 777 /tmp/{recoverScript}')
+        executeRemoteShellCommand('mkdir /tmp/recover')
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Project', '/tmp/recover/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/tmp/recover/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/tmp/recover/', recursive=True)
+        executeRemoteShellCommand('/tmp/recover.sh')
+        scpFromPowerPMACtoLocal('/tmp/recover.log', f'{self.resultsDir}/', recursive=False)
+        if self.reboot:
+            sshClient.client.exec_command('reboot')
         sshClient.disconnect()
+
+    def processDownloadOptions(self, ppmacArgs):
+        if ppmacArgs.interface is not None:
+            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
+            self.port = ppmacArgs.interface[0].split(':')[1]
+        # Specify directory containing backup
+        if len(ppmacArgs.download) < 1:
+            raise IOError(f'Unspecified directory to use for recovery.')
+        self.backupDir = ppmacArgs.download[0]
+        if not os.path.isdir(self.backupDir):
+            raise IOError(f'Repository directory {self.backupDir} does not exist.')
+
+    def download(self):
+        sshClient.port = self.port
+        sshClient.hostname = self.ipAddress
+        sshClient.connect()
+        # Copy usrflash files into ppmac
+        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/*')
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Project', '/var/ftp/usrflash/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
+        # Make directory that projpp will log to
+        executeRemoteShellCommand('mkdir -p /var/ftp/usrflash/Project/Log')
+        # Looks like everything in project dir needs to be rwx
+        executeRemoteShellCommand(f'chmod 777 -R -f /var/ftp/usrflash/Project')
+        # Finally execute a projpp to parse and load new project
+        executeRemoteShellCommand('projpp -l')
+        sshClient.disconnect()
+
+#        if len(ppmacArgs.recover) > 1:
+#            if ppmacArgs.recover[1] not in self.operationTypes:
+#                raise IOError(f'Unrecognised backup option {ppmacArgs.recover[1]}, '
+#                              f'should be "all","active" or "project".')
+#            self.operationType = ppmacArgs.recover[1]
 
 if __name__ == '__main__':
     start = time.time()
@@ -1617,8 +1676,7 @@ if __name__ == '__main__':
     ppmacArgs = parseArgs()
     sshClient = dls_pmacremote.PPmacSshInterface()
     analysis = PPMACanalyse(ppmacArgs)
-    #'+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=', '++', '--'
-    PPMACLexer('a s += df>>=>>>=')
+
     #sshClient = dls_pmacremote.PPmacSshInterface()
     #sshClient.port = 1025
     ##sshClient.hostname = '10.2.2.77'
