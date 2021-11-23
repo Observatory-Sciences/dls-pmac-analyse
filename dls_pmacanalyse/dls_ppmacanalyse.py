@@ -17,6 +17,16 @@ def timer(func):
         return result
     return measureExecutionTime
 
+
+def connectDisconnect(func):
+        def wrapped_func(self, *args):
+            sshClient.port = self.port
+            sshClient.hostname = self.ipAddress
+            sshClient.connect()
+            func(self, *args)
+            sshClient.disconnect()
+        return wrapped_func
+
 def createEmptyDir(dir):
     if dir[0] == '/':
         if os.environ['PWD'] not in dir:
@@ -402,8 +412,6 @@ class PPMACProject(object):
                                    f'the ppmac will be copied.')
             self.root = f'{tempDir}/tmp/'
             createEmptyDir(f'{tempDir}/tmp')
-            #os.system(f'rm -rf tmp/hardware')
-            #os.makedirs(self.root[0:self.root.rfind('/')])
             scpFromPowerPMACtoLocal(source=root, destination=self.root, recursive=True)
         elif self.source != 'repository':
             raise RuntimeError('Invalid project source: should be "hardware" or "repository".')
@@ -478,7 +486,6 @@ class ProjectCompare(object):
             projCompFile.write(f'@@ Project files in source \'{self.projectB.source}\' and source '
                                f'\'{self.projectA.source}\' with different contents @@\n')
             for projFileName in fileNamesInAandB:
-                print('here  ' + projFileName)
                 projCompFile.writelines(difflib.unified_diff(self.projectA.files[projFileName].contents,
                                                         self.projectB.files[projFileName].contents,
                                                         fromfile=f'{self.projectA.source}: {projFileName}',
@@ -516,7 +523,6 @@ class PPMACCompare(object):
         self.ppmacInstanceB = ppmacB
 
     def compareActiveElements(self):
-        print('here')
         elementNamesA = set(self.ppmacInstanceA.activeElements.keys())
         elementNamesB = set(self.ppmacInstanceB.activeElements.keys())
         self.elemNamesOnlyInA = elementNamesA - elementNamesB
@@ -532,9 +538,8 @@ class PPMACCompare(object):
         for elemName in self.elemNamesInAandB:
             self.activeElemsInAandB[elemName] = {'A':self.ppmacInstanceA.activeElements[elemName],
                                                  'B':self.ppmacInstanceB.activeElements[elemName]}
-            print(f'{elemName} A = {self.ppmacInstanceA.activeElements[elemName].value}',
-                  f'{elemName} B = {self.ppmacInstanceB.activeElements[elemName].value}')
-        #self.writeActiveElemDifferencesToFile()
+            #print(f'{elemName} A = {self.ppmacInstanceA.activeElements[elemName].value}, ',
+            #      f'{elemName} B = {self.ppmacInstanceB.activeElements[elemName].value}')
 
     def writeActiveElemDifferencesToFile(self, compareDir):
         dataStructCategoriesInA = set([elem.category for elem in list(self.ppmacInstanceA.activeElements.values())])
@@ -547,13 +552,11 @@ class PPMACCompare(object):
             sourceB = self.ppmacInstanceB.source
             for file in filePaths:
                 diffFiles[file] = open(file, 'w+')
-            print('diff Files:', diffFiles)
             # write first set of headers
             for file in diffFiles:
                 diffFiles[file].write(f'@@ Active elements in source \'{sourceA}\' but not source \'{sourceB}\' @@\n')
             # write to file elements that are in ppmacA but not ppmacB
             for elemName in self.elemNamesOnlyInA:
-                print('zzzz ' + elemName)
                 file = f'{compareDir}/{self.activeElemsOnlyInA[elemName].category}.diff'
                 diffFiles[file].write('>> ' + self.activeElemsOnlyInA[elemName].name + ' = '
                                       + self.activeElemsOnlyInA[elemName].value + '\n')
@@ -562,7 +565,6 @@ class PPMACCompare(object):
                 diffFiles[file].write(f'@@ Active elements in source \'{sourceB}\' but not source \'{sourceA}\' @@\n')
             # write to file elements that are in ppmacB but not ppmacA
             for elemName in self.elemNamesOnlyInB:
-                print('xxxx ' + elemName)
                 file = f'{compareDir}/{self.activeElemsOnlyInB[elemName].category}.diff'
                 diffFiles[file].write('>> ' + self.activeElemsOnlyInB[elemName].name + ' = '
                                       + self.activeElemsOnlyInB[elemName].value + '\n')
@@ -717,7 +719,7 @@ class PPMACHardwareWriteRead(object):
         # Standard Data Structure symbols tables
         self.pp_swtlbs_symfiles = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
         # Read maximum values for the various configuration parameters
-        self.readSysMaxes
+        self.readSysMaxes()
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -1479,12 +1481,19 @@ class PPMACanalyse:
         self.operationTypes = ['all', 'active', 'project']
         self.backupDir = None
         self.reboot = False
+        if ppmacArgs.interface is not None:
+            if not isValidNetworkInterface(ppmacArgs.interface[0]):
+                raise IOError(
+                    f'Interface {ppmacArgs.interface} not a valid network interface <ipaddress>:<port>')
+            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
+            self.port = ppmacArgs.interface[0].split(':')[1]
         # Configure logger
         if ppmacArgs.resultsdir is not None:
             self.resultsDir = ppmacArgs.resultsdir[0]
         createEmptyDir(self.resultsDir)
         logfile = self.resultsDir + '/' + 'ppmacanalyse.log'
         logging.basicConfig(filename=logfile, level=logging.INFO)
+        # Perform the backup, compare, recover or download
         if ppmacArgs.backup is not None:
             self.processBackupOptions(ppmacArgs)
             self.backup(self.operationType)
@@ -1503,12 +1512,10 @@ class PPMACanalyse:
             raise IOError('Insufficient number of arguments, please specify TWO sources for comparison.')
         self.compareSourceA = ppmacArgs.compare[0]
         self.compareSourceB = ppmacArgs.compare[1]
-        if isValidNetworkInterface(self.compareSourceA):
-            self.ipAddressA = self.compareSourceA.strip().split(':')[0]
-            self.portA = self.compareSourceA.strip().split(':')[1]
-        if isValidNetworkInterface(self.compareSourceB):
-            self.ipAddressB = self.compareSourceB.strip().split(':')[0]
-            self.portB = self.compareSourceB.strip().split(':')[1]
+        if not isValidNetworkInterface(self.compareSourceA) and not os.path.isdir(self.compareSourceA):
+            raise IOError(f'{self.compareSourceA} not an existing directory or valid network interface <ipaddress>:<port>')
+        if not isValidNetworkInterface(self.compareSourceB) and not os.path.isdir(self.compareSourceB):
+            raise IOError(f'{self.compareSourceB} not an existing directory or valid network interface <ipaddress>:<port>')
         self.compareDir = f'{self.resultsDir}/compare'
         if len(ppmacArgs.compare) > 2:
             self.compareDir = f'{self.resultsDir}/{ppmacArgs.compare[2]}'
@@ -1531,7 +1538,7 @@ class PPMACanalyse:
             projectA = PPMACProject('hardware', '/opt/ppmac/usrflash/*', self.resultsDir)
             sshClient.disconnect()
         else:
-            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
+            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, self.compareSourceA)
             repositoryWriteRead.readAndStoreActiveElements()
             projectA = PPMACProject('repository', self.compareSourceA)
         if isValidNetworkInterface(self.compareSourceB):
@@ -1543,7 +1550,7 @@ class PPMACanalyse:
             projectB = PPMACProject('hardware', '/opt/ppmac/usrflash/*', self.resultsDir)
             sshClient.disconnect()
         else:
-            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB)
+            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB, self.compareSourceB)
             repositoryWriteRead.readAndStoreActiveElements()
             projectB = PPMACProject('repository', self.compareSourceB)
         ppmacComparison = PPMACCompare(ppmacA, ppmacB)
@@ -1555,9 +1562,6 @@ class PPMACanalyse:
         projComparison.compareProjectFiles(progDiffPath + 'Project.diff')
 
     def processBackupOptions(self, ppmacArgs):
-        if ppmacArgs.interface is not None:
-            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
-            self.port = ppmacArgs.interface[0].split(':')[1]
         self.name = 'hardware'
         if ppmacArgs.name is not None:
             self.name = ppmacArgs.name[0]
@@ -1577,35 +1581,28 @@ class PPMACanalyse:
         if not fileExists(self.ignoreFile):
             raise IOError(f'Ignore file {self.ignoreFile} not found.')
 
+    @connectDisconnect
     def backup(self, type='all'):
         ppmacA = PowerPMAC(self.name)
         if type == 'all' or type == 'active':
             # read current state of ppmac and store in ppmacA object
-            sshClient.port = self.port
-            sshClient.hostname = self.ipAddress
-            sshClient.connect()
             hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
             hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
-            sshClient.disconnect()
             # write current state of ppmacA object to repository
             activeDir = f'{self.backupDir}/active'
             createEmptyDir(activeDir)
             repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, activeDir)
             repositoryWriteRead.writeActiveState()
         if type == 'all' or type == 'project':
-            projectDir = f'{self.backupDir}/project'
-            createEmptyDir(projectDir)
-            print(projectDir)
-            sshClient.port = self.port
-            sshClient.hostname = self.ipAddress
-            sshClient.connect()
-            scpFromPowerPMACtoLocal('/opt/ppmac/usrflash/*', projectDir, recursive=True)
-        sshClient.disconnect()
+            createEmptyDir(f'{self.backupDir}/project')
+            savedProjectDir = f'{self.backupDir}/project/saved'
+            createEmptyDir(savedProjectDir)
+            scpFromPowerPMACtoLocal('/opt/ppmac/usrflash/*', savedProjectDir, recursive=True)
+            activeProjectDir = f'{self.backupDir}/project/active'
+            createEmptyDir(activeProjectDir)
+            scpFromPowerPMACtoLocal('/var/ftp/usrflash/*', activeProjectDir, recursive=True)
 
     def processRecoverOptions(self, ppmacArgs):
-        if ppmacArgs.interface is not None:
-            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
-            self.port = ppmacArgs.interface[0].split(':')[1]
         # Specify directory containing backup
         if len(ppmacArgs.recover) < 1:
             raise IOError(f'Unspecified directory to use for recovery.')
@@ -1616,10 +1613,8 @@ class PPMACanalyse:
             if ppmacArgs.recover[1] is not 'reboot':
                 raise IOError(f'Unknown option {ppmacArgs.recover[1]}. Should be \'reboot\' or nothing.')
 
+    @connectDisconnect
     def recover(self):
-        sshClient.port = self.port
-        sshClient.hostname = self.ipAddress
-        sshClient.connect()
         recoverScript = 'recover.sh'
         with open(recoverScript, 'w+') as writeFile:
             writeFile.write(recoveryCmds)
@@ -1634,12 +1629,8 @@ class PPMACanalyse:
         scpFromPowerPMACtoLocal('/tmp/recover.log', f'{self.resultsDir}/', recursive=False)
         if self.reboot:
             sshClient.client.exec_command('reboot')
-        sshClient.disconnect()
 
     def processDownloadOptions(self, ppmacArgs):
-        if ppmacArgs.interface is not None:
-            self.ipAddress = ppmacArgs.interface[0].split(':')[0]
-            self.port = ppmacArgs.interface[0].split(':')[1]
         # Specify directory containing backup
         if len(ppmacArgs.download) < 1:
             raise IOError(f'Unspecified directory to use for recovery.')
@@ -1647,22 +1638,19 @@ class PPMACanalyse:
         if not os.path.isdir(self.backupDir):
             raise IOError(f'Repository directory {self.backupDir} does not exist.')
 
+    @connectDisconnect
     def download(self):
-        sshClient.port = self.port
-        sshClient.hostname = self.ipAddress
-        sshClient.connect()
         # Copy usrflash files into ppmac
-        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/*')
+        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/Project')
         scpFromLocalToPowerPMAC(f'{self.backupDir}/Project', '/var/ftp/usrflash/', recursive=True)
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
+        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
+        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
         # Make directory that projpp will log to
         executeRemoteShellCommand('mkdir -p /var/ftp/usrflash/Project/Log')
         # Looks like everything in project dir needs to be rwx
         executeRemoteShellCommand(f'chmod 777 -R -f /var/ftp/usrflash/Project')
         # Finally execute a projpp to parse and load new project
         executeRemoteShellCommand('projpp -l')
-        sshClient.disconnect()
 
 #        if len(ppmacArgs.recover) > 1:
 #            if ppmacArgs.recover[1] not in self.operationTypes:
