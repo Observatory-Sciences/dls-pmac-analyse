@@ -184,14 +184,261 @@ echo "Sync completed." >> /tmp/recover.log 2>&1
 
 
 class PPMACLexer(object):
-    tokens = {'bpclear','bpclearall','bpset','disable','plc'}
+    # Tokens formed from the 'Power PMAC on-line commands' and 'Power PMAC program commands'.
+    # As given in the Power PMAC Software reference manual 22nd Mar 2021 p.40-47
+    commandTokens = {
+        'a',
+        'aa',
+        'abort',
+        'abs',
+        'adisable',
+        'alias',
+        'all',
+        'apc',
+        'assign',
+        'b',
+        'bb',
+        'begin',
+        'bgcplc',
+        'break',
+        'bstart',
+        'bstop',
+        'buffers',
+        'c',
+        'cc',
+        'call',
+        'callsub',
+        'case',
+        'ccall',
+        'cclr',
+        'ccmode0',
+        'ccmode1',
+        'ccmode2',
+        'ccmode3',
+        'ccr',
+        'cdef',
+        'cexec',
+        'cipserialnumber',
+        'cipvendorcode',
+        'circle',
+        'clear',
+        'close',
+        'clrf',
+        'cmd',
+        'config',
+        'continue',
+        'cout',
+        'cpu',
+        'cpx',
+        'cset',
+        'cskip',
+        'cundef',
+        'cx',
+        'd',
+        'dd',
+        'date',
+        'ddisable',
+        'define',
+        'delete',
+        'disable',
+        'dkill',
+        'do',
+        'dread',
+        'dtogread',
+        'dwell',
+        'ecat',
+        'echo',
+        'else',
+        'enable',
+        'f',
+        'ff',
+        'fload',
+        'forward',
+        'frax',
+        'frax2',
+        'fread',
+        'free',
+        'fsave',
+        'g',
+        'gg',
+        'gather',
+        'gosub',
+        'goto',
+        'h',
+        'hh',
+        'halt',
+        'hm',
+        'hmz',
+        'hold',
+        'home',
+        'homez',
+        'i',
+        'if',
+        'inc',
+        'inverse',
+        'j',
+        'jog',
+        'jogret',
+        'k',
+        'kill',
+        'l',
+        'll',
+        'lh',
+        'lhpurge',
+        'linear',
+        'list',
+        'lookahead',
+        'lotnum',
+        'm',
+        'mm',
+        'macroauxiliary',
+        'macroauxiliaryread',
+        'macroauxiliarywrite',
+        'macrocontrolledetect',
+        'macrocontrollerinit',
+        'macromaster',
+        'macromasterread',
+        'macromasterwrite',
+        'macroport',
+        'macroportclose',
+        'macroportstate',
+        'macroring',
+        'macroringmasterslave',
+        'macroringmasterslaveread',
+        'macroringmasterslavewrite',
+        'macroringorder',
+        'macroringorderbackup',
+        'macroringorderclrf',
+        'macroringorderdetect',
+        'macroringorderinit',
+        'macroringorderload',
+        'macroringorderrepair',
+        'macroringorderrestore',
+        'macroringordersave',
+        'macroringorderstations',
+        'macroringordersync',
+        'macroringorderverify',
+        'macroringorderverifybackup',
+        'macroslave',
+        'macroslaveread',
+        'macroslavewrite',
+        'macrostation',
+        'macrostationclearerrors',
+        'macrostationclose',
+        'macrostationenable',
+        'macrostationerrors',
+        'macrostationfrequency',
+        'macrostationringcheck',
+        'macrostationstatus',
+        'macrostationtype',
+        'n',
+        'nn',
+        'nofrax',
+        'nofrax2',
+        'nop',
+        'normal',
+        'nxyz',
+        'oo',
+        'open',
+        'out',
+        'p',
+        'pp',
+        'pause',
+        'pc',
+        'pclear',
+        'phase',
+        'plc',
+        'pload',
+        'pmatch',
+        'pread',
+        'productcode',
+        'prog',
+        'pset',
+        'pstore',
+        'pvt',
+        'q',
+        'qq',
+        'r',
+        'rr',
+        'rapid',
+        'read',
+        'reboot',
+        'reset',
+        'resetverbose',
+        'resume',
+        'return',
+        'rotary',
+        'rotfree',
+        'rotfreeall',
+        'rtiplc',
+        'run',
+        's',
+        'ss',
+        'save',
+        'send',
+        'sendall',
+        'sendallcmds',
+        'sendallsystemcmds',
+        'serialnum',
+        'setverbose',
+        'size',
+        'slaves',
+        'spline',
+        'start',
+        'step',
+        'step',
+        'stop',
+        'string',
+        'subprog',
+        'switch',
+        'system',
+        't',
+        'tt',
+        'ta',
+        'td',
+        'tm',
+        'tread',
+        'ts',
+        'tsd',
+        'tsel',
+        'txyz',
+        'txyzscale',
+        'type',
+        'uu',
+        'undefine',
+        'v',
+        'vv',
+        'vers',
+        'vread',
+        'ww',
+        'xx',
+        'yy',
+        'z',
+        '#', '->', '$', '$$', '$$$', '$$$***', '%', '&', '\\', '?', ':'
+    }
+    arithmeticOperatorTokens = {'+', '-', '*', '/', '%'}
+    bitByBitLogicalOperatorTokens = {'&', '|', '^', '~', '<<', '>>'}
+    standardAssignmentOperatorTokens = {'=', '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '>>=', '<<=', '++', '--'}
+    synchronousAssignmentOperatorTokens = {'==', '+==', '-==', '*==', '/==', '&==', '|==', '^==', '++=', '--='}
+    conditionalComparatorTokens = {'==', '!=', '<', '>', '<=', '>=', '~', '!~', '<>', '!>', '!<'}
+    conditionalCombinatorialOperatorTokens = {'&&', '||', '!'}
+    otherTokens = {'(', ')', '{', '}', '..'}
+    # Full list of PPMAC tokens
+    tokens = commandTokens.union(
+        arithmeticOperatorTokens).union(
+        bitByBitLogicalOperatorTokens).union(
+        standardAssignmentOperatorTokens).union(
+        synchronousAssignmentOperatorTokens).union(
+        conditionalComparatorTokens).union(
+        conditionalCombinatorialOperatorTokens).union(
+        otherTokens)
     spaces = ' \n\t\r'
-    mathsChars = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
-    operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^']}
-    assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
-    comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
-    mathsDict = {**operators, **assignment, **comparators}
-    maths = set(mathsDict)
+    nonAlphaNumeric = {'=','+','-','*','/','%','<','>','&','|','^','!','~','$','#','?',':','\\','(',')','}','{','.'}
+    #mathsChars = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
+    #operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^', '~']}
+    #assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
+    #comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
+    #maths = set({**operators, **assignment, **comparators})
 
     class Chars(object):
         def __init__(self, chars):
@@ -221,17 +468,21 @@ class PPMACLexer(object):
                 self.chars = self._chars[-pos:] + self.chars
                 self._chars = self._chars[0:-pos]
 
-    def __init__(self, chars):
-        #chars = "a s[] 0.234 67 += df>>=>>>="
-        #chars = "if(P1701==0){Q7=((P(5)*P(100+5)+P(300+5)+P(6)*P(100+6)+P(300+6))/2)+Motor[10].JogSpeed}"
-        chars = """
+    def __init__(self, chars, extendedTokens={''}):
+        #chars = \
+        """
         IF(P1701=0)
         P(5)=(Q7-P(300+5))/P(100+5)
         P(6)=(Q7-P(300+6))/P(100+6)
         ENDIF
+        $FFFF3
+        lh\\
+        lh<lh>
+        frax2
         IF(P1701=1)
         IF(P1753<1)
         P1753=1
+        ccmode0
         ENDIF
         P1771=Q7/P1753
         P1772=P1720+P1771*(P1721+P1771*(P1722+P1771*(P1723+P1771*(P1724
@@ -242,7 +493,8 @@ class PPMACLexer(object):
         ENDIF
         RETURN
         """
-        chars = """
+        #chars =
+        """
         Sys.WDTReset=5000/(Sys.ServoPeriod*2.258)
         R0=5call100000.010001
         BrickLV.Reset=1
@@ -258,6 +510,7 @@ class PPMACLexer(object):
         Sys.MaxServoTime=0
         Sys.MaxRtIntTime=0
         Sys.MaxBgTime=0
+        P3..10=P90
         R0=5call100000.010001
         bpclearallb
         bpclear
@@ -276,8 +529,9 @@ class PPMACLexer(object):
         R0=5call100000.010001
         }
         """
+        self.extendedTokens = {token.lower() for token in extendedTokens}
         self.tokens = []
-        self.chars = self.Chars(chars)
+        self.chars = self.Chars(chars.lower())
         print(f'Text is \"{chars}\"')
         for token in self.lex(self.chars):
             print(f'Adding token: {token}')
@@ -288,36 +542,77 @@ class PPMACLexer(object):
             c = chars.moveNext()
             if c in PPMACLexer.spaces:
                 pass
-            elif c in PPMACLexer.mathsChars:
-                yield (self.scanMathsChars(c, chars))
-            elif c in '(){},':
-                yield (c, "")
-            elif c in '.':
-                yield (self.scanDots(c, chars), "")
+            #elif c in PPMACLexer.mathsChars:
+            #    yield (self.scanMathsChars(c, chars))
+            elif c == '$':
+                yield("hex", self.scanHexadecimal(c, chars))
             elif c in ("'", '"'):
                 yield("string", self.scanString(c, chars))
             elif re.match("[.0-9]", c):
-                yield("number", self.scanNumber(c, chars, "[.0-9]"))
+                yield("number", self.scanNumber(c, chars))
             elif re.match("[a-zA-Z]", c):
                 yield("symbol", self.scanSymbol(c, chars))
+            elif c in PPMACLexer.nonAlphaNumeric:
+                yield("", self.scanNonAlphaNumeric(c, chars))
+            else:
+                raise IOError(f'Unknown token type "{c}"')
+
+    def scanHexadecimal(self, c, chars):
+        ret = c
+        if chars.isEmpty():
+            return ret
+        next = chars.peek()
+        allowed = "[a-f0-9]"
+        while re.match(allowed, next) != None:
+            ret += chars.moveNext()
+            if chars.isEmpty():
+                break
+            next = chars.peek()
+        return ret
+
+    def scanNonAlphaNumeric(self, c, chars):
+        ret = c
+        if chars.isEmpty():
+            return ret
+        existingToken = ''
+        if ret in PPMACLexer.tokens:
+            existingToken = ret
+        next = chars.peek()
+        allowed = PPMACLexer.nonAlphaNumeric
+        while next in allowed:
+            ret += chars.moveNext()
+            if ret in PPMACLexer.tokens:
+                existingToken = ret
+            if chars.isEmpty():
+                break
+        if len(existingToken) > 0:
+            chars.rewind(len(ret) - len(existingToken))
+            ret = existingToken
+        return ret
 
     def scanSymbol(self, c, chars):
         ret = c
+        if chars.isEmpty():
+            return ret
         existingToken = ''
+        if ret in PPMACLexer.tokens:
+            existingToken = ret
         next = chars.peek()
-        if c in "PLQRCMD" and next.isdigit():
-            # We have a P/L/Q/M/R/C variable
-            allowed = "[0-9]"
-            while re.match(allowed, next) != None:
-                ret += chars.moveNext()
-                if chars.isEmpty():
-                    break
-                next = chars.peek()
-        else:
+        #if c in "PLQRCMDI" and next.isdigit():
+        #    # We have a P/L/Q/M/R/C variable
+        #    allowed = "[0-9]"
+        #    while re.match(allowed, next) != None:
+        #        ret += chars.moveNext()
+        #        if chars.isEmpty():
+        #            break
+        #        next = chars.peek()
+        #else:
+        if True:
             # Check to see if we can find an existing token in the subsequent
             # characters. If we do, take the longest existing token we find.
             # If we don't, assume the token can take the form of an active element name.
-            allowed_ = "[a-zA-Z.\[]"
+            #allowed_ = "[a-zA-Z.\[]"
+            allowed_ = "[a-zA-Z0-9.\[]"
             allowed = allowed_
             while re.match(allowed, next) != None:
                 if next == "[":
@@ -327,7 +622,14 @@ class PPMACLexer(object):
                 ret += chars.moveNext()
                 if ret in PPMACLexer.tokens:
                     existingToken = ret
+                # Use this condition to catch active element names
+                if re.sub('\[([0-9]+)\]', '[]', ret) in self.extendedTokens:
+                    existingToken = ret
                 if chars.isEmpty():
+                    break
+                # Use this condition to catch the few PPMACLexer.tokens that end in a digit, e.g. frax2
+                if re.match("[0-9]", chars.peek()) and ret + chars.peek() in PPMACLexer.tokens:
+                    existingToken = ret + chars.moveNext()
                     break
                 next = chars.peek()
             if len(existingToken) > 0:
@@ -335,11 +637,14 @@ class PPMACLexer(object):
                 ret = existingToken
         return ret
 
-    def scanNumber(self, c, chars, allowed):
+    def scanNumber(self, c, chars):
         ret = c
+        if chars.isEmpty():
+            return ret
         next = chars.peek()
+        allowed = "[.0-9]"
         while re.match(allowed, next) != None:
-            # to catch 2..31 and whatnot
+            # to catch '..' used to indicate ranges
             if next == '.':
                 if chars.peekNext() == '.':
                     break
@@ -351,6 +656,8 @@ class PPMACLexer(object):
 
     def scanMathsChars(self, c, chars):
         ret = c
+        if chars.isEmpty():
+            return ret
         while ret + chars.peek() in PPMACLexer.maths:
             c = chars.moveNext()
             ret += c
@@ -368,12 +675,6 @@ class PPMACLexer(object):
             next = chars.peek()
         chars.moveNext()
         return ret
-
-    def scanDots(self, c, chars):
-        if chars.peek() == '.':
-            return c + chars.moveNext()
-        else:
-            return f'Error with chars {c + next}'
 
 
 class PPMACProject(object):
@@ -695,13 +996,11 @@ class PPMACRepositoryWriteRead(object):
             elif progType == 'Forward':
                 progCoordSystem = header[7]
                 self.ppmacInstance.forwardPrograms[progName] = \
-                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType,
-                                                          progCoordSystem, progListing)
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem)
             elif progType == 'Inverse':
                 progCoordSystem = header[7]
                 self.ppmacInstance.inversePrograms[progName] = \
-                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType,
-                                                          progCoordSystem, progListing)
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem)
 
 
 class PPMACHardwareWriteRead(object):
@@ -728,7 +1027,6 @@ class PPMACHardwareWriteRead(object):
 
     def getCommandReturnInt(self, cmd):
         (cmdReturn, status) = sshClient.sendCommand(cmd)
-        print('here')
         if status:
             cmdReturnInt = int(cmdReturn[0:])
         else:
@@ -1263,10 +1561,10 @@ class PPMACHardwareWriteRead(object):
             self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
         elementsToIgnore = self.generateIgnoreSet(pathToIgnoreFile)
-        activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
-                                                                  recordTimings=True, timeout=10.0)
-        self.ppmacInstance.activeElements = \
-            self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
+        #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
+        #                                                          recordTimings=True, timeout=10.0)
+        #self.ppmacInstance.activeElements = \
+        #    self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
         bufferedProgramsInfo = self.getBufferedProgramsInfo()
         self.appendBufferedProgramsInfoWithListings(bufferedProgramsInfo)
         self.ppmacInstance.forwardPrograms = \
@@ -1412,20 +1710,29 @@ class PowerPMAC:
             self.forward = forward
             self.inverse = inverse
 
-    class Program:
-        def __init__(self, name, size, offset, type, listing):
+    def Program(self, name, size, offset, type, listing):
+        return self._Program(self, name, size, offset, type, listing)
+
+    class _Program():
+        def __init__(self, ppmac, name, size, offset, type, listing):
             self.name = name
             self.size = size
             self.offset = offset
             self.type = type
             self.listing = listing
+            self.dataStructureNames = set(ppmac.dataStructures.keys())
+            self.lexer = PPMACLexer('\n'.join(self.listing), self.dataStructureNames)
+            self.tokenList = self.lexer.tokens
 
         def printInfo(self):
             return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n'
 
-    class KinematicTransform(Program):
-        def __init__(self, name, size, offset, type, coordSystem, listing):
-            super().__init__(name, size, offset, type, listing)
+    def KinematicTransform(self, name, size, offset, type, coordSystem, listing):
+        return self._KinematicTransform(self, name, size, offset, type, coordSystem, listing)
+
+    class _KinematicTransform(_Program):
+        def __init__(self, ppmac, name, size, offset, type, coordSystem, listing):
+            super().__init__(ppmac, name, size, offset, type, listing)
             self.coodSystem = coordSystem
 
         def printInfo(self):
@@ -1665,6 +1972,7 @@ if __name__ == '__main__':
     sshClient = dls_pmacremote.PPmacSshInterface()
     analysis = PPMACanalyse(ppmacArgs)
 
+    lex = PPMACLexer("")
     #sshClient = dls_pmacremote.PPmacSshInterface()
     #sshClient.port = 1025
     ##sshClient.hostname = '10.2.2.77'
