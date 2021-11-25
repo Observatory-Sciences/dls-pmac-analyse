@@ -1,5 +1,5 @@
-import dls_pmacremote
-from scp import SCPClient
+import dls_pmaclib.dls_pmacremote
+#from scp import SCPClient
 import time
 import re
 import warnings
@@ -460,7 +460,7 @@ class ProjectCompare(object):
     def setProjectA(self, project):
         self.projectA = project
 
-    def setprojectB(self, project):
+    def setProjectB(self, project):
         self.projectB = project
 
     def compareProjectFiles(self, diffFilePath):
@@ -840,9 +840,9 @@ class PPMACHardwareWriteRead(object):
             if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
                 i += 1
                 continue
-            print(dataStructure_i)
+            #print(dataStructure_i)
             cmd_return = self.sendCommand(dataStructure_i)
-            print(cmd_return)
+            #print(cmd_return)
             if 'ILLEGAL' in cmd_return[0]:
                 cmd_accepted = False
             else:
