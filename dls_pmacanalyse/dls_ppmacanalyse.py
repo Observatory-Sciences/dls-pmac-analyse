@@ -422,7 +422,7 @@ class PPMACLexer(object):
     synchronousAssignmentOperatorTokens = {'==', '+==', '-==', '*==', '/==', '&==', '|==', '^==', '++=', '--='}
     conditionalComparatorTokens = {'==', '!=', '<', '>', '<=', '>=', '~', '!~', '<>', '!>', '!<'}
     conditionalCombinatorialOperatorTokens = {'&&', '||', '!'}
-    otherTokens = {'(', ')', '{', '}', '..'}
+    otherTokens = {'(', ')', '{', '}', '..', ','}
     # Full list of PPMAC tokens
     tokens = commandTokens.union(
         arithmeticOperatorTokens).union(
@@ -433,7 +433,7 @@ class PPMACLexer(object):
         conditionalCombinatorialOperatorTokens).union(
         otherTokens)
     spaces = ' \n\t\r'
-    nonAlphaNumeric = {'=','+','-','*','/','%','<','>','&','|','^','!','~','$','#','?',':','\\','(',')','}','{','.'}
+    nonAlphaNumeric = {'=','+','-','*','/','%','<','>','&','|','^','!','~','$','#','?',':','\\','(',')','}','{','.',','}
     #mathsChars = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
     #operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^', '~']}
     #assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
@@ -537,6 +537,20 @@ class PPMACLexer(object):
             print(f'Adding token: {token}')
             self.tokens.append(token)
 
+    def pop(self, n=0):
+        token = self.tokens[n]
+        self.tokens = self.tokens[n+1:]
+        return token
+
+    def getTokenTypes(self):
+        return [token[0] for token in self.tokens]
+
+    def getTokenValues(self):
+        return [token[1] for token in self.tokens]
+
+    def getTokensAsString(self):
+        return ''.join([token[1] for token in self.tokens])
+
     def lex(self, chars):
         while not chars.isEmpty():
             c = chars.moveNext()
@@ -555,7 +569,7 @@ class PPMACLexer(object):
             elif c in PPMACLexer.nonAlphaNumeric:
                 yield("", self.scanNonAlphaNumeric(c, chars))
             else:
-                raise IOError(f'Unknown token type "{c}"')
+                raise IOError(f'Unknown token type {c}')
 
     def scanHexadecimal(self, c, chars):
         ret = c
@@ -694,7 +708,7 @@ class PPMACProject(object):
             filePath = f'{dir}/{name}'
             self.extension = os.path.splitext(filePath)[1]
             self.contents = proj.getFileContents(filePath)
-            self.sha256 = None  # calculate sha256sum of file
+            #self.sha256 = None  # calculate sha256sum of file
 
     def __init__(self, source, root, tempDir=None):
         # absolute path the project directory
@@ -1557,12 +1571,13 @@ class PPMACHardwareWriteRead(object):
         # Store data structures in ppmac object
         dataStructures = self.createDataStructuresFromSymbolsTables(self.pp_swtlbs_symfiles, self.local_db_path)
         validDataStructures = self.checkDataStructuresValidity(dataStructures)
+        # Store the dictionary of data strutures in the ppmac object
         self.ppmacInstance.dataStructures = \
             self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
         elementsToIgnore = self.generateIgnoreSet(pathToIgnoreFile)
         #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
-        #                                                          recordTimings=True, timeout=10.0)
+        #                                                          recordTimings=True) #timeout=10.0
         #self.ppmacInstance.activeElements = \
         #    self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
         bufferedProgramsInfo = self.getBufferedProgramsInfo()
@@ -1574,7 +1589,27 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.subPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['SubProg'])
         self.ppmacInstance.motionPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Motion'])
         self.ppmacInstance.plcPrograms = self.copyDict(self.ppmacInstance.Program, bufferedProgramsInfo['Plc'])
-        #coordSystemAxisDefs = self.getCoordSystemAxisDefinitions()
+        coordSystemAxisDefs = self.getCoordSystemAxisDefinitions()
+
+    def getCoordSystemAxisDefinitions(self):
+        coordSystemAxisDefinitions = {}
+        currentCoordSystem = self.sendCommand('&')
+        motorDefinitions = self.sendCommand(f'#*->')
+        for motorDefinition in motorDefinitions:
+            motorDefinitionTokens = PPMACLexer(motorDefinition)
+            firstToken = motorDefinitionTokens.pop()[1]
+            if firstToken == '&':
+                currentCoordSystem = motorDefinitionTokens.pop()[1]
+                motorDefinitionTokens.pop()[1]
+            elif firstToken is not '#':
+                raise IOError(f'Unexpected token \'{firstToken}\'')
+            motorAxesDefinition = f'&{currentCoordSystem}#{motorDefinitionTokens.getTokensAsString()}'
+            if int(currentCoordSystem) in coordSystemAxisDefinitions:
+                coordSystemAxisDefinitions[int(currentCoordSystem)].append(motorAxesDefinition)
+            else:
+                coordSystemAxisDefinitions[int(currentCoordSystem)] = []
+        print(coordSystemAxisDefinitions)
+        return coordSystemAxisDefinitions
 
     def appendBufferedProgramsInfoWithListings(self, bufferedProgramsInfo):
         for programType in bufferedProgramsInfo.keys():
@@ -1722,7 +1757,7 @@ class PowerPMAC:
             self.listing = listing
             self.dataStructureNames = set(ppmac.dataStructures.keys())
             self.lexer = PPMACLexer('\n'.join(self.listing), self.dataStructureNames)
-            self.tokenList = self.lexer.tokens
+            self.tokens = self.lexer.tokens
 
         def printInfo(self):
             return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n'
@@ -1948,10 +1983,11 @@ class PPMACanalyse:
     @connectDisconnect
     def download(self):
         # Copy usrflash files into ppmac
-        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/Project')
+        #executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/Project')
+        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/*')
         scpFromLocalToPowerPMAC(f'{self.backupDir}/Project', '/var/ftp/usrflash/', recursive=True)
-        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
-        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
+        scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
         # Make directory that projpp will log to
         executeRemoteShellCommand('mkdir -p /var/ftp/usrflash/Project/Log')
         # Looks like everything in project dir needs to be rwx
@@ -1959,11 +1995,7 @@ class PPMACanalyse:
         # Finally execute a projpp to parse and load new project
         executeRemoteShellCommand('projpp -l')
 
-#        if len(ppmacArgs.recover) > 1:
-#            if ppmacArgs.recover[1] not in self.operationTypes:
-#                raise IOError(f'Unrecognised backup option {ppmacArgs.recover[1]}, '
-#                              f'should be "all","active" or "project".')
-#            self.operationType = ppmacArgs.recover[1]
+
 
 if __name__ == '__main__':
     start = time.time()
@@ -1972,7 +2004,6 @@ if __name__ == '__main__':
     sshClient = dls_pmacremote.PPmacSshInterface()
     analysis = PPMACanalyse(ppmacArgs)
 
-    lex = PPMACLexer("")
     #sshClient = dls_pmacremote.PPmacSshInterface()
     #sshClient.port = 1025
     ##sshClient.hostname = '10.2.2.77'
