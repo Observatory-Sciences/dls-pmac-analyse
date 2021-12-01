@@ -824,7 +824,7 @@ class PPMACCompare(object):
         self.progNamesOnlyInA = progNamesA - progNamesB
         self.progNamesOnlyInB = progNamesB - progNamesA
         self.progNamesInAandB = progNamesA & progNamesB
-        with open(f'{outputDir}/missingProgs.txt', 'w+') as writeFile:
+        with open(f'{outputDir}/missingPrograms.txt', 'w+') as writeFile:
             writeFile.write(f'@@ Programs in source \'{self.ppmacInstanceA.source}\' but not source '
                             f'\'{self.ppmacInstanceB.source}\'\n')
             for progName in self.progNamesOnlyInA:
@@ -836,11 +836,38 @@ class PPMACCompare(object):
         for progName in self.progNamesInAandB:
             filePath = f'{outputDir}/{progName}.diff'
             with open(filePath, 'w+') as writeFile:
-                writeFile.writelines(difflib.unified_diff(programsA[progName].listings,
-                                                         programsB[progName].listings,
+                writeFile.writelines(difflib.unified_diff(programsA[progName].listings, programsB[progName].listings,
                                                          fromfile=f'{self.ppmacInstanceA.source}: {progName}',
                                                          tofile=f'{self.ppmacInstanceB.source}: {progName}',
                                                          lineterm='\n'))
+
+    def compareCoordSystemAxesDefinitions(self):
+        outputDir = f'{self.compareDir}/active/axes'
+        os.makedirs(outputDir, exist_ok=True)
+        coordSysDefsA = self.ppmacInstanceA.coordSystemDefs
+        coordSysDefsB = self.ppmacInstanceB.coordSystemDefs
+        coordSysNumbersA = set(coordSysDefsA.keys())
+        coordSysNumbersB = set(coordSysDefsB.keys())
+        self.coordSystemsOnlyInA = coordSysNumbersA - coordSysNumbersB
+        self.coordSystemsOnlyInB = coordSysNumbersB - coordSysNumbersA
+        self.coordSystemsInAandB = coordSysNumbersA & coordSysNumbersB
+        with open(f'{outputDir}/missingCoordSystems.txt', 'w+') as writeFile:
+            writeFile.write(f'@@ Coordinate Systems defined in source \'{self.ppmacInstanceA.source}\' but not source '
+                            f'\'{self.ppmacInstanceB.source}\'\n')
+            for coordSysNumber in self.coordSystemsOnlyInA:
+                writeFile.write(f'>>>> &{coordSysNumber}\n')
+            writeFile.write(f'@@ Coordinate Systems defined in source \'{self.ppmacInstanceB.source}\' but not source '
+                            f'\'{self.ppmacInstanceA.source}\'\n')
+            for coordSysNumber in self.coordSystemsOnlyInB:
+                writeFile.write(f'>>>> &{coordSysNumber}\n')
+        for coordSysNumber in self.coordSystemsInAandB:
+            filePath = f'{outputDir}/cs{coordSysNumber}Axes.diff'
+            with open(filePath, 'w+') as writeFile:
+                writeFile.writelines(difflib.unified_diff(coordSysDefsA[coordSysNumber].axisDefs,
+                                                          coordSysDefsB[coordSysNumber].axisDefs,
+                                                          fromfile=f'{self.ppmacInstanceA.source}: coord system {coordSysNumber}',
+                                                          tofile=f'{self.ppmacInstanceB.source}: coord system {coordSysNumber}',
+                                                          lineterm='\n'))
 
     def writeActiveElemDifferencesToFile(self):
         outputDir = f'{self.compareDir}/active'
@@ -1751,8 +1778,18 @@ class PowerPMAC:
         def __init__(self, name='', value='', category='', dataStructure='', indices=[]):
             self.name = name
             self.value = value
-            self.category = category
-            self.dataStructure = dataStructure
+            if dataStructure == '':
+                self.dataStructure = re.sub('\[([0-9]+)\]', '[]', self.name)
+            else:
+                self.dataStructure = dataStructure
+            if category == '':
+                if self.dataStructure.find('.') == -1:
+                    category = self.dataStructure
+                else:
+                    category = self.dataStructure[0:self.dataStructure.find('.')]
+                self.category = category.replace('[]', '')
+            else:
+                self.category = category
             self.indices = indices
 
         def __str__(self):
@@ -1765,7 +1802,8 @@ class PowerPMAC:
             self.csNumber = csNumber # coordinate system number
             self.motors = [] #motors # list of motors assigned to CS
             self.motor = {} #motorDef # dict definition of each motor in terms of the axes
-            self.parseAxesDefinitions(definitions)
+            self.axisDefs = definitions
+            self.parseAxesDefinitions(self.axisDefs)
             self.forward = forward # instance of _KinematicTransform. Not implemented
             self.inverse = inverse # instance of _KinematicTransform. Not implemented
 
@@ -1978,9 +2016,7 @@ class PPMACanalyse:
         if type == 'all' or type == 'project':
             savedProjectDir = f'{self.backupDir}/project/saved'
             os.makedirs(savedProjectDir, exist_ok=True)
-            print('here')
             scpFromPowerPMACtoLocal('/opt/ppmac/usrflash/*', savedProjectDir, recursive=True)
-            print('now here')
             activeProjectDir = f'{self.backupDir}/project/active'
             os.makedirs(activeProjectDir, exist_ok=True)
             scpFromPowerPMACtoLocal('/var/ftp/usrflash/*', activeProjectDir, recursive=True)
