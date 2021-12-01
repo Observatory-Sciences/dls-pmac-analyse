@@ -8,6 +8,7 @@ import numpy as np
 import logging
 import difflib
 import argparse
+import sys
 
 def timer(func):
     def measureExecutionTime(*args, **kwargs):
@@ -820,7 +821,9 @@ class PPMACCompare(object):
                                self.ppmacInstanceB.plcPrograms, self.ppmacInstanceB.forwardPrograms,
                                self.ppmacInstanceB.inversePrograms)
         progNamesA = set(programsA.keys())
+        print('progs in A:', progNamesA)
         progNamesB = set(programsB.keys())
+        print('progs in B:', progNamesB)
         self.progNamesOnlyInA = progNamesA - progNamesB
         self.progNamesOnlyInB = progNamesB - progNamesA
         self.progNamesInAandB = progNamesA & progNamesB
@@ -836,10 +839,16 @@ class PPMACCompare(object):
         for progName in self.progNamesInAandB:
             filePath = f'{outputDir}/{progName}.diff'
             with open(filePath, 'w+') as writeFile:
-                writeFile.writelines(difflib.unified_diff(programsA[progName].listings, programsB[progName].listings,
+                print(programsA[progName].listing)
+                print(programsB[progName].listing)
+                writeFile.writelines(difflib.unified_diff(programsA[progName].listing, programsB[progName].listing,
                                                          fromfile=f'{self.ppmacInstanceA.source}: {progName}',
                                                          tofile=f'{self.ppmacInstanceB.source}: {progName}',
                                                          lineterm='\n'))
+                print(sys.stdout.writelines(difflib.unified_diff(programsA[progName].listing, programsB[progName].listing,
+                                                         fromfile=f'{self.ppmacInstanceA.source}: {progName}',
+                                                         tofile=f'{self.ppmacInstanceB.source}: {progName}',
+                                                         lineterm='\n')))
 
     def compareCoordSystemAxesDefinitions(self):
         outputDir = f'{self.compareDir}/active/axes'
@@ -982,7 +991,8 @@ class PPMACRepositoryWriteRead(object):
             fileName = progsDir + '/' + progName.replace('&', 'CS')
             with open(fileName, 'w+') as writeFile:
                 writeFile.write(ppmacProgs[progName].printInfo())
-                writeFile.write('\n'.join(ppmacProgs[progName].listing))
+                for line in ppmacProgs[progName].listing:
+                    writeFile.write(line)
 
     def writeAllPrograms(self):
         progsDir = self.repositoryPath + '/active/programs'
@@ -1017,15 +1027,15 @@ class PPMACRepositoryWriteRead(object):
         csAxesDefsPath = self.repositoryPath + '/active/axes'
         csAxesFileNames = [file for file in os.listdir(csAxesDefsPath) if os.path.isfile(f'{csAxesDefsPath}/{file}')]
         for fileName in csAxesFileNames:
-            fileName = f'{csAxesDefsPath}/{fileName}'
-            csNumber = re.search(r'\d+', fileName).group()
+            file = f'{csAxesDefsPath}/{fileName}'
+            csNumber = str(re.search(r'\d+', fileName).group())
             self.ppmacInstance.coordSystemDefs[csNumber] = [csNumber, []]
-            with open(fileName, 'r') as readFile:
+            with open(file, 'r') as readFile:
                 motorDefs = []
                 for line in readFile:
                     csNumber_ = PPMACLexer(line).pop(1)[1]
                     if csNumber is not csNumber_:
-                        raise IOError(f'Inconsistent coordinate system numbers in file: {fileName}')
+                        raise IOError(f'Inconsistent coordinate system numbers in file: {file}')
                     motorDefinition = line.rstrip('\n')
                     motorDefs.append(motorDefinition)
             self.ppmacInstance.coordSystemDefs[csNumber] = self.ppmacInstance.CoordSystemDefinition(csNumber, motorDefs)
@@ -1041,24 +1051,25 @@ class PPMACRepositoryWriteRead(object):
                 progType, progName, progSize, progOffset = (header[i] for i in [0, 1, 3, 5])
                 progListing = []
                 for line in readFile:
-                    progListing.append(line.rstrip('\n'))
+                    #progListing.append(line.rstrip('\n'))
+                    progListing.append(line)
             if progType == 'Motion':
                 self.ppmacInstance.motionPrograms[progName] = \
                     self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
             elif progType == 'SubProg':
                 self.ppmacInstance.subPrograms[progName] = \
                     self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
-            elif progType == 'PlcProg':
+            elif progType == 'Plc':
                 self.ppmacInstance.plcPrograms[progName] = \
                     self.ppmacInstance.Program(progName, progOffset, progSize, progType, progListing)
             elif progType == 'Forward':
                 progCoordSystem = header[7]
                 self.ppmacInstance.forwardPrograms[progName] = \
-                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem)
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem, progListing)
             elif progType == 'Inverse':
                 progCoordSystem = header[7]
                 self.ppmacInstance.inversePrograms[progName] = \
-                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem)
+                    self.ppmacInstance.KinematicTransform(progName, progSize, progOffset, progType, progCoordSystem, progListing)
 
 
 class PPMACHardwareWriteRead(object):
@@ -1620,10 +1631,10 @@ class PPMACHardwareWriteRead(object):
             self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
         elementsToIgnore = self.generateIgnoreSet(pathToIgnoreFile)
-        activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
-                                                                  recordTimings=True) #timeout=10.0
-        self.ppmacInstance.activeElements = \
-            self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
+        #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
+        #                                                          recordTimings=True) #timeout=10.0
+        #self.ppmacInstance.activeElements = \
+        #    self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
         bufferedProgramsInfo = self.getBufferedProgramsInfo()
         self.appendBufferedProgramsInfoWithListings(bufferedProgramsInfo)
         self.ppmacInstance.forwardPrograms = \
@@ -1666,13 +1677,17 @@ class PPMACHardwareWriteRead(object):
         for programType in bufferedProgramsInfo.keys():
             for programInfo in bufferedProgramsInfo[programType].values():
                 programName = programInfo[0]
+                programListing = []
                 if programType == 'Forward' or programType == 'Inverse':
                     progCoordSystem = programInfo[4]
-                    programListing = self.sendCommand(f'&{progCoordSystem} list {programType}')
-                    programInfo.append(programListing)
+                    #programListing = self.sendCommand(f'&{progCoordSystem} list {programType}')
+                    listing = self.sendCommand(f'&{progCoordSystem} list {programType}')
                 else:
-                    programListing = self.sendCommand(f'list {programName}')
-                    programInfo.append(programListing)
+                    #programListing = self.sendCommand(f'list {programName}')
+                    listing = self.sendCommand(f'list {programName}')
+                for line in listing:
+                    programListing.append(line + '\n')
+                programInfo.append(programListing)
 
     def getBufferedProgramsInfo(self):
         motion, subProgs, plcs, inverse, forward = ({} for _ in range(5))
@@ -1829,8 +1844,9 @@ class PowerPMAC:
             self.type = type
             self.listing = listing
             self.dataStructureNames = set(ppmac.dataStructures.keys())
-            self.lexer = PPMACLexer('\n'.join(self.listing), self.dataStructureNames)
-            self.tokens = self.lexer.tokens
+            # Currently dataStructures are not read from the repository
+            #self.lexer = PPMACLexer('\n'.join(self.listing), self.dataStructureNames)
+            #self.tokens = self.lexer.tokens
 
         def printInfo(self):
             return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n'
@@ -1954,6 +1970,8 @@ class PPMACanalyse:
         else:
             repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, self.compareSourceA)
             repositoryWriteRead.readAndStoreActiveElements()
+            repositoryWriteRead.readAndStoreBufferedPrograms()
+            repositoryWriteRead.readAndStoreCSAxesDefinitions()
             projectASaved = PPMACProject('repository', f'{self.compareSourceA}/project/saved')
             projectAActive = PPMACProject('repository', f'{self.compareSourceA}/project/active')
         if isValidNetworkInterface(self.compareSourceB):
@@ -1968,12 +1986,15 @@ class PPMACanalyse:
         else:
             repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB, self.compareSourceB)
             repositoryWriteRead.readAndStoreActiveElements()
+            repositoryWriteRead.readAndStoreBufferedPrograms()
+            repositoryWriteRead.readAndStoreCSAxesDefinitions()
             projectBSaved = PPMACProject('repository', f'{self.compareSourceB}/project/saved')
             projectBActive = PPMACProject('repository', f'{self.compareSourceB}/project/active')
         ppmacComparison = PPMACCompare(ppmacA, ppmacB, self.compareDir)
         ppmacComparison.compareActiveElements()
         ppmacComparison.writeActiveElemDifferencesToFile()
         ppmacComparison.comparePrograms()
+        ppmacComparison.compareCoordSystemAxesDefinitions()
         savedProjComparison = ProjectCompare(projectASaved, projectBSaved)
         savedProjDiffPath = f'{self.compareDir}/project/saved'
         os.makedirs(savedProjDiffPath, exist_ok=True)
