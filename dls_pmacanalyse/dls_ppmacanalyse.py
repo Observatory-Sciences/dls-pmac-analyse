@@ -1,5 +1,5 @@
 import dls_pmaclib.dls_pmacremote
-#from scp import SCPClient
+from scp import SCPClient
 import time
 import re
 import warnings
@@ -278,9 +278,9 @@ class PPMACLexer(object):
         """
         self.tokens = []
         self.chars = self.Chars(chars)
-        print(f'Text is \"{chars}\"')
+        #print(f'Text is \"{chars}\"')
         for token in self.lex(self.chars):
-            print(f'Adding token: {token}')
+            #print(f'Adding token: {token}')
             self.tokens.append(token)
 
     def lex(self, chars):
@@ -728,7 +728,7 @@ class PPMACHardwareWriteRead(object):
 
     def getCommandReturnInt(self, cmd):
         (cmdReturn, status) = sshClient.sendCommand(cmd)
-        print('here')
+        #print('here')
         if status:
             cmdReturnInt = int(cmdReturn[0:])
         else:

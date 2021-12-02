@@ -3,11 +3,10 @@ from mock import patch, Mock
 import os
 
 from dls_pmacanalyse import dls_ppmacanalyse
+from dls_pmaclib import dls_pmacremote
 
-# from dls_pmaclib import dls_pmacremote
 
-
-class MockPpmac:
+class DummyPpmac:
     def __init__(self):
         self.source = "unknown"
         self.Pvariables = ["var"]
@@ -18,7 +17,7 @@ class MockPpmac:
         self.activeElements = {"test": None}
 
 
-class MockProj:
+class DummyProj:
     class File:
         def __init__(self):
             self.contents = None
@@ -27,8 +26,27 @@ class MockProj:
         self.files = {
             "file1": self.File(),
             "file2": self.File(),
-        }  # should hold file objects not None
+        }
         self.source = "repository"
+
+
+class DummyPpmacArgs:
+    def __init__(self):
+        self.interface = None
+        self.backup = None
+        self.compare = ["test1", "test2"]
+        self.recover = None
+        self.download = None
+        self.resultsdir = None
+
+
+# class TestPpmacLexer(unittest.TestCase):
+#   def setUp(self):
+#      self.obj = dls_ppmacanalyse.PPMACLexer(None)
+
+# def test_init(self):
+# def test_lex(self):
+# def test_scanSymbol(self):
 
 
 class TestPpmacProject(unittest.TestCase):
@@ -81,8 +99,8 @@ class TestPpmacProjectCompare(unittest.TestCase):
         test_file = "/tmp/test_diff.txt"
         with open(test_file, "w") as f:
             pass
-        self.obj.projectA = MockProj()
-        self.obj.projectB = MockProj()
+        self.obj.projectA = DummyProj()
+        self.obj.projectB = DummyProj()
         self.obj.compareProjectFiles("/tmp/test_diff.txt")
         assert self.obj.filesOnlyInA == {}
         assert self.obj.filesOnlyInB == {}
@@ -122,12 +140,13 @@ class TestPpmacCompare(unittest.TestCase):
         self.obj.setPPMACInstanceB(mock_proj)
         assert self.obj.ppmacInstanceB == mock_proj
 
-    #def test_compareActiveElements(self):
-    #def test_writeActiveElemDifferencesToFile(self):
+    # def test_compareActiveElements(self):
+    # def test_writeActiveElemDifferencesToFile(self):
+
 
 class TestPpmacRepositoryWriteRead(unittest.TestCase):
     def setUp(self):
-        self.mock_ppmac = MockPpmac()
+        self.mock_ppmac = DummyPpmac()
         self.obj = dls_ppmacanalyse.PPMACRepositoryWriteRead(self.mock_ppmac)
 
     def test_init(self):
@@ -136,7 +155,7 @@ class TestPpmacRepositoryWriteRead(unittest.TestCase):
         assert self.obj.repositoryPath == "repository"
 
     def test_setPPMACInstance(self):
-        mock_ppmac = MockPpmac()
+        mock_ppmac = DummyPpmac()
         self.obj.setPPMACInstance(mock_ppmac)
         assert self.obj.ppmacInstance == mock_ppmac
         assert self.obj.ppmacInstance.source == "repository"
@@ -221,42 +240,43 @@ class TestPpmacRepositoryWriteRead(unittest.TestCase):
         f.close()
         os.remove(test_file)
 
+    # def test_readAndStoreBufferedPrograms(self):
 
-    #def test_writePrograms(self):
-    #def test_writeAllPrograms(self):
-    #def test_readAndStoreActiveElements(self):
-    #def test_readAndStoreBufferedPrograms(self):
 
-class TestPpmacRepositoryWriteRead(unittest.TestCase):
+class TestPpmacHardwareWriteRead(unittest.TestCase):
     @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.readSysMaxes")
     def setUp(self, mock_readsys):
-        self.mock_ppmac = MockPpmac()
+        self.mock_ppmac = DummyPpmac()
         self.obj = dls_ppmacanalyse.PPMACHardwareWriteRead(self.mock_ppmac)
 
     def test_init(self):
         assert self.obj.ppmacInstance == self.mock_ppmac
-        assert self.obj.ppmacInstance.source == 'hardware'
-        assert self.obj.remote_db_path == '/var/ftp/usrflash/Database'
-        assert self.obj.local_db_path == './tmp/Database'
-        assert self.obj.pp_swtbl0_txtfile == 'pp_swtbl0.txt'
-        assert self.obj.pp_swtlbs_symfiles == ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
+        assert self.obj.ppmacInstance.source == "hardware"
+        assert self.obj.remote_db_path == "/var/ftp/usrflash/Database"
+        assert self.obj.local_db_path == "./tmp/Database"
+        assert self.obj.pp_swtbl0_txtfile == "pp_swtbl0.txt"
+        assert self.obj.pp_swtlbs_symfiles == [
+            "pp_swtbl1.sym",
+            "pp_swtbl2.sym",
+            "pp_swtbl3.sym",
+        ]
 
     def test_setPPMACInstance(self):
-        mock_ppmac = MockPpmac()
+        mock_ppmac = DummyPpmac()
         self.obj.setPPMACInstance(mock_ppmac)
         assert self.obj.ppmacInstance == mock_ppmac
-        assert self.obj.ppmacInstance.source == 'hardware'
+        assert self.obj.ppmacInstance.source == "hardware"
 
-    @unittest.skip("need to mock sshClient sendCommand")
-    @patch("dls_pmaclib.dls_pmacremote.PPmacSshInterface.sendCommand")
-    #@patch("dls_pmacanalyse.dls_ppmacanalyse.sshClient.sendCommand")
-    #@patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.sshClient.sendCommand")
-    def test_getCommandReturnInt(self, mock_sendcmd):
-        mock_sendcmd.return_value = ("0", True)
+    def test_getCommandReturnInt(self):
+        dls_ppmacanalyse.sshClient = Mock()
+        attrs = {"sendCommand.return_value": ("0", True)}
+        dls_ppmacanalyse.sshClient.configure_mock(**attrs)
         assert self.obj.getCommandReturnInt("cmd") == 0
-        mock_sendcmd.assert_called_with("cmd")
+        dls_ppmacanalyse.sshClient.sendCommand.assert_called_with("cmd")
 
-    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getCommandReturnInt")
+    @patch(
+        "dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getCommandReturnInt"
+    )
     def test_readSysMaxes(self, mock_getint):
         mock_getint.return_value = 1
         self.obj.readSysMaxes()
@@ -268,14 +288,20 @@ class TestPpmacRepositoryWriteRead(unittest.TestCase):
         assert self.obj.ppmacInstance.numberOfECATs == 1
         assert self.obj.ppmacInstance.numberOfEncTables == 1
 
-    @unittest.skip("need to mock sshClient sendCommand")
-    @patch("dls_pmaclib.dls_pmacremote.PPmacSshInterface.sendCommand")
-    def test_sendCommand(self, mock_sendcmd):
-        mock_sendcmd.return_value = ("0\r0\r0\r\x06", True)
-        assert self.obj.sendCommand("cmd") == ["0","0","0"]
-        mock_sendcmd.assert_called_with("cmd")
+    def test_sendCommand(self):
+        dls_ppmacanalyse.sshClient = Mock()
+        attrs = {"sendCommand.return_value": ("0\r0\r0\r\x06", True)}
+        dls_ppmacanalyse.sshClient.configure_mock(**attrs)
+        assert self.obj.sendCommand("cmd") == ["0", "0", "0"]
+        dls_ppmacanalyse.sshClient.sendCommand.assert_called_with("cmd")
 
-    #def test_swtblFileToList(self):
+    def test_swtblFileToList(self):
+        test_file = "/tmp/test.txt"
+        with open(test_file, mode="w") as f:
+            f.write("test\n\x06")
+        ret = self.obj.swtblFileToList(test_file)
+        assert ret == [["test"], ["\x06"]]
+        os.remove(test_file)
 
     def test_getDataStructureCategory_1(self):
         ret = self.obj.getDataStructureCategory("test")
@@ -293,9 +319,15 @@ class TestPpmacRepositoryWriteRead(unittest.TestCase):
         ret = self.obj.ignoreDataStructure("another.test[]", [])
         assert ret == False
 
-    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.ignoreDataStructure")
-    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getDataStructureCategory")
-    def test_fillDataStructureIndices_i_ignore_true(self, mock_getcategory, mock_ignore):
+    @patch(
+        "dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.ignoreDataStructure"
+    )
+    @patch(
+        "dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getDataStructureCategory"
+    )
+    def test_fillDataStructureIndices_i_ignore_true(
+        self, mock_getcategory, mock_ignore
+    ):
         data_structure = "test.this[]"
         mock_getcategory.return_value = "test"
         mock_ignore.return_value = True
@@ -303,16 +335,85 @@ class TestPpmacRepositoryWriteRead(unittest.TestCase):
         mock_getcategory.assert_called_with("test.this[]")
         mock_ignore.assert_called_with("test.this[0:]", None)
 
-    @unittest.skip("need to mock sshClient sendCommand")
-    @patch("dls_pmaclib.dls_pmacremote.PPmacSshInterface.sendCommand")
-    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.ignoreDataStructure")
-    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getDataStructureCategory")
-    def test_fillDataStructureIndices_i_ignore_false_illegalcmd(self, mock_getcategory, mock_ignore, mock_sendcmd):
+    @patch(
+        "dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.ignoreDataStructure"
+    )
+    @patch(
+        "dls_pmacanalyse.dls_ppmacanalyse.PPMACHardwareWriteRead.getDataStructureCategory"
+    )
+    def test_fillDataStructureIndices_i_ignore_false_illegalcmd(
+        self, mock_getcategory, mock_ignore
+    ):
+        dls_ppmacanalyse.sshClient = Mock()
+        attrs = {"sendCommand.return_value": ("ILLEGAL\rNone", True)}
+        dls_ppmacanalyse.sshClient.configure_mock(**attrs)
         data_structure = "test.this[]"
         mock_getcategory.return_value = "test"
         mock_ignore.return_value = False
-        mock_sendcmd.return_value = ["ILLEGAL", None]
         self.obj.fillDataStructureIndices_i(data_structure, None, None)
         mock_getcategory.assert_called_with("test.this[]")
-        mock_ignore.assert_called_with("test.this[0:]", None)
-        mock_sendcmd.assert_called_with("test.this[0]")
+        mock_ignore.assert_called_with("test.this[0]", None)
+        dls_ppmacanalyse.sshClient.sendCommand.assert_called_with("test.this[0]")
+
+    # def test_fillDataStructureIndices_ij(self):
+    # def test_fillDataStructureIndices_ijk(self):
+    # def test_fillDataStructureIndices_ijkl(self):
+    # def test_createDataStructuresFromSymbolsTables(self):
+    # def test_getActiveElementsFromDataStructures(self):
+    # def test_expandSplicedIndices(self):
+    # def test_readAndStoreActiveState(self):
+    # def test_getBufferedProgramsInfo(self):
+    # def test_test_getActiveElementsFromDataStructures
+
+
+class TestPowerPMAC(unittest.TestCase):
+    def setUp(self):
+        self.obj = dls_ppmacanalyse.PowerPMAC()
+
+    def test_init(self):
+        assert self.obj.source == "unknown"
+        assert self.obj.dataStructures == {}
+        assert self.obj.activeElements == {}
+        assert self.obj.motionPrograms == {}
+        assert self.obj.subPrograms == {}
+        assert self.obj.plcPrograms == {}
+        assert self.obj.forwardPrograms == {}
+        assert self.obj.inversePrograms == {}
+        assert self.obj.coordSystemDefs == {}
+
+
+class TestPPMACanalyse(unittest.TestCase):
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACanalyse.compare")
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.PPMACanalyse.processCompareOptions")
+    @patch("logging.basicConfig")
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.createEmptyDir")
+    def setUp(self, mock_create, mock_log, mock_opts, mock_comp):
+        self.ppmacArgs = DummyPpmacArgs()
+        self.obj = dls_ppmacanalyse.PPMACanalyse(self.ppmacArgs)
+
+    def test_init(self):
+        assert self.obj.resultsDir == "ppmacAnalyse"
+        assert self.obj.verbosity == "info"
+        assert self.obj.ipAddress == "192.168.56.10"
+        assert self.obj.port == 1025
+        assert self.obj.operationType == "all"
+        assert self.obj.operationTypes == ["all", "active", "project"]
+        assert self.obj.backupDir == None
+        assert self.obj.reboot == False
+
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.fileExists")
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.createEmptyDir")
+    @patch("dls_pmacanalyse.dls_ppmacanalyse.isValidNetworkInterface")
+    def test_processCompareOptions(self, mock_valid, mock_create, mock_exists):
+        mock_valid.return_value = True
+        mock_exists.return_value = True
+        self.obj.processCompareOptions(self.ppmacArgs)
+        assert self.obj.compareSourceA == "test1"
+        assert self.obj.compareSourceB == "test2"
+        mock_valid.assert_called_with("test2")
+        mock_create.assert_called_with("ppmacAnalyse/compare")
+        mock_exists.assert_called_with("ignore/ignore")
+
+    # def test_compare(self):
+    # def test_processBackupOptions(self):
+    # def test_backup(self):
