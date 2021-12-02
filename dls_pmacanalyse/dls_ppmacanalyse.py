@@ -163,6 +163,16 @@ def mergeDicts(*dict_args):
         result.update(dictionary)
     return result
 
+def comparedicts(d1, d2):
+    d1Keys = set(d1.keys())
+    d2Keys = set(d2.keys())
+    shared_keys = d1Keys.intersection(d2Keys)
+    added = d1Keys - d2Keys
+    removed = d2Keys - d1Keys
+    modified = {o : (d1[o], d2[o]) for o in shared_keys if d1[o] != d2[o]}
+    same = set(o for o in shared_keys if d1[o] == d2[o])
+    return added, removed, modified, same
+
 recoveryCmds = \
 '''
 #!/bin/bash
@@ -821,9 +831,7 @@ class PPMACCompare(object):
                                self.ppmacInstanceB.plcPrograms, self.ppmacInstanceB.forwardPrograms,
                                self.ppmacInstanceB.inversePrograms)
         progNamesA = set(programsA.keys())
-        print('progs in A:', progNamesA)
         progNamesB = set(programsB.keys())
-        print('progs in B:', progNamesB)
         self.progNamesOnlyInA = progNamesA - progNamesB
         self.progNamesOnlyInB = progNamesB - progNamesA
         self.progNamesInAandB = progNamesA & progNamesB
@@ -832,23 +840,19 @@ class PPMACCompare(object):
                             f'\'{self.ppmacInstanceB.source}\'\n')
             for progName in self.progNamesOnlyInA:
                 writeFile.write(f'>>>> {progName}\n')
+                writeFile.write(f'{programsA[progName].printInfo()}\n')
             writeFile.write(f'@@ Programs in source \'{self.ppmacInstanceB.source}\' but not source '
                             f'\'{self.ppmacInstanceA.source}\'\n')
             for progName in self.progNamesOnlyInB:
                 writeFile.write(f'>>>> {progName}\n')
+                writeFile.write(f'{programsB[progName].printInfo()}\n')
         for progName in self.progNamesInAandB:
             filePath = f'{outputDir}/{progName}.diff'
             with open(filePath, 'w+') as writeFile:
-                print(programsA[progName].listing)
-                print(programsB[progName].listing)
                 writeFile.writelines(difflib.unified_diff(programsA[progName].listing, programsB[progName].listing,
                                                          fromfile=f'{self.ppmacInstanceA.source}: {progName}',
                                                          tofile=f'{self.ppmacInstanceB.source}: {progName}',
                                                          lineterm='\n'))
-                print(sys.stdout.writelines(difflib.unified_diff(programsA[progName].listing, programsB[progName].listing,
-                                                         fromfile=f'{self.ppmacInstanceA.source}: {progName}',
-                                                         tofile=f'{self.ppmacInstanceB.source}: {progName}',
-                                                         lineterm='\n')))
 
     def compareCoordSystemAxesDefinitions(self):
         outputDir = f'{self.compareDir}/active/axes'
@@ -865,18 +869,22 @@ class PPMACCompare(object):
                             f'\'{self.ppmacInstanceB.source}\'\n')
             for coordSysNumber in self.coordSystemsOnlyInA:
                 writeFile.write(f'>>>> &{coordSysNumber}\n')
+                writeFile.write(self.ppmacInstanceA.coordSystemDefs[coordSysNumber].printInfo())
             writeFile.write(f'@@ Coordinate Systems defined in source \'{self.ppmacInstanceB.source}\' but not source '
                             f'\'{self.ppmacInstanceA.source}\'\n')
             for coordSysNumber in self.coordSystemsOnlyInB:
                 writeFile.write(f'>>>> &{coordSysNumber}\n')
+                writeFile.write(self.ppmacInstanceB.coordSystemDefs[coordSysNumber].printInfo())
         for coordSysNumber in self.coordSystemsInAandB:
             filePath = f'{outputDir}/cs{coordSysNumber}Axes.diff'
             with open(filePath, 'w+') as writeFile:
-                writeFile.writelines(difflib.unified_diff(coordSysDefsA[coordSysNumber].axisDefs,
-                                                          coordSysDefsB[coordSysNumber].axisDefs,
-                                                          fromfile=f'{self.ppmacInstanceA.source}: coord system {coordSysNumber}',
-                                                          tofile=f'{self.ppmacInstanceB.source}: coord system {coordSysNumber}',
-                                                          lineterm='\n'))
+                added, removed, modified, same = \
+                    comparedicts(coordSysDefsA[coordSysNumber].motor, coordSysDefsB[coordSysNumber].motor)
+                for motorNumber in modified:
+                    writeFile.write(f'@@ Motor {motorNumber} @@\n{self.ppmacInstanceA.source} definition = '
+                                    f'&{coordSysNumber}#{motorNumber}->{modified[motorNumber][0]}\n'
+                                    f'{self.ppmacInstanceB.source} definition = '
+                                    f'&{coordSysNumber}#{motorNumber}->{modified[motorNumber][1]}\n')
 
     def writeActiveElemDifferencesToFile(self):
         outputDir = f'{self.compareDir}/active'
@@ -996,7 +1004,6 @@ class PPMACRepositoryWriteRead(object):
 
     def writeAllPrograms(self):
         progsDir = self.repositoryPath + '/active/programs'
-        #createEmptyDir(progsDir)
         os.makedirs(progsDir, exist_ok=True)
         self.writePrograms(self.ppmacInstance.motionPrograms, progsDir)
         self.writePrograms(self.ppmacInstance.subPrograms, progsDir)
@@ -1019,6 +1026,8 @@ class PPMACRepositoryWriteRead(object):
             for line in readFile:
                 line = line.split()
                 line = [item.strip() for item in line]
+                if line == '':
+                    continue
                 key = line[0]
                 value = line[0:] # need to deal with the list of indices which is tha last column(s)
                 self.ppmacInstance.activeElements[key] = self.ppmacInstance.ActiveElement(*value[0:5])
@@ -1033,6 +1042,9 @@ class PPMACRepositoryWriteRead(object):
             with open(file, 'r') as readFile:
                 motorDefs = []
                 for line in readFile:
+                    line = line.strip()
+                    if line == '':
+                        continue
                     csNumber_ = PPMACLexer(line).pop(1)[1]
                     if csNumber is not csNumber_:
                         raise IOError(f'Inconsistent coordinate system numbers in file: {file}')
@@ -1051,7 +1063,8 @@ class PPMACRepositoryWriteRead(object):
                 progType, progName, progSize, progOffset = (header[i] for i in [0, 1, 3, 5])
                 progListing = []
                 for line in readFile:
-                    #progListing.append(line.rstrip('\n'))
+                    if line.strip() == '':
+                        continue
                     progListing.append(line)
             if progType == 'Motion':
                 self.ppmacInstance.motionPrograms[progName] = \
@@ -1575,7 +1588,7 @@ class PPMACHardwareWriteRead(object):
             elif N_brackets == 4:
                 self.fillDataStructureIndices_ijkl(ds, activeElements, elementsToIgnore, timeout=timeout)
             else:
-                logging.info('Too many indexed substructures in data structure. Ignoring.')
+                logging.info(f'Too many indexed substructures in data structure \'{ds}\'. Ignoring.')
                 continue
             if recordTimings:
                 logging.info(ds + f'   time: {time.time() - loopStartTime} sec')
@@ -1664,13 +1677,13 @@ class PPMACHardwareWriteRead(object):
             #motor = motorDefinitionTokens.pop()[1] # motor number token
             #motorDefinitionTokens.pop() # '->' token
             #definition = motorDefinitionTokens.getTokensAsString() # remaining tokens define the motor in terms of axes
-            if int(currentCoordSystem) in coordSystemMotorDefinitions:
-                coordSystemMotorDefinitions[int(currentCoordSystem)][1].append(motorDefinition)
+            if currentCoordSystem in coordSystemMotorDefinitions:
+                coordSystemMotorDefinitions[currentCoordSystem][1].append(motorDefinition)
                 #coordSystemAxisDefinitions[int(currentCoordSystem)][1].append(motor) # list of motors assigned to CS
                 #coordSystemAxisDefinitions[int(currentCoordSystem)][2][motor] = definition # definition of each motor
             else:
                 #coordSystemAxisDefinitions[int(currentCoordSystem)] = [currentCoordSystem, [], {}]
-                coordSystemMotorDefinitions[int(currentCoordSystem)] = [currentCoordSystem, [motorDefinition]]
+                coordSystemMotorDefinitions[currentCoordSystem] = [currentCoordSystem, [motorDefinition]]
         return coordSystemMotorDefinitions
 
     def appendBufferedProgramsInfoWithListings(self, bufferedProgramsInfo):
@@ -1815,9 +1828,9 @@ class PowerPMAC:
     class CoordSystemDefinition:
         def __init__(self, csNumber=None, definitions=[], forward=None, inverse=None):
             self.csNumber = csNumber # coordinate system number
-            self.motors = [] #motors # list of motors assigned to CS
-            self.motor = {} #motorDef # dict definition of each motor in terms of the axes
-            self.axisDefs = definitions
+            self.motors = [] # list of motors assigned to CS
+            self.motor = {} # dict definition of each motor in terms of the axes
+            self.axisDefs = definitions # List of strings containing axes defs. I don't think these need to be sorted.
             self.parseAxesDefinitions(self.axisDefs)
             self.forward = forward # instance of _KinematicTransform. Not implemented
             self.inverse = inverse # instance of _KinematicTransform. Not implemented
@@ -1831,7 +1844,7 @@ class PowerPMAC:
                 self.motor[motorNum] = tokens.getTokensAsString()
 
         def printInfo(self):
-            return f'\n'.join([f'&{self.csNumber}#{key}->{value}' for key, value in self.motor.items()])
+            return ''.join([f'&{self.csNumber}#{key}->{value}\n' for key, value in self.motor.items()])
 
     def Program(self, name, size, offset, type, listing):
         return self._Program(self, name, size, offset, type, listing)
@@ -1849,7 +1862,10 @@ class PowerPMAC:
             #self.tokens = self.lexer.tokens
 
         def printInfo(self):
-            return f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n'
+            s = f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n' + \
+                ''.join(self.listing)
+            return s#f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n' \
+
 
     def KinematicTransform(self, name, size, offset, type, coordSystem, listing):
         return self._KinematicTransform(self, name, size, offset, type, coordSystem, listing)
