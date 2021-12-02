@@ -1915,8 +1915,7 @@ class PowerPMAC:
         # Gate2[i] has an unknown range of indices i
         # self.numberOfGate2ICs = ???
         # Gate3[i] can have i = 0,..,15 (software reference manual p.289)
-        # GateIo[i] can have i = 0,..,15 (software reference manual p.360), although
-        # for some reason i > 15 does not return an error
+        # GateIo[i] can have i = 0,..,15 (software reference manual p.360), although i > 15 does not return an error
 
 class PPMACanalyse:
     def __init__(self, ppmacArgs):
@@ -1936,7 +1935,6 @@ class PPMACanalyse:
         # Configure logger
         if ppmacArgs.resultsdir is not None:
             self.resultsDir = ppmacArgs.resultsdir[0]
-        #createEmptyDir(self.resultsDir)
         os.makedirs(self.resultsDir, exist_ok=True)
         logfile = self.resultsDir + '/' + 'ppmacanalyse.log'
         logging.basicConfig(filename=logfile, level=logging.INFO)
@@ -2092,11 +2090,9 @@ class PPMACanalyse:
     @connectDisconnect
     def download(self):
         # Copy usrflash files into ppmac
-        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/Project')
-        #executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/*')
-        scpFromLocalToPowerPMAC(f'{self.backupDir}/Project', '/var/ftp/usrflash/', recursive=True)
-        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Database', '/var/ftp/usrflash/', recursive=True)
-        #scpFromLocalToPowerPMAC(f'{self.backupDir}/Temp', '/var/ftp/usrflash/', recursive=True)
+        executeRemoteShellCommand(f'rm -rf /var/ftp/usrflash/Project/*')
+        for file in os.listdir(self.backupDir):
+            scpFromLocalToPowerPMAC(f'{self.backupDir}/{file}', '/var/ftp/usrflash/Project', recursive=True)
         # Make directory that projpp will log to
         executeRemoteShellCommand('mkdir -p /var/ftp/usrflash/Project/Log')
         # Looks like everything in project dir needs to be rwx
