@@ -2,13 +2,11 @@ import dls_pmacremote
 from scp import SCPClient
 import time
 import re
-import warnings
 import os
 import numpy as np
 import logging
 import difflib
 import argparse
-import sys
 
 def timer(func):
     def measureExecutionTime(*args, **kwargs):
@@ -18,7 +16,6 @@ def timer(func):
         return result
     return measureExecutionTime
 
-
 def connectDisconnect(func):
         def wrapped_func(self, *args):
             sshClient.port = self.port
@@ -27,19 +24,6 @@ def connectDisconnect(func):
             func(self, *args)
             sshClient.disconnect()
         return wrapped_func
-
-def createEmptyDir(dir):
-    if dir[0] == '/':
-        if os.environ['PWD'] not in dir:
-            raise IOError(f"Unable to delete directory {dir} as it is not in PWD")
-    os.system(f'rm -rf {dir}')
-    os.mkdir(dir)
-
-def removeFile(file):
-    if file[0] == '/':
-        if os.environ['PWD'] not in file:
-            raise IOError(f"Unable to delete directory {file} as it is not in PWD")
-    os.system(f'rm -rf {file}')
 
 def fileExists(file):
     return os.path.isfile(file)
@@ -112,7 +96,6 @@ def executeRemoteShellCommand(cmd):
 
 def scpFromPowerPMACtoLocal(source, destination, recursive=True):
     logging.info(f'scp files/dirs \'{source}\' from remote server into local dir \'{destination}\'.')
-    #print('look:', source, destination, recursive)
     try:
         scp = SCPClient(sshClient.client.get_transport(), sanitize=lambda x: x)
         scp.get(source, destination, recursive)
@@ -453,11 +436,6 @@ class PPMACLexer(object):
         otherTokens)
     spaces = ' \n\t\r'
     nonAlphaNumeric = {'=','+','-','*','/','%','<','>','&','|','^','!','~','$','#','?',':','\\','(',')','}','{','.',','}
-    #mathsChars = {'=','+','-','*','/','%','<','>','&','|','^','!','~'}
-    #operators = {key: 'operator' for key in ['+','-','*','/','%','<<','>>','&','|','^', '~']}
-    #assignment = {key: 'assignment' for key in ['=','+=','-=','*=','/=','%=','&=','|=','^=','>>=','<<=','++','--']}
-    #comparators = {key: 'comparator' for key in ['==','!=','<','>','<=','>=','~','!~','<>','!>','!<','&&','||','!']}
-    #maths = set({**operators, **assignment, **comparators})
 
     class Chars(object):
         def __init__(self, chars):
@@ -491,9 +469,7 @@ class PPMACLexer(object):
         self.extendedTokens = {token.lower() for token in extendedTokens}
         self.tokens = []
         self.chars = self.Chars(chars.lower())
-        #print(f'Text is \"{chars}\"')
         for token in self.lex(self.chars):
-            #print(f'Adding token: {token}')
             self.tokens.append(token)
 
     def pop(self, n=0):
@@ -515,8 +491,6 @@ class PPMACLexer(object):
             c = chars.moveNext()
             if c in PPMACLexer.spaces:
                 pass
-            #elif c in PPMACLexer.mathsChars:
-            #    yield (self.scanMathsChars(c, chars))
             elif c == '$':
                 yield("hex", self.scanHexadecimal(c, chars))
             elif c in ("'", '"'):
@@ -667,7 +641,6 @@ class PPMACProject(object):
             filePath = f'{dir}/{name}'
             self.extension = os.path.splitext(filePath)[1]
             self.contents = proj.getFileContents(filePath)
-            #self.sha256 = None  # calculate sha256sum of file
 
     def __init__(self, source, root, tempDir=None):
         # absolute path the project directory
@@ -685,7 +658,6 @@ class PPMACProject(object):
                 raise RuntimeError(f'Please define a temporary directory into which the project from '
                                    f'the ppmac will be copied.')
             self.root = tempDir
-            #createEmptyDir(f'{tempDir}/tmp')
             os.makedirs(tempDir, exist_ok=True)
             scpFromPowerPMACtoLocal(source=root, destination=tempDir, recursive=True)
         elif self.source != 'repository':
@@ -759,8 +731,6 @@ class ProjectCompare(object):
                                f'\'{self.projectA.source}\' @@\n')
             for projFileName in fileNamesOnlyInB:
                 writeFile.write(f'>>>> {projFileName}\n')
-            writeFile.write(f'@@ Project files in source \'{self.projectB.source}\' and source '
-                               f'\'{self.projectA.source}\' with different contents @@\n')
         for projFileName in fileNamesInAandB:
             projFileName_ = projFileName.split('/')[-1]
             diffFilePath = f'{diffDirPath}/{projFileName_}.diff'
@@ -818,8 +788,7 @@ class PPMACCompare(object):
         for elemName in self.elemNamesInAandB:
             self.activeElemsInAandB[elemName] = {'A':self.ppmacInstanceA.activeElements[elemName],
                                                  'B':self.ppmacInstanceB.activeElements[elemName]}
-            #print(f'{elemName} A = {self.ppmacInstanceA.activeElements[elemName].value}, ',
-            #      f'{elemName} B = {self.ppmacInstanceB.activeElements[elemName].value}')
+        self.writeActiveElemDifferencesToFile()
 
     def comparePrograms(self):
         outputDir = f'{self.compareDir}/active/programs'
@@ -924,7 +893,7 @@ class PPMACCompare(object):
                 valB = self.activeElemsInAandB[elemName]['B'].value
                 if valA != valB:
                     file = f'{self.compareDir}/active/{self.ppmacInstanceA.activeElements[elemName].category}.diff'
-                    diffFiles[file].write(f'@@ {elemName} @@\n{self.ppmacInstanceA.source} value = {valA}\n'
+                    diffFiles[file].write(f'>>>> {elemName} @@\n{self.ppmacInstanceA.source} value = {valA}\n'
                           f'{self.ppmacInstanceB.source} value = {valB}\n')
         finally:
             for file in diffFiles:
@@ -947,28 +916,6 @@ class PPMACRepositoryWriteRead(object):
     def setRepositoryPath(self, path):
         self.repositoryPath = path
 
-    def writeVars(self, vars, file):
-        with open(file, 'w+') as writeFile:
-            for var in vars:
-                writeFile.write(var.__str__() + '\n')
-
-    def writePvars(self):
-        file = self.repositoryPath + '/Pvars.txt'
-        self.writeVars(self.ppmacInstance.Pvariables, file)
-
-    def writeIvars(self):
-        file = self.repositoryPath + '/Ivars.txt'
-        self.writeVars(self.ppmacInstance.Ivariables, file)
-
-    def writeMvars(self):
-        file = self.repositoryPath + '/Mvars.txt'
-        self.writeVars(self.ppmacInstance.Mvariables, file)
-
-    def writeQvars(self):
-        for i in range(self.ppmacInstance.numberOfCoordSystems):
-            file = self.repositoryPath + f'/Qvars_CS{i}.txt'
-            self.writeVars(self.ppmacInstance.Qvariables[i], file)
-
     def writeActiveState(self):
         os.makedirs(self.repositoryPath + '/active', exist_ok=True)
         self.writeDataStructures()
@@ -980,13 +927,13 @@ class PPMACRepositoryWriteRead(object):
         file = self.repositoryPath + '/active/dataStructures.txt'
         with open(file, 'w+') as writeFile:
             for dataStructure in self.ppmacInstance.dataStructures:
-                writeFile.write(self.ppmacInstance.dataStructures[dataStructure].__str__() + '\n')
+                writeFile.write(self.ppmacInstance.dataStructures[dataStructure].printInfo() + '\n')
 
     def writeActiveElements(self):
         file = self.repositoryPath + '/active/activeElements.txt'
         with open(file, 'w+') as writeFile:
             for elem in self.ppmacInstance.activeElements:
-                writeFile.write(self.ppmacInstance.activeElements[elem].__str__() + '\n')
+                writeFile.write(self.ppmacInstance.activeElements[elem].printInfo() + '\n')
 
     def writePrograms(self, ppmacProgs, progsDir):
         """
@@ -1013,7 +960,6 @@ class PPMACRepositoryWriteRead(object):
 
     def writeCSAxesDefinitions(self):
         csAxesDefsPath = self.repositoryPath + '/active/axes'
-        #createEmptyDir(csAxesDefsPath)
         os.makedirs(csAxesDefsPath, exist_ok=True)
         for coordSystem in self.ppmacInstance.coordSystemDefs:
             fileName = f'{csAxesDefsPath}/cs{coordSystem}Axes'
@@ -1099,7 +1045,7 @@ class PPMACHardwareWriteRead(object):
         # Standard Data Structure symbols tables
         self.pp_swtlbs_symfiles = ['pp_swtbl1.sym', 'pp_swtbl2.sym', 'pp_swtbl3.sym']
         # Read maximum values for the various configuration parameters
-        self.readSysMaxes()
+        #self.readSysMaxes()
 
     def setPPMACInstance(self, ppmac):
         self.ppmacInstance = ppmac
@@ -1131,17 +1077,11 @@ class PPMACHardwareWriteRead(object):
         self.ppmacInstance.numberOfEncTables = self.getCommandReturnInt('Sys.MaxEncoders')
 
     def sendCommand(self, cmd):
-        start = time.time()
         (data, status) = sshClient.sendCommand(cmd)
-        tdiff = time.time() - start
         if not status:
             raise IOError('Cannot retrieve data structure: error communicating with PMAC')
         else:
             data = data.split("\r")[:-1]
-            # print(data)
-        # if 'error' in data[0]:
-        #    errMessage = 'Error reading data.'
-        #    raise IOError(errMessage + data[0])
         return data
 
     def swtblFileToList(self, pp_swtbl_file):
@@ -1186,9 +1126,7 @@ class PPMACHardwareWriteRead(object):
         """
         n = substructure.count('.')
         for _ in range(n + 1):
-            # print('Checking if the following structure is in the ignore list: ' + substructure)
             if substructure in elementsToIgnore:
-                # print('Ignoring data structure')
                 return True
             substructure = substructure[0:substructure.rfind('.')]
         return False
@@ -1219,9 +1157,9 @@ class PPMACHardwareWriteRead(object):
             if self.ignoreDataStructure(dataStructure_i, elementsToIgnore):
                 i += 1
                 continue
-            print(dataStructure_i)
+            #print(dataStructure_i)
             cmd_return = self.sendCommand(dataStructure_i)
-            print(cmd_return)
+            #print(cmd_return)
             if 'ILLEGAL' in cmd_return[0]:
                 cmd_accepted = False
             else:
@@ -1232,7 +1170,6 @@ class PPMACHardwareWriteRead(object):
                              f'Last i = {i}.')
                 return
             i += 1
-        # print(activeElements)
 
     def fillDataStructureIndices_ij(self, dataStructure, activeElements, elementsToIgnore, timeout=None):
         """
@@ -1272,9 +1209,9 @@ class PPMACHardwareWriteRead(object):
                 if self.ignoreDataStructure(dataStructure_ij.replace(f'[{i}]', '[]', 1), elementsToIgnore):
                     j += 1
                     continue
-                print(dataStructure_ij)
+                #print(dataStructure_ij)
                 cmd_return = self.sendCommand(dataStructure_ij)
-                print(cmd_return)
+                #print(cmd_return)
                 if 'ILLEGAL' in cmd_return[0]:
                     cmd_accepted = False
                 else:
@@ -1313,7 +1250,7 @@ class PPMACHardwareWriteRead(object):
         i = 0
         last_i_accepted = i
         cmd_accepted = True
-        print(dataStructure)
+        #print(dataStructure)
         while cmd_accepted:
             j = 0
             last_j_accepted = j
@@ -1350,9 +1287,9 @@ class PPMACHardwareWriteRead(object):
                         #    break
                         k += 1
                         continue
-                    print(dataStructure_ijk)
+                    #print(dataStructure_ijk)
                     cmd_return = self.sendCommand(dataStructure_ijk)
-                    print(cmd_return)
+                    #print(cmd_return)
                     if 'ILLEGAL' in cmd_return[0]:
                         cmd_accepted = False
                     else:
@@ -1444,9 +1381,9 @@ class PPMACHardwareWriteRead(object):
                                 f'[{j}]', '[]', 1).replace(f'[{k}]', '[]', 1), elementsToIgnore):
                             l += 1
                             continue
-                        print(dataStructure_ijkl)
+                        #print(dataStructure_ijkl)
                         cmd_return = self.sendCommand(dataStructure_ijkl)
-                        print(cmd_return)
+                        #print(cmd_return)
                         if 'ILLEGAL' in cmd_return[0]:
                             cmd_accepted = False
                         else:
@@ -1492,8 +1429,6 @@ class PPMACHardwareWriteRead(object):
         #        swtbl0.append(line.replace('\n',''))
         pp_swtbls = []
         for pp_swtbl_file in pp_swtlbs_symfiles:
-            print(pp_swtbl_file)
-            print(local_db_path)
             pp_swtbls.append(self.swtblFileToList(local_db_path + '/' + pp_swtbl_file))
         swtbl1_nparray = np.asarray(pp_swtbls[0])
         swtbl2_nparray = np.asarray(pp_swtbls[1])
@@ -1521,22 +1456,22 @@ class PPMACHardwareWriteRead(object):
                             substruct_23 = True
                             dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                     '.' + swtbl3_nparray[k, 1] + '.' + swtbl3_nparray[k, 2]
-                            print(dsName)
+                            #print(dsName)
                             dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1],
                                                         *(swtbl3_nparray[k, 3:].tolist())]
                     if substruct_23 == False:
                         dsName = swtbl1_nparray[i, 1] + '.' + swtbl2_nparray[j, 1] + \
                                 '.' + swtbl2_nparray[j, 2]
-                        print(dsName)
+                        #print(dsName)
                         dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl2_nparray[j, 3:].tolist())]
             if substruct_12 == False:
                 dsName = swtbl1_nparray[i, 1] + '.' + swtbl1_nparray[i, 2]
-                print(dsName)
+                #print(dsName)
                 dataStructures[dsName] = [dsName, swtbl1_nparray[i, 1], *(swtbl1_nparray[i, 3:].tolist())]
         # if substruct_01 == False:
         #    print(baseDS)
         #    dataStructures.append(baseDS)
-        #    writeFile.write(baseDS.__str__() + '\n')
+        #    writeFile.write(baseDS.printInfo() + '\n')
         return dataStructures
 
     def checkDataStructuresValidity(self, dataStructures):
@@ -1619,6 +1554,7 @@ class PPMACHardwareWriteRead(object):
 
     def generateIgnoreSet(self, ignoreFile):
         ignore = []
+        logging.info(f'Using ignore file {ignoreFile}.')
         with open(ignoreFile, 'r') as readFile:
             for line in readFile:
                 line = line.split('#', 1)[0]
@@ -1644,10 +1580,10 @@ class PPMACHardwareWriteRead(object):
             self.copyDict(self.ppmacInstance.DataStructure, validDataStructures)
         # Store active elements in ppmac object
         elementsToIgnore = self.generateIgnoreSet(pathToIgnoreFile)
-        #activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
-        #                                                          recordTimings=True) #timeout=10.0
-        #self.ppmacInstance.activeElements = \
-        #    self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
+        activeElements = self.getActiveElementsFromDataStructures(validDataStructures, elementsToIgnore,
+                                                                  recordTimings=True) #timeout=10.0
+        self.ppmacInstance.activeElements = \
+            self.copyDict(self.ppmacInstance.ActiveElement, activeElements)
         bufferedProgramsInfo = self.getBufferedProgramsInfo()
         self.appendBufferedProgramsInfoWithListings(bufferedProgramsInfo)
         self.ppmacInstance.forwardPrograms = \
@@ -1674,15 +1610,9 @@ class PPMACHardwareWriteRead(object):
             elif firstToken is not '#':
                 raise IOError(f'Unexpected token \'{firstToken}\'')
             motorDefinition = f'&{currentCoordSystem}#{motorDefinitionTokens.getTokensAsString()}'
-            #motor = motorDefinitionTokens.pop()[1] # motor number token
-            #motorDefinitionTokens.pop() # '->' token
-            #definition = motorDefinitionTokens.getTokensAsString() # remaining tokens define the motor in terms of axes
             if currentCoordSystem in coordSystemMotorDefinitions:
                 coordSystemMotorDefinitions[currentCoordSystem][1].append(motorDefinition)
-                #coordSystemAxisDefinitions[int(currentCoordSystem)][1].append(motor) # list of motors assigned to CS
-                #coordSystemAxisDefinitions[int(currentCoordSystem)][2][motor] = definition # definition of each motor
             else:
-                #coordSystemAxisDefinitions[int(currentCoordSystem)] = [currentCoordSystem, [], {}]
                 coordSystemMotorDefinitions[currentCoordSystem] = [currentCoordSystem, [motorDefinition]]
         return coordSystemMotorDefinitions
 
@@ -1693,10 +1623,8 @@ class PPMACHardwareWriteRead(object):
                 programListing = []
                 if programType == 'Forward' or programType == 'Inverse':
                     progCoordSystem = programInfo[4]
-                    #programListing = self.sendCommand(f'&{progCoordSystem} list {programType}')
                     listing = self.sendCommand(f'&{progCoordSystem} list {programType}')
                 else:
-                    #programListing = self.sendCommand(f'list {programName}')
                     listing = self.sendCommand(f'list {programName}')
                 for line in listing:
                     programListing.append(line + '\n')
@@ -1771,6 +1699,8 @@ class PPMACHardwareWriteRead(object):
             self.sendCommand = self.sendCommand_
         print('Expected: ', expectedOutput)
         print('Actual: ', indexedDataStructures)
+        print('Expected - Actual: ', expectedOutput - indexedDataStructures)
+        print('Actual - Expected: ', indexedDataStructures - expectedOutput)
         if expectedOutput == indexedDataStructures:
             print('PASS')
         else:
@@ -1796,7 +1726,7 @@ class PowerPMAC:
             self.field11 = field11
             self.field12 = field12
 
-        def __str__(self):
+        def printInfo(self):
             s = self.name + ', ' + self.base + ', ' + self.field1 + ', ' + self.field2 + ', ' + self.field3 + \
                 ', ' + self.field4 + ', ' + self.field5 + ', ' + self.field6 + ', ' + self.field7 + ', ' + \
                 self.field8 + ', ' + self.field9 + ', ' + self.field10 + ', ' + self.field11 + ', ' + self.field12
@@ -1820,10 +1750,8 @@ class PowerPMAC:
                 self.category = category
             self.indices = indices
 
-        def __str__(self):
-            s = self.name + '  ' + self.value + '  '# + self.category + '  ' + \
-                #self.dataStructure + '  ' + str(self.indices)
-            return s
+        def printInfo(self):
+            return self.name + '  ' + self.value
 
     class CoordSystemDefinition:
         def __init__(self, csNumber=None, definitions=[], forward=None, inverse=None):
@@ -1864,7 +1792,7 @@ class PowerPMAC:
         def printInfo(self):
             s = f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n' + \
                 ''.join(self.listing)
-            return s#f'{self.type}, {self.name}, size {self.size}, offset {self.offset}\n' \
+            return s
 
 
     def KinematicTransform(self, name, size, offset, type, coordSystem, listing):
@@ -2006,7 +1934,6 @@ class PPMACanalyse:
             projectBActive = PPMACProject('repository', f'{self.compareSourceB}/project/active')
         ppmacComparison = PPMACCompare(ppmacA, ppmacB, self.compareDir)
         ppmacComparison.compareActiveElements()
-        ppmacComparison.writeActiveElemDifferencesToFile()
         ppmacComparison.comparePrograms()
         ppmacComparison.compareCoordSystemAxesDefinitions()
         savedProjComparison = ProjectCompare(projectASaved, projectBSaved)
@@ -2108,46 +2035,5 @@ if __name__ == '__main__':
     ppmacArgs = parseArgs()
     sshClient = dls_pmacremote.PPmacSshInterface()
     analysis = PPMACanalyse(ppmacArgs)
-
-    #sshClient = dls_pmacremote.PPmacSshInterface()
-    #sshClient.port = 1025
-    ##sshClient.hostname = '10.2.2.77'
-    #sshClient.hostname = '192.168.56.10'
-    #sshClient.connect()
-
-    """
-    ppmacA = PowerPMAC()
-    ppmacB = PowerPMAC()
-
-    # read current state of ppmac and store in ppmacA object
-    hardwareWriteRead = PPMACHardwareWriteRead(ppmacA)
-    hardwareWriteRead.readAndStoreActiveState()
-
-    # write current state of ppmacA object to repository
-    repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA)
-    #repositoryWriteRead.writeActiveElements()
-    repositoryWriteRead.writeAllPrograms()
-    repositoryWriteRead.readAndStoreBufferedPrograms()
-
-    # read state from repository and store in ppmacB object
-    repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB)
-    #repositoryWriteRead.setPPMACInstance(ppmacB)
-    repositoryWriteRead.readAndStoreActiveElements()
-
-    # compare ppmacA and ppmacB objects
-    ppmacComparison = PPMACCompare(ppmacA, ppmacB)
-    ppmacComparison.compareActiveElements()
-
-    projectA = PPMACProject('repository', 'tmp/opt')
-    projectB = PPMACProject('hardware', '/opt/ppmac/usrflash')
-    #projectB = PPMACProject('repository', 'tmp/var-ftp')
-    projComparison = ProjectCompare(projectA, projectB)
-    projComparison.compareProjectFiles()
-    """
-
-    # hardwareWriteRead.test_CreateDataStructuresFromSymbolsTables()
-    # hardwareWriteRead.test_getActiveElementsFromDataStructures()
-
-    sshClient.disconnect()
 
     print(time.time() - start)
