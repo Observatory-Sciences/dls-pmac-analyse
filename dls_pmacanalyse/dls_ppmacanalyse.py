@@ -1653,59 +1653,6 @@ class PPMACHardwareWriteRead(object):
         return {'SubProg': subProgs, 'Motion': motion, 'Plc': plcs, 'Inverse': inverse, 'Forward': forward}
 
 
-    def test_CreateDataStructuresFromSymbolsTables(self):
-        # dataStructuresFile = 'test/PPMACsoftwareRef_25102016_DataStructures.txt'
-        dataStructuresFile = 'test/PPMACsoftwareRef_22032021_DataStructures.txt'
-        softwareRefDataStructures = []
-        with open(dataStructuresFile, 'r') as readFile:
-            for line in readFile:
-                if line[0] == '#' or line[0] == '\n':
-                    continue
-                softwareRefDataStructures.append(line.replace('\n', '').lower())
-        softwareRefDataStructures = set(softwareRefDataStructures)
-        ppmacActiveDataStructures = []
-        for ds in self.createDataStructuresFromSymbolsTables():
-            ppmacActiveDataStructures.append(ds.lower())
-        ppmacActiveDataStructures = set(ppmacActiveDataStructures)
-        diffA = softwareRefDataStructures - ppmacActiveDataStructures
-        print(f'{len(diffA)} Data structures in soft. ref. manual but NOT found from ppmac database: ', diffA)
-        diffB = ppmacActiveDataStructures - softwareRefDataStructures
-        print(f'{len(diffB)} Data structures found from ppmac database but NOT in soft. ref. manual:', diffB)
-
-    def test_getActiveElementsFromDataStructures(self):
-        expectedOutputFilePath = 'test/FillAllDataStructuresIndices_ExpectedOutput.txt'
-        ignoreListFilePath = 'test/FillAllDataStructuresIndices_IgnoreList.txt'
-        unindexedDataFilePath = 'test/FillAllDataStructuresIndices_UnindexedDSs.txt'
-        unindexedDataStructures = []
-        with open(unindexedDataFilePath, 'r') as unindexedDataFile:
-            for line in unindexedDataFile:
-                if line[0] == '#' or line[0] == '\n':
-                    continue
-                unindexedDataStructures.append(line.replace('\n', ''))
-        elementsToIgnore = self.generateIgnoreSet(ignoreListFilePath)
-        expectedOutput = []
-        with open(expectedOutputFilePath, 'r') as expectedOutputFile:
-            for line in expectedOutputFile:
-                if line[0] == '#' or line[0] == '\n':
-                    continue
-                expectedOutput.append(line.replace('\n', ''))
-        expectedOutput = set(expectedOutput)
-        self.sendCommand_ = self.sendCommand
-        try:
-            self.sendCommand = lambda x: ['1', '1']
-            indexedDataStructures = set(
-                self.getActiveElementsFromDataStructures(unindexedDataStructures, elementsToIgnore))
-        finally:
-            self.sendCommand = self.sendCommand_
-        print('Expected: ', expectedOutput)
-        print('Actual: ', indexedDataStructures)
-        print('Expected - Actual: ', expectedOutput - indexedDataStructures)
-        print('Actual - Expected: ', indexedDataStructures - expectedOutput)
-        if expectedOutput == indexedDataStructures:
-            print('PASS')
-        else:
-            print('FAIL')
-
 
 class PowerPMAC:
     class DataStructure:
