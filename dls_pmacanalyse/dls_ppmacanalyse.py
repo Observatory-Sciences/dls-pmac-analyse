@@ -45,14 +45,13 @@ def parseArgs():
                                                                        '--compare <source_a> <source_b> \ <source_a> <source_b> <ignore_file>\n'
                                                                        '<source_a> and <source_b> define the two sources to compare. They can \n'
                                                                        'take the form of a path to a back-up directory or a network interface <ip_address>:<port>.\n'
-                                                                       '<ignore_file> is the path to the file listing which data structures should be ignored.')
+                                                                       '<ignore file> is the path to the file listing which data structures should be ignored.')
     parser.add_argument('-d', '--download', metavar='', nargs=1, help='Download configuration onto Power PMAC.\n'
                                                                       '--download <usrflash dir>\n'
-                                                                      '<usrflash dir> = local copy of the /var/ftp/usrflash\n'
+                                                                      '<project dir> = local copy of the /var/ftp/usrflash/Project\n'
                                                                        'directory on a Power PMAC.')
     parser.add_argument('-f', '--resultsdir', metavar='', nargs=1, help='Directory in which to place output of analysis.\n'
                                                                         '--resultsdir <results dir>')
-    parser.add_argument('-v', '--verbosity', metavar='', nargs=1, help='Verbosity level of output')
     parser.add_argument('-n', '--name', metavar='', nargs=1, help='Name of Power PMAC.')
     return parser.parse_args()
 
