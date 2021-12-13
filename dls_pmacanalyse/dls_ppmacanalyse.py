@@ -36,21 +36,19 @@ def parseArgs():
                                                                         '--backup <type>/<type> <ignore>\n'
                                                                         '<type> = all/active/project\n'
                                                                         '<ignore> = path to ignore file')
-    parser.add_argument('-r', '--recover', metavar='', nargs=1, help='Recover configuration of Power PMAC using the recovery'
+    parser.add_argument('-r', '--recover', metavar='', nargs=1, help='Recover configuration of Power PMAC using the recovery '
                                                                        'stick method.\n'
                                                                        '--recover <usrflash dir>\n'
-                                                                       '<usrflash dir> = local copy of the /opt/ppmac/usrflash\n'
-                                                                       'directory on a Power PMAC.')
+                                                                       '<usrflash dir> = local copy of the /opt/ppmac/usrflash directory on a Power PMAC.')
     parser.add_argument('-c', '--compare', metavar='', nargs='*', help='Compare configuration of two Power PMACs.\n'
                                                                        '--compare <source_a> <source_b> \ <source_a> <source_b> <ignore_file>\n'
-                                                                       '<source_a> and <source_b> define the two sources to compare. They can \n'
-                                                                       'take the form of a path to a back-up directory or a network interface <ip_address>:<port>.\n'
+                                                                       '<source_a> and <source_b> define the two sources to compare. They can take the\n'
+                                                                       'form of a path to a back-up directory or a network interface <ip_address>:<port>.\n'
                                                                        '<ignore file> is the path to the file listing which data structures should be ignored.')
     parser.add_argument('-d', '--download', metavar='', nargs=1, help='Download configuration onto Power PMAC.\n'
-                                                                      '--download <usrflash dir>\n'
-                                                                      '<project dir> = local copy of the /var/ftp/usrflash/Project\n'
-                                                                       'directory on a Power PMAC.')
-    parser.add_argument('-f', '--resultsdir', metavar='', nargs=1, help='Directory in which to place output of analysis.\n'
+                                                                      '--download <project dir>\n'
+                                                                      '<project dir> = local copy of the /var/ftp/usrflash/Project directory on a Power PMAC.')
+    parser.add_argument('-f', '--resultsdir', metavar='', nargs=1, help='Directory into which the results of the analysis (backup or compare) will be placed.\n'
                                                                         '--resultsdir <results dir>')
     parser.add_argument('-n', '--name', metavar='', nargs=1, help='Name of Power PMAC.')
     return parser.parse_args()
