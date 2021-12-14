@@ -5,8 +5,8 @@ import os
 import re
 import time
 
-import dls_pmacremote
 import numpy as np
+from dls_pmaclib import dls_pmacremote
 from scp import SCPClient
 
 
@@ -2608,8 +2608,8 @@ class PPMACanalyse:
         # Finally execute a projpp to parse and load new project
         executeRemoteShellCommand("projpp -l")
 
-
-if __name__ == "__main__":
+def main():
+    """Main entry point of the script."""
     start = time.time()
 
     ppmacArgs = parseArgs()
@@ -2617,3 +2617,7 @@ if __name__ == "__main__":
     analysis = PPMACanalyse(ppmacArgs)
 
     print(time.time() - start)
+
+if __name__ == "__main__":
+    main()
+

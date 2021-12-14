@@ -15,10 +15,14 @@ doc8 = "*"
 
 [packages]
 dls-pmaclib = "==3.0.0b1"
+mock = "*"
+numpy = "*"
+scp = "*"
+types-mock = "*"
 
 [scripts]
 # Put coverage here so we don't interfere with debugging in the IDE
-tests = "python -m pytest --cov-fail-under=90 --cov=test_python --cov-report term"
+tests = "python -m pytest --cov=dls_pmacanalyse --cov-report term"
 docs = "sphinx-build -E -b html docs build/html"
 
 [pipenv]
