@@ -48,58 +48,70 @@ def parseArgs():
         "--interface",
         metavar="",
         nargs=1,
-        help="Network interface address of Power PMAC.\n"
-        "--interface <ip address>:<port>.",
+        help=(
+            "Network interface address of Power PMAC.\n--interface <ip address>:<port>."
+        ),
     )
     parser.add_argument(
         "-b",
         "--backup",
         metavar="",
         nargs="*",
-        help="Back-up configuration of Power PMAC.\n"
-        "--backup <type>/<type> <ignore>\n"
-        "<type> = all/active/project\n"
-        "<ignore> = path to ignore file",
+        help=(
+            "Back-up configuration of Power PMAC.\n"
+            "--backup <type>/<type> <ignore>\n"
+            "<type> = all/active/project\n"
+            "<ignore> = path to ignore file"
+        ),
     )
     parser.add_argument(
         "-r",
         "--recover",
         metavar="",
         nargs=1,
-        help="Recover configuration of Power PMAC using the recovery"
-        "stick method.\n"
-        "--recover <usrflash dir>\n"
-        "<usrflash dir> = local copy of the /opt/ppmac/usrflash\n"
-        "directory on a Power PMAC.",
+        help=(
+            "Recover configuration of Power PMAC using the recovery"
+            "stick method.\n"
+            "--recover <usrflash dir>\n"
+            "<usrflash dir> = local copy of the /opt/ppmac/usrflash\n"
+            "directory on a Power PMAC."
+        ),
     )
     parser.add_argument(
         "-c",
         "--compare",
         metavar="",
         nargs="*",
-        help="Compare configuration of two Power PMACs.\n"
-        "--compare <source_a> <source_b> \ <source_a> <source_b> <ignore_file>\n"
-        "<source_a> and <source_b> define the two sources to compare. They can \n"
-        "take the form of a path to a back-up directory or a network interface <ip_address>:<port>.\n"
-        "<ignore file> is the path to the file listing which data structures should be ignored.",
+        help=(
+            "Compare configuration of two Power PMACs.\n--compare <source_a> <source_b>"
+            " <ignore_file>\n<source_a> and <source_b> define"
+            " the two sources to compare. They can \ntake the form of a path to a"
+            " back-up directory or a network interface <ip_address>:<port>.\n<ignore"
+            " file> is the path to the file listing which data structures should be"
+            " ignored."
+        ),
     )
     parser.add_argument(
         "-d",
         "--download",
         metavar="",
         nargs=1,
-        help="Download configuration onto Power PMAC.\n"
-        "--download <usrflash dir>\n"
-        "<project dir> = local copy of the /var/ftp/usrflash/Project\n"
-        "directory on a Power PMAC.",
+        help=(
+            "Download configuration onto Power PMAC.\n"
+            "--download <usrflash dir>\n"
+            "<project dir> = local copy of the /var/ftp/usrflash/Project\n"
+            "directory on a Power PMAC."
+        ),
     )
     parser.add_argument(
         "-f",
         "--resultsdir",
         metavar="",
         nargs=1,
-        help="Directory in which to place output of analysis.\n"
-        "--resultsdir <results dir>",
+        help=(
+            "Directory in which to place output of analysis.\n"
+            "--resultsdir <results dir>"
+        ),
     )
     parser.add_argument("-n", "--name", metavar="", nargs=1, help="Name of Power PMAC.")
     return parser.parse_args()
@@ -134,7 +146,8 @@ def exitGpascii():
 
 def executeRemoteShellCommand(cmd):
     """
-    Execute a command on a remote server. The call to stdout.channel.recv_exit_status() blocks until the resulting
+    Execute a command on a remote server. The call to stdout.channel.recv_exit_status()
+    blocks until the resulting
     process on the remote server has finished.
     :param cmd: string containing command to be executed.
     :return:
@@ -245,7 +258,8 @@ echo "Sync completed." >> /tmp/recover.log 2>&1
 
 
 class PPMACLexer(object):
-    # Tokens formed from the 'Power PMAC on-line commands' and 'Power PMAC program commands'.
+    # Tokens formed from the 'Power PMAC on-line commands' and
+    # 'Power PMAC program commands'.
     # As given in the Power PMAC Software reference manual 22nd Mar 2021 p.40-47
     commandTokens = {
         "a",
@@ -642,7 +656,7 @@ class PPMACLexer(object):
             return ret
         next = chars.peek()
         allowed = "[a-f0-9]"
-        while re.match(allowed, next) != None:
+        while re.match(allowed, next) is not None:
             ret += chars.moveNext()
             if chars.isEmpty():
                 break
@@ -690,23 +704,24 @@ class PPMACLexer(object):
             # Check to see if we can find an existing token in the subsequent
             # characters. If we do, take the longest existing token we find.
             # If we don't, assume the token can take the form of an active element name.
-            allowed_ = "[a-zA-Z.\[]"
+            allowed_ = "[a-zA-Z.\\[]"
             # allowed_ = "[a-zA-Z0-9.\[]"
             allowed = allowed_
-            while re.match(allowed, next) != None:
+            while re.match(allowed, next) is not None:
                 if next == "[":
-                    allowed = "[0-9\]]"
+                    allowed = "[0-9\\]]"
                 if next == "]":
                     allowed = allowed_
                 ret += chars.moveNext()
                 if ret in PPMACLexer.tokens:
                     existingToken = ret
                 # Use this condition to catch active element names
-                if re.sub("\[([0-9]+)\]", "[]", ret) in self.extendedTokens:
+                if re.sub("\\[([0-9]+)\\]", "[]", ret) in self.extendedTokens:
                     existingToken = ret
                 if chars.isEmpty():
                     break
-                # Use this condition to catch the few PPMACLexer.tokens that end in a digit, e.g. frax2
+                # Use this condition to catch the few PPMACLexer.tokens that end
+                # in a digit, e.g. frax2
                 if (
                     re.match("[0-9]", chars.peek())
                     and ret + chars.peek() in PPMACLexer.tokens
@@ -725,7 +740,7 @@ class PPMACLexer(object):
             return ret
         next = chars.peek()
         allowed = "[.0-9]"
-        while re.match(allowed, next) != None:
+        while re.match(allowed, next) is not None:
             # to catch '..' used to indicate ranges
             if next == ".":
                 if chars.peekNext() == ".":
@@ -792,10 +807,10 @@ class PPMACProject(object):
                 raise RuntimeError(
                     f'Root directory "{root}" invalid: not a project directory.'
                 )
-            if tempDir == None:
+            if tempDir is None:
                 raise RuntimeError(
-                    f"Please define a temporary directory into which the project from "
-                    f"the ppmac will be copied."
+                    "Please define a temporary directory into which the project from "
+                    "the ppmac will be copied."
                 )
             self.root = tempDir
             os.makedirs(tempDir, exist_ok=True)
@@ -916,14 +931,15 @@ class PPMACCompare(object):
         self.elemNamesOnlyInB = {}
         # Set of element names in both A and B
         self.elemNamesInAandB = {}
-        # Dictionary of active elements only in A. Keys refer to the active elem names, the values are
-        # PowerPMAC.activeElement objects.
+        # Dictionary of active elements only in A. Keys refer to the active
+        # elem names, the values are PowerPMAC.activeElement objects.
         self.activeElemsOnlyInA = {}
-        # Dictionary of active elements only in B. Keys refer to the active elem names, the values are
-        # PowerPMAC.activeElement objects.
+        # Dictionary of active elements only in B. Keys refer to the active
+        # elem names, the values are PowerPMAC.activeElement objects.
         self.activeElemsOnlyInB = {}
-        # A nested dictionary. The outer keys refer to the active elem names, the inner keys refer to ppmac
-        # instance (A or B), the values are PowerPMAC.activeElement objects.
+        # A nested dictionary. The outer keys refer to the active elem names,
+        # the inner keys refer to ppmac instance (A or B), the values
+        # are PowerPMAC.activeElement objects.
         self.activeElemsInAandB = {}
         self.progNamesOnlyInA = {}
         self.progNamesOnlyInB = {}
@@ -1018,8 +1034,9 @@ class PPMACCompare(object):
         self.coordSystemsInAandB = coordSysNumbersA & coordSysNumbersB
         with open(f"{outputDir}/missingCoordSystems.txt", "w+") as writeFile:
             writeFile.write(
-                f"@@ Coordinate Systems defined in source '{self.ppmacInstanceA.source}' but not source "
-                f"'{self.ppmacInstanceB.source}'\n"
+                "@@ Coordinate Systems defined in source"
+                f" '{self.ppmacInstanceA.source}' but not source"
+                f" '{self.ppmacInstanceB.source}'\n"
             )
             for coordSysNumber in self.coordSystemsOnlyInA:
                 writeFile.write(f">>>> &{coordSysNumber}\n")
@@ -1027,8 +1044,9 @@ class PPMACCompare(object):
                     self.ppmacInstanceA.coordSystemDefs[coordSysNumber].printInfo()
                 )
             writeFile.write(
-                f"@@ Coordinate Systems defined in source '{self.ppmacInstanceB.source}' but not source "
-                f"'{self.ppmacInstanceA.source}'\n"
+                "@@ Coordinate Systems defined in source"
+                f" '{self.ppmacInstanceB.source}' but not source"
+                f" '{self.ppmacInstanceA.source}'\n"
             )
             for coordSysNumber in self.coordSystemsOnlyInB:
                 writeFile.write(f">>>> &{coordSysNumber}\n")
@@ -1044,7 +1062,8 @@ class PPMACCompare(object):
                 )
                 for motorNumber in modified:
                     writeFile.write(
-                        f"@@ Motor {motorNumber} @@\n{self.ppmacInstanceA.source} definition = "
+                        "@@ Motor"
+                        f" {motorNumber} @@\n{self.ppmacInstanceA.source} definition = "
                         f"&{coordSysNumber}#{motorNumber}->{modified[motorNumber][0]}\n"
                         f"{self.ppmacInstanceB.source} definition = "
                         f"&{coordSysNumber}#{motorNumber}->{modified[motorNumber][1]}\n"
@@ -1076,11 +1095,15 @@ class PPMACCompare(object):
             # write first set of headers
             for file in diffFiles:
                 diffFiles[file].write(
-                    f"@@ Active elements in source '{sourceA}' but not source '{sourceB}' @@\n"
+                    f"@@ Active elements in source '{sourceA}' but not source"
+                    f" '{sourceB}' @@\n"
                 )
             # write to file elements that are in ppmacA but not ppmacB
             for elemName in self.elemNamesOnlyInA:
-                file = f"{self.compareDir}/active/{self.activeElemsOnlyInA[elemName].category}.diff"
+                file = (
+                    f"{self.compareDir}/active/"
+                    f"{self.activeElemsOnlyInA[elemName].category}.diff"
+                )
                 diffFiles[file].write(
                     ">>>> "
                     + self.activeElemsOnlyInA[elemName].name
@@ -1091,11 +1114,15 @@ class PPMACCompare(object):
             # write second set of headers
             for file in diffFiles:
                 diffFiles[file].write(
-                    f"@@ Active elements in source '{sourceB}' but not source '{sourceA}' @@\n"
+                    f"@@ Active elements in source '{sourceB}' but not source"
+                    f" '{sourceA}' @@\n"
                 )
             # write to file elements that are in ppmacB but not ppmacA
             for elemName in self.elemNamesOnlyInB:
-                file = f"{self.compareDir}/active/{self.activeElemsOnlyInB[elemName].category}.diff"
+                file = (
+                    f"{self.compareDir}/active/"
+                    f"{self.activeElemsOnlyInB[elemName].category}.diff"
+                )
                 diffFiles[file].write(
                     ">>>> "
                     + self.activeElemsOnlyInB[elemName].name
@@ -1103,20 +1130,24 @@ class PPMACCompare(object):
                     + self.activeElemsOnlyInB[elemName].value
                     + "\n"
                 )
-            # write to file elements that in ppmacB but not ppmacA but whose values differ
+            # write to file elements that in ppmacB but not ppmacA but whose
+            # values differ
             for file in diffFiles:
                 diffFiles[file].write(
-                    f"@@ Active elements in source '{sourceA}' and source '{sourceB}' with "
-                    f"different values @@\n"
+                    f"@@ Active elements in source '{sourceA}' and source '{sourceB}'"
+                    " with different values @@\n"
                 )
             for elemName in self.elemNamesInAandB:
                 valA = self.activeElemsInAandB[elemName]["A"].value
                 valB = self.activeElemsInAandB[elemName]["B"].value
                 if valA != valB:
-                    file = f"{self.compareDir}/active/{self.ppmacInstanceA.activeElements[elemName].category}.diff"
+                    file = (
+                        f"{self.compareDir}/active/"
+                        f"{self.ppmacInstanceA.activeElements[elemName].category}.diff"
+                    )
                     diffFiles[file].write(
-                        f">>>> {elemName} @@\n{self.ppmacInstanceA.source} value = {valA}\n"
-                        f"{self.ppmacInstanceB.source} value = {valB}\n"
+                        f">>>> {elemName} @@\n{self.ppmacInstanceA.source} value ="
+                        f" {valA}\n{self.ppmacInstanceB.source} value = {valB}\n"
                     )
         finally:
             for file in diffFiles:
@@ -1164,7 +1195,8 @@ class PPMACRepositoryWriteRead(object):
 
     def writePrograms(self, ppmacProgs, progsDir):
         """
-        Write contents of dictionary of PPMAC programs to files. Each dict key corresponds to separate file written.
+        Write contents of dictionary of PPMAC programs to files. Each dict key
+        corresponds to separate file written.
         :param ppmacProgs: dictionary of programs.
         :return:
         """
@@ -1331,7 +1363,7 @@ class PPMACHardwareWriteRead(object):
         return cmdReturnInt
 
     def readSysMaxes(self):
-        if self.ppmacInstance == None:
+        if self.ppmacInstance is None:
             raise RuntimeError("No Power PMAC object has been specified")
         # number of active motors
         self.ppmacInstance.numberOfMotors = self.getCommandReturnInt("Sys.MaxMotors")
@@ -1366,8 +1398,8 @@ class PPMACHardwareWriteRead(object):
         """
         Generate a list of symbols from a symbols table file.
         :param pp_swtbl_file: full path to symbols table file.
-        :return: swtbl_DSs: list of symbols, where each 'symbol' is represented by the contents of one row of the
-        symbols table file.
+        :return: swtbl_DSs: list of symbols, where each 'symbol' is represented by
+        the contents of one row of the symbols table file.
         """
         try:
             file = open(file=pp_swtbl_file, mode="r", encoding="ISO-8859-1")
@@ -1397,10 +1429,12 @@ class PPMACHardwareWriteRead(object):
 
     def ignoreDataStructure(self, substructure, elementsToIgnore):
         """
-        Determine whether a data structure or substructure should be ignored by checking if it or any of its parent,
-        grandparent, great-grandparent etc. structures are included in the ignore list.
+        Determine whether a data structure or substructure should be ignored by
+        checking if it or any of its parent, grandparent, great-grandparent etc.
+        structures are included in the ignore list.
         :param substructure: name of data structure or substructure to check
-        :return: True if data structure or substructure should be ignored, False otherwise
+        :return: True if data structure or substructure should be ignored, False
+        otherwise
         """
         n = substructure.count(".")
         for _ in range(n + 1):
@@ -1413,13 +1447,16 @@ class PPMACHardwareWriteRead(object):
         self, dataStructure, activeElements, elementsToIgnore, timeout=None
     ):
         """
-        Incrementally increase the index of a singly-indexed data structure and send the resulting command to the ppmac
-        until the maximum accepted index is reached. Add the command string and return value of all commands accepted by
+        Incrementally increase the index of a singly-indexed data structure and send
+        the resulting command to the ppmac until the maximum accepted index is reached.
+        Add the command string and return value of all commands accepted by
         the ppmac to the dictionary of active elements.
         :param dataStructure: String containing the data structure name.
-        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
-        name, and the value is a tuple containing the return value from the ppmac and the active element name.
-        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :param activeElements: Dictionary containing the current set of active elements,
+        where the key is the element name, and the value is a tuple containing
+        the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to
+        activeElements.
         :return:
         """
         applyTimeout = False
@@ -1464,13 +1501,16 @@ class PPMACHardwareWriteRead(object):
         self, dataStructure, activeElements, elementsToIgnore, timeout=None
     ):
         """
-        Incrementally increase the indices of a doubly-indexed data structure and send the resulting command to the ppmac
-        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
+        Incrementally increase the indices of a doubly-indexed data structure and send
+        the resulting command to the ppmac until the maximum accepted indices are
+        reached. Add the command string and return value of all commands accepted by
         the ppmac to the dictionary of active elements.
         :param dataStructure: String containing the data structure name.
-        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
-        name, and the value is a tuple containing the return value from the ppmac and the active element name.
-        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :param activeElements: Dictionary containing the current set of active
+        elements, where the key is the element name, and the value is a tuple
+        containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to
+        activeElements.
         :return:
         """
         applyTimeout = False
@@ -1541,13 +1581,16 @@ class PPMACHardwareWriteRead(object):
         self, dataStructure, activeElements, elementsToIgnore, timeout=None
     ):
         """
-        Incrementally increase the indices of a triply-indexed data structure and send the resulting command to the ppmac
-        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
+        Incrementally increase the indices of a triply-indexed data structure and send
+        the resulting command to the ppmac until the maximum accepted indices are
+        reached. Add the command string and return value of all commands accepted by
         the ppmac to the dictionary of active elements.
         :param dataStructure: String containing the data structure name.
-        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
-        name, and the value is a tuple containing the return value from the ppmac and the active element name.
-        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :param activeElements: Dictionary containing the current set of active
+        elements, where the key is the element name, and the value is a
+        tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to
+        activeElements.
         :return:
         """
         applyTimeout = False
@@ -1629,8 +1672,8 @@ class PPMACHardwareWriteRead(object):
                         )
                     if applyTimeout and time.time() - startTime > timeout:
                         logging.info(
-                            f"Timed-out generating active elements for {dataStructure}. "
-                            f"Last i,j,k = {i},{j},{k}."
+                            f"Timed-out generating active elements for {dataStructure}."
+                            f" Last i,j,k = {i},{j},{k}."
                         )
                         return
                     k += 1
@@ -1648,13 +1691,16 @@ class PPMACHardwareWriteRead(object):
         self, dataStructure, activeElements, elementsToIgnore, timeout=None
     ):
         """
-        Incrementally increase the indices of a quadruply-indexed data structure and send the resulting command to the ppmac
-        until the maximum accepted indices are reached. Add the command string and return value of all commands accepted by
-        the ppmac to the dictionary of active elements.
+        Incrementally increase the indices of a quadruply-indexed data structure and
+        send the resulting command to the ppmac until the maximum accepted
+        indices are reached. Add the command string and return value of all commands
+        accepted by the ppmac to the dictionary of active elements.
         :param dataStructure: String containing the data structure name.
-        :param activeElements: Dictionary containing the current set of active elements, where the key is the element
-        name, and the value is a tuple containing the return value from the ppmac and the active element name.
-        :param elementsToIgnore: Set of data structures not to be added to activeElements.
+        :param activeElements: Dictionary containing the current set of active
+        elements, where the key is the element name, and the value is a tuple
+        containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to
+        activeElements.
         :return:
         """
         applyTimeout = False
@@ -1699,7 +1745,7 @@ class PPMACHardwareWriteRead(object):
                     j += 1
                     continue
                 while cmd_accepted:
-                    l = 0
+                    m = 0
                     k_idex_string = f"[{k}]"
                     dataStructure_ijk = nthRepl(
                         dataStructure_ij, "[]", k_idex_string, 1
@@ -1722,28 +1768,28 @@ class PPMACHardwareWriteRead(object):
                         k += 1
                         continue
                     while cmd_accepted:
-                        l_idex_string = f"[{l}]"
-                        dataStructure_ijkl = nthRepl(
-                            dataStructure_ijk, "[]", l_idex_string, 1
+                        m_idex_string = f"[{m}]"
+                        dataStructure_ijkm = nthRepl(
+                            dataStructure_ijk, "[]", m_idex_string, 1
                         )
                         if self.ignoreDataStructure(
-                            dataStructure_ijkl.replace(f"[{i}]", "[]", 1)
+                            dataStructure_ijkm.replace(f"[{i}]", "[]", 1)
                             .replace(f"[{j}]", "[]", 1)
                             .replace(f"[{k}]", "[]", 1)
-                            .replace(l_idex_string, f"[{l}:]", 1),
+                            .replace(m_idex_string, f"[{m}:]", 1),
                             elementsToIgnore,
                         ):
                             break
                         if self.ignoreDataStructure(
-                            dataStructure_ijkl.replace(f"[{i}]", "[]", 1)
+                            dataStructure_ijkm.replace(f"[{i}]", "[]", 1)
                             .replace(f"[{j}]", "[]", 1)
                             .replace(f"[{k}]", "[]", 1),
                             elementsToIgnore,
                         ):
-                            l += 1
+                            m += 1
                             continue
-                        # print(dataStructure_ijkl)
-                        cmd_return = self.sendCommand(dataStructure_ijkl)
+                        # print(dataStructure_ijkm)
+                        cmd_return = self.sendCommand(dataStructure_ijkm)
                         # print(cmd_return)
                         if "ILLEGAL" in cmd_return[0]:
                             cmd_accepted = False
@@ -1751,20 +1797,20 @@ class PPMACHardwareWriteRead(object):
                             last_k_accepted = k
                             last_j_accepted = j
                             last_i_accepted = i
-                            activeElements[dataStructure_ijkl] = (
-                                dataStructure_ijkl,
+                            activeElements[dataStructure_ijkm] = (
+                                dataStructure_ijkm,
                                 cmd_return[0],
                                 dataStructureCategory,
                                 dataStructure,
-                                [i, j, k, l],
+                                [i, j, k, m],
                             )
                         if applyTimeout and time.time() - startTime > timeout:
                             logging.info(
-                                f"Timed-out generating active elements for {dataStructure}. "
-                                f"Last i,j,k,l = {i},{j},{k},{l}."
+                                "Timed-out generating active elements for"
+                                f" {dataStructure}. Last i,j,k,m = {i},{j},{k},{m}."
                             )
                             return
-                        l += 1
+                        m += 1
                     cmd_accepted = True
                     if k - last_k_accepted > 1:
                         cmd_accepted = False
@@ -1788,7 +1834,8 @@ class PPMACHardwareWriteRead(object):
 
     def createDataStructuresFromSymbolsTables(self, pp_swtlbs_symfiles, local_db_path):
         """
-        Read the symbols tables and create a list of data structure names contained within them.
+        Read the symbols tables and create a list of data structure names contained
+        within them.
         :return: dataStructures: list of data structure names
         """
         # Clear current data structure dictionary
@@ -1842,7 +1889,7 @@ class PPMACHardwareWriteRead(object):
                                 swtbl1_nparray[i, 1],
                                 *(swtbl3_nparray[k, 3:].tolist()),
                             ]
-                    if substruct_23 == False:
+                    if substruct_23 is False:
                         dsName = (
                             swtbl1_nparray[i, 1]
                             + "."
@@ -1856,7 +1903,7 @@ class PPMACHardwareWriteRead(object):
                             swtbl1_nparray[i, 1],
                             *(swtbl2_nparray[j, 3:].tolist()),
                         ]
-            if substruct_12 == False:
+            if substruct_12 is False:
                 dsName = swtbl1_nparray[i, 1] + "." + swtbl1_nparray[i, 2]
                 # print(dsName)
                 dataStructures[dsName] = [
@@ -1872,27 +1919,29 @@ class PPMACHardwareWriteRead(object):
 
     def checkDataStructuresValidity(self, dataStructures):
         """
-        Remove invalid data structures from a dictionary of data structures. A data structure is defined as invalid
-        if the ppmac rejects it when its indices are filled-in as zero.
+        Remove invalid data structures from a dictionary of data structures. A data
+        structure is defined as invalid if the ppmac rejects it when its indices
+        are filled-in as zero.
         :param dataStructures:
         :return:
         """
         logging.info(
-            f"checkDataStructuresValidity: checking if all data structures are valid, "
-            f"and removing any invalid data structures..."
+            "checkDataStructuresValidity: checking if all data structures are valid, "
+            "and removing any invalid data structures..."
         )
         invalidCount = 0
         for ds in list(dataStructures):
             cmd_return = self.sendCommand(ds.replace("[]", "[0]"))
             if "ILLEGAL" in cmd_return[0]:
                 logging.debug(
-                    f"{ds.replace('[]', '[0]')} not a valid ppmac command, deleting from"
-                    f" dictionary of data structures."
+                    f"{ds.replace('[]', '[0]')} not a valid ppmac command, deleting"
+                    " from dictionary of data structures."
                 )
                 del dataStructures[ds]
                 invalidCount += 1
         logging.info(
-            f"checkDataStructuresValidity: removed {invalidCount} invalid data structures."
+            f"checkDataStructuresValidity: removed {invalidCount} invalid data"
+            " structures."
         )
         return dataStructures
 
@@ -1900,15 +1949,18 @@ class PPMACHardwareWriteRead(object):
         self, dataStructures, elementsToIgnore, recordTimings=False, timeout=None
     ):
         """
-        Generate a dictionary of active elements from an iterable containing data structure names.
+        Generate a dictionary of active elements from an iterable containing data
+        structure names.
         :param dataStructures: Iterable containing data structure names
-        :param elementsToIgnore: Set of data structures not to be added to included in the active elements read from
-        the ppmac.
-        :return: Dictionary containing the current set of active elements, where the key is the active element
-        name, and the value is a tuple containing the return value from the ppmac and the active element name.
+        :param elementsToIgnore: Set of data structures not to be added to included
+        in the active elements read from the ppmac.
+        :return: Dictionary containing the current set of active elements, where the
+        key is the active element name, and the value is a tuple containing the return
+        value from the ppmac and the active element name.
         """
         logging.info(
-            "getActiveElementsFromDataStructures: generating dictionary of active elements..."
+            "getActiveElementsFromDataStructures: generating dictionary of active"
+            " elements..."
         )
         fncStartTime = time.time()
         activeElements = {}
@@ -1937,7 +1989,8 @@ class PPMACHardwareWriteRead(object):
                 )
             else:
                 logging.info(
-                    f"Too many indexed substructures in data structure '{ds}'. Ignoring."
+                    f"Too many indexed substructures in data structure '{ds}'."
+                    " Ignoring."
                 )
                 continue
             if recordTimings:
@@ -1958,8 +2011,8 @@ class PPMACHardwareWriteRead(object):
         elif ":" not in splicedDataStructure:
             return [splicedDataStructure]
         else:
-            splicedIndices = re.search("\[([0-9]+):([0-9]+)\]", splicedDataStructure)
-            if splicedIndices == None:
+            splicedIndices = re.search("\\[([0-9]+):([0-9]+)\\]", splicedDataStructure)
+            if splicedIndices is None:
                 return [splicedDataStructure]
             startIndex = int(splicedIndices.group(1))
             endIndex = int(splicedIndices.group(2))
@@ -1991,7 +2044,8 @@ class PPMACHardwareWriteRead(object):
     def readAndStoreActiveState(self, pathToIgnoreFile):
         if self.local_db_path is None:
             raise IOError(
-                "Need to specify temporary directory where Power PMAC Database can be copied to."
+                "Need to specify temporary directory where Power PMAC Database can be"
+                " copied to."
             )
         os.makedirs(self.local_db_path, exist_ok=True)
         self.scpPPMACDatabaseToLocal("/var/ftp/usrflash/Database/*", self.local_db_path)
@@ -2037,7 +2091,7 @@ class PPMACHardwareWriteRead(object):
     def getCoordSystemMotorDefinitions(self):
         coordSystemMotorDefinitions = {}
         currentCoordSystem = self.sendCommand("&")
-        axesDefStatements = self.sendCommand(f"#*->")
+        axesDefStatements = self.sendCommand("#*->")
         for definition in axesDefStatements:
             motorDefinitionTokens = PPMACLexer(definition)
             firstToken = motorDefinitionTokens.pop()[1]  # either '&' or '#' token
@@ -2046,7 +2100,7 @@ class PPMACHardwareWriteRead(object):
                     1
                 ]  # coord system number token
                 motorDefinitionTokens.pop()[1]  # '#' token
-            elif firstToken is not "#":
+            elif firstToken != "#":
                 raise IOError(f"Unexpected token '{firstToken}'")
             motorDefinition = (
                 f"&{currentCoordSystem}#{motorDefinitionTokens.getTokensAsString()}"
@@ -2190,7 +2244,7 @@ class PowerPMAC:
             self.name = name
             self.value = value
             if dataStructure == "":
-                self.dataStructure = re.sub("\[([0-9]+)\]", "[]", self.name)
+                self.dataStructure = re.sub("\\[([0-9]+)\\]", "[]", self.name)
             else:
                 self.dataStructure = dataStructure
             if category == "":
@@ -2211,7 +2265,9 @@ class PowerPMAC:
             self.csNumber = csNumber  # coordinate system number
             self.motors = []  # list of motors assigned to CS
             self.motor = {}  # dict definition of each motor in terms of the axes
-            self.axisDefs = definitions  # List of strings containing axes defs. I don't think these need to be sorted.
+            # List of strings containing axes defs. I don't think these need
+            # to be sorted.
+            self.axisDefs = definitions
             self.parseAxesDefinitions(self.axisDefs)
             self.forward = forward  # instance of _KinematicTransform. Not implemented
             self.inverse = inverse  # instance of _KinematicTransform. Not implemented
@@ -2265,7 +2321,10 @@ class PowerPMAC:
             self.coodSystem = coordSystem
 
         def printInfo(self):
-            return f"{self.type}, {self.name}, size {self.size}, offset {self.offset}, cs {self.coodSystem}\n"
+            return (
+                f"{self.type}, {self.name}, size {self.size}, offset {self.offset}, cs"
+                f" {self.coodSystem}\n"
+            )
 
     def __init__(self, name="unknown"):
         # Source: hardware or respository
@@ -2299,12 +2358,14 @@ class PowerPMAC:
         # Power PMAC supports up to 256 compensation tables
         # Power PMAC supports up to 128 coordinate systems
         # Power PMAC supports up to 9 ECAT networks
-        # Power PMAC supports up to 768 encoder conversion tables (software reference manual p.206)
+        # Power PMAC supports up to 768 encoder conversion tables (software
+        # reference manual p.206)
         # Gate1[i] can have i = 4,...,19 (software reference manual p.237)
         # Gate2[i] has an unknown range of indices i
         # self.numberOfGate2ICs = ???
         # Gate3[i] can have i = 0,..,15 (software reference manual p.289)
-        # GateIo[i] can have i = 0,..,15 (software reference manual p.360), although i > 15 does not return an error
+        # GateIo[i] can have i = 0,..,15 (software reference manual p.360),
+        # although i > 15 does not return an error
 
 
 class PPMACanalyse:
@@ -2319,7 +2380,8 @@ class PPMACanalyse:
         if ppmacArgs.interface is not None:
             if not isValidNetworkInterface(ppmacArgs.interface[0]):
                 raise IOError(
-                    f"Interface {ppmacArgs.interface} not a valid network interface <ipaddress>:<port>"
+                    f"Interface {ppmacArgs.interface} not a valid network interface"
+                    " <ipaddress>:<port>"
                 )
             self.ipAddress = ppmacArgs.interface[0].split(":")[0]
             self.port = ppmacArgs.interface[0].split(":")[1]
@@ -2346,7 +2408,8 @@ class PPMACanalyse:
     def processCompareOptions(self, ppmacArgs):
         if len(ppmacArgs.compare) < 2:
             raise IOError(
-                "Insufficient number of arguments, please specify TWO sources for comparison."
+                "Insufficient number of arguments, please specify TWO sources for"
+                " comparison."
             )
         self.compareSourceA = ppmacArgs.compare[0]
         self.compareSourceB = ppmacArgs.compare[1]
@@ -2354,13 +2417,15 @@ class PPMACanalyse:
             self.compareSourceA
         ):
             raise IOError(
-                f"{self.compareSourceA} not an existing directory or valid network interface <ipaddress>:<port>"
+                f"{self.compareSourceA} not an existing directory or valid network"
+                " interface <ipaddress>:<port>"
             )
         if not isValidNetworkInterface(self.compareSourceB) and not os.path.isdir(
             self.compareSourceB
         ):
             raise IOError(
-                f"{self.compareSourceB} not an existing directory or valid network interface <ipaddress>:<port>"
+                f"{self.compareSourceB} not an existing directory or valid network"
+                " interface <ipaddress>:<port>"
             )
         self.compareDir = self.resultsDir
         os.makedirs(self.compareDir, exist_ok=True)
@@ -2454,7 +2519,7 @@ class PPMACanalyse:
             if ppmacArgs.backup[0] not in self.operationTypes:
                 raise IOError(
                     f"Unrecognised backup option {ppmacArgs.backup[0]}, "
-                    f'should be "all","active" or "project".'
+                    'should be "all","active" or "project".'
                 )
             self.operationType = ppmacArgs.backup[0]
         self.backupDir = self.resultsDir
@@ -2492,7 +2557,7 @@ class PPMACanalyse:
     def processRecoverOptions(self, ppmacArgs):
         # Specify directory containing backup
         if len(ppmacArgs.recover) < 1:
-            raise IOError(f"Unspecified directory to use for recovery.")
+            raise IOError("Unspecified directory to use for recovery.")
         self.backupDir = ppmacArgs.recover[0]
         if not os.path.isdir(self.backupDir):
             raise IOError(f"Repository directory {self.backupDir} does not exist.")
@@ -2523,7 +2588,7 @@ class PPMACanalyse:
     def processDownloadOptions(self, ppmacArgs):
         # Specify directory containing backup
         if len(ppmacArgs.download) < 1:
-            raise IOError(f"Unspecified directory to use for recovery.")
+            raise IOError("Unspecified directory to use for recovery.")
         self.backupDir = ppmacArgs.download[0]
         if not os.path.isdir(self.backupDir):
             raise IOError(f"Repository directory {self.backupDir} does not exist.")
@@ -2531,7 +2596,7 @@ class PPMACanalyse:
     @connectDisconnect
     def download(self):
         # Copy usrflash files into ppmac
-        executeRemoteShellCommand(f"rm -rf /var/ftp/usrflash/Project/*")
+        executeRemoteShellCommand("rm -rf /var/ftp/usrflash/Project/*")
         for file in os.listdir(self.backupDir):
             scpFromLocalToPowerPMAC(
                 f"{self.backupDir}/{file}", "/var/ftp/usrflash/Project", recursive=True
@@ -2539,7 +2604,7 @@ class PPMACanalyse:
         # Make directory that projpp will log to
         executeRemoteShellCommand("mkdir -p /var/ftp/usrflash/Project/Log")
         # Looks like everything in project dir needs to be rwx
-        executeRemoteShellCommand(f"chmod 777 -R -f /var/ftp/usrflash/Project")
+        executeRemoteShellCommand("chmod 777 -R -f /var/ftp/usrflash/Project")
         # Finally execute a projpp to parse and load new project
         executeRemoteShellCommand("projpp -l")
 
