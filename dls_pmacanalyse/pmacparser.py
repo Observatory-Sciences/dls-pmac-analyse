@@ -462,7 +462,7 @@ class PmacParser(object):
 
     def parseE3(self):
         """Returns the result of a sub-expression that is an I,P,Q or M variable or
-           a constant or a parenthesised expression."""
+        a constant or a parenthesised expression."""
         t = self.lexer.getToken()
         if t == "(":
             result = self.parseExpression()

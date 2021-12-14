@@ -43,7 +43,7 @@ class GlobalConfig(object):
 
     def processArguments(self):
         """Process the command line arguments.  Returns False
-           if the program is to print(the help and exit."""
+        if the program is to print(the help and exit."""
         try:
             opts, args = getopt.gnu_getopt(
                 sys.argv[1:],

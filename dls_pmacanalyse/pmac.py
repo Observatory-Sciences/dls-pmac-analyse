@@ -113,7 +113,7 @@ class Pmac(object):
 
     def readHardware(self, backupDir, checkPositions, debug, comments, verbose):
         """Loads the current state of the PMAC.  If a backupDir is provided, the
-           state is written as it is read."""
+        state is written as it is read."""
         self.checkPositions = checkPositions
         self.debug = debug
         self.comments = comments
@@ -174,7 +174,7 @@ class Pmac(object):
                 self.backupFile = None
 
     def verifyCurrentPositions(self, positions):
-        """ Checks the axis current positions to see if any have moved."""
+        """Checks the axis current positions to see if any have moved."""
         if self.checkPositions:
             now = self.readCurrentPositions()
             match = True
@@ -200,7 +200,7 @@ class Pmac(object):
         return (returnStr, status)
 
     def readCurrentPositions(self):
-        """ Returns the current position as a list."""
+        """Returns the current position as a list."""
         positions = []
         for axis in range(self.numAxes):
             (returnStr, status) = self.sendCommand("#%sP" % (axis + 1))
@@ -224,7 +224,7 @@ class Pmac(object):
 
     def determineNumAxes(self):
         """Determines the number of axes the PMAC has by determining the
-           number of macro station ICs."""
+        number of macro station ICs."""
         if self.numMacroStationIcs is None:
             (returnStr, status) = self.sendCommand("i20 i21 i22 i23")
             if not status:
@@ -241,7 +241,7 @@ class Pmac(object):
 
     def determineNumCoordSystems(self):
         """Determines the number of coordinate systems that are active by
-           reading i68."""
+        reading i68."""
         (returnStr, status) = self.sendCommand("i68")
         if not status:
             raise PmacReadError(returnStr)
@@ -446,8 +446,8 @@ class Pmac(object):
 
     def readKinematicPrograms(self):
         """Reads the kinematic programs.  Note that this
-           function will fail if a program exceeds 1350 characters and small buffers
-           are required."""
+        function will fail if a program exceeds 1350 characters and small buffers
+        are required."""
         log.info("Reading kinematic programs...")
         self.writeBackup("\n; Kinematic programs\n")
         for cs in range(1, self.numCoordSystems + 1):
@@ -467,10 +467,10 @@ class Pmac(object):
 
     def getListingLines(self, thing, pre_thing=""):
         """Returns the listing of a motion program or PLC using
-           small blocks.  It uses the start and length parameters
-           of the list command to slowly build up the listing.  Note
-           that the function fails if any chuck exceeds 1350 characters.
-           For use in small buffer mode."""
+        small blocks.  It uses the start and length parameters
+        of the list command to slowly build up the listing.  Note
+        that the function fails if any chuck exceeds 1350 characters.
+        For use in small buffer mode."""
         lines = []
         offsets = []
         startPos = 0
@@ -527,7 +527,7 @@ class Pmac(object):
 
     def readMotionPrograms(self):
         """Reads the motion programs. Note
-           that only the first 256 programs are read, there are actually 32768."""
+        that only the first 256 programs are read, there are actually 32768."""
         log.info("Reading motion programs...")
         self.writeBackup("\n; Motion programs\n")
         for prog in range(1, 256):

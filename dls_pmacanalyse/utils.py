@@ -93,8 +93,8 @@ def tokenToFloat(token):
 
 def numericSplit(a):
     """Splits a into two parts, a numeric suffix (or 0 if none) and an
-       alphanumeric prefix (the remainder).  The parts are returned
-       as a tuple."""
+    alphanumeric prefix (the remainder).  The parts are returned
+    as a tuple."""
     splitPos = len(a)
     inSuffix = True
     while splitPos > 0 and inSuffix:

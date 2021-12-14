@@ -538,9 +538,7 @@ class Analyse:
 
     def hudsonXmlReport(self):
         # Write out an XML report for Hudson
-        xmlDoc = getDOMImplementation().createDocument(
-            None, "testsuite", None
-        )  # noqa
+        xmlDoc = getDOMImplementation().createDocument(None, "testsuite", None)  # noqa
         xmlTop = xmlDoc.documentElement
         xmlTop.setAttribute("tests", str(len(self.config.pmacs)))
         xmlTop.setAttribute("time", "0")
