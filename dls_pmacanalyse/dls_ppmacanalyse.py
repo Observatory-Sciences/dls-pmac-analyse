@@ -2608,13 +2608,13 @@ class PPMACanalyse:
         # Finally execute a projpp to parse and load new project
         executeRemoteShellCommand("projpp -l")
 
+sshClient = dls_pmacremote.PPmacSshInterface()
 def main():
     """Main entry point of the script."""
     start = time.time()
 
-    ppmacArgs = parseArgs()
-    sshClient = dls_pmacremote.PPmacSshInterface()
-    analysis = PPMACanalyse(ppmacArgs)
+    ppmacArgs = parseArgs()   
+    PPMACanalyse(ppmacArgs)
 
     print(time.time() - start)
 
