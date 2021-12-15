@@ -12,7 +12,7 @@
 import os
 import sys
 
-import dls_pmacanalyse  # noqa
+# import dls_pmacanalyse  # noqa
 
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 
@@ -25,13 +25,13 @@ copyright = "2020, Diamond Light Source"
 author = "Giles Knap"
 
 # The short X.Y version.
-version = dls_pmacanalyse.__version__.split("+")[0]
+# version = dls_pmacanalyse.__version__.split("+")[0]
 # The full version, including alpha/beta/rc tags.
-release = dls_pmacanalyse.__version__
+# release = dls_pmacanalyse.__version__
 
-if os.environ.get("READTHEDOCS") == "True":
-    # Readthedocs modifies conf.py, so will appear dirty when it isn't
-    release = release.split("+0")[0].replace(".dirty", "")
+# if os.environ.get("READTHEDOCS") == "True":
+# Readthedocs modifies conf.py, so will appear dirty when it isn't
+#    release = release.split("+0")[0].replace(".dirty", "")
 
 extensions = [
     # Use this for generating API docs
