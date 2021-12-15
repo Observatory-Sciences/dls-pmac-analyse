@@ -2617,7 +2617,7 @@ def main():
     start = time.time()
 
     ppmacArgs = parseArgs()
-    analysis = PPMACanalyse(ppmacArgs)
+    PPMACanalyse(ppmacArgs)
 
     print(time.time() - start)
 
