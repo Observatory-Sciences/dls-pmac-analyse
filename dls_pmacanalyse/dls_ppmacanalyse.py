@@ -2135,6 +2135,8 @@ class PPMACHardwareWriteRead(object):
         programBuffers = self.sendCommand("buffer")
         for progBuffInfo in programBuffers:
             progBuffInfo = progBuffInfo.split()
+            if len(progBuffInfo) < 5:
+                continue
             progName = progBuffInfo[0].strip("., ")
             progOffset = progBuffInfo[2].strip("., ")
             progSize = progBuffInfo[4].strip("., ")
