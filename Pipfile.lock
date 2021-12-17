@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3a5b2d028018e9bd340e3372ad59f81ac83d4c10874624290dd074e7eece7f05"
+            "sha256": "84b9bd5f682b97fba23548b981de9de2ebd03f0b25958954b638130d5ce49a13"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -92,14 +92,6 @@
             "index": "pypi",
             "version": "==3.0.0b1"
         },
-        "mock": {
-            "hashes": [
-                "sha256:122fcb64ee37cfad5b3f48d7a7d51875d7031aaf3d8be7c42e2bee25044eee62",
-                "sha256:7d3fbbde18228f4ff2f1f119a45cdffa458b4c0dee32eb4d2bb2f82554bac7bc"
-            ],
-            "index": "pypi",
-            "version": "==4.0.3"
-        },
         "numpy": {
             "hashes": [
                 "sha256:2428b109306075d89d21135bdd6b785f132a1f5a3260c371cee1fae427e12727",
@@ -187,14 +179,6 @@
                 "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"
             ],
             "version": "==1.16.0"
-        },
-        "types-mock": {
-            "hashes": [
-                "sha256:1a470543be8de673e2ea14739622de3bfb8c9b10429f50338ba9ca1e868c15e9",
-                "sha256:1ad09970f4f5ec45a138ab1e88d032f010e851bccef7765b34737ed390bbc5c8"
-            ],
-            "index": "pypi",
-            "version": "==4.0.1"
         }
     },
     "develop": {
@@ -455,6 +439,14 @@
                 "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"
             ],
             "version": "==0.6.1"
+        },
+        "mock": {
+            "hashes": [
+                "sha256:122fcb64ee37cfad5b3f48d7a7d51875d7031aaf3d8be7c42e2bee25044eee62",
+                "sha256:7d3fbbde18228f4ff2f1f119a45cdffa458b4c0dee32eb4d2bb2f82554bac7bc"
+            ],
+            "index": "pypi",
+            "version": "==4.0.3"
         },
         "mypy": {
             "hashes": [
@@ -809,6 +801,14 @@
             ],
             "markers": "python_version < '3.8'",
             "version": "==1.4.3"
+        },
+        "types-mock": {
+            "hashes": [
+                "sha256:1a470543be8de673e2ea14739622de3bfb8c9b10429f50338ba9ca1e868c15e9",
+                "sha256:1ad09970f4f5ec45a138ab1e88d032f010e851bccef7765b34737ed390bbc5c8"
+            ],
+            "index": "pypi",
+            "version": "==4.0.1"
         },
         "typing-extensions": {
             "hashes": [
