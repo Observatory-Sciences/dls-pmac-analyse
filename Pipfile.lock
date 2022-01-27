@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "161d49d1c032f15c0a6f539d4be600554e29833516c5900e4f7e845944fac65e"
+            "sha256": "cdd8a68312f6843c2b2c42dd9399a74cfcd9f1b3f3c2e87aacec85b0d2a96d74"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -165,11 +165,26 @@
             ],
             "version": "==1.4.0"
         },
+        "pyqt5": {
+            "hashes": [
+                "sha256:2c309db3035093ea85f08029711d6fbcccf89eded7f8e4f788695d933cfd80a5"
+            ],
+            "index": "pypi",
+            "version": "==5.12.2+dls1"
+        },
         "pyserial": {
             "hashes": [
                 "sha256:e0770fadba80c31013896c7e6ef703f72e7834965954a78e71a3049488d4d7d8"
             ],
             "version": "==3.4"
+        },
+        "pythonqwt": {
+            "hashes": [
+                "sha256:1f13cc8b555a57f8fe0f806d6c2f6d847050e4d837649503932b81316d12788a",
+                "sha256:806d109a0f163ee37259516b498f9b2a711682efbb0dd60dff3c31f25007cbef"
+            ],
+            "index": "pypi",
+            "version": "==0.5.5"
         },
         "scp": {
             "hashes": [

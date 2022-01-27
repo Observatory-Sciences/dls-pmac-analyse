@@ -19,6 +19,8 @@ mock = "*"
 dls-pmaclib = ">=3.0.0b2"
 numpy = "*"
 scp = "*"
+pyqt5 = "*"
+pythonqwt = "*"
 
 
 [scripts]
