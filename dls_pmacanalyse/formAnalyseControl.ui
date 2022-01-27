@@ -1,0 +1,703 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ControlForm</class>
+ <widget class="QMainWindow" name="ControlForm">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1033</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Power-PMAC Analyse Tool</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTextEdit" name="textOutput">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>260</y>
+      <width>991</width>
+      <height>171</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>991</width>
+      <height>221</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <widget class="QWidget" name="Backup">
+     <attribute name="title">
+      <string>Backup</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>10</y>
+        <width>991</width>
+        <height>171</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Power PMAC Backup Configuration</string>
+      </property>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>241</width>
+         <height>131</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Connection to Power PMAC</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>220</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="textLabel1">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Server:</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineServer">
+           <property name="toolTip">
+            <string>Specify the IP address of the Power PMAC to backup</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="textLabel2">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Port:</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="linePort">
+           <property name="toolTip">
+            <string>Specify the port number of which to connect.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>30</y>
+         <width>541</width>
+         <height>141</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Backup Options</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>31</y>
+          <width>77</width>
+          <height>92</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <widget class="QRadioButton" name="rdbActive">
+           <property name="toolTip">
+            <string>Only back up the active elements, buffered programs and coordinate system axes definitions.</string>
+           </property>
+           <property name="text">
+            <string>active</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rdbProject">
+           <property name="toolTip">
+            <string>Only backup the saved and active Project files.</string>
+           </property>
+           <property name="text">
+            <string>project</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rdbAll">
+           <property name="toolTip">
+            <string>Back up everything.</string>
+           </property>
+           <property name="text">
+            <string>all</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="layoutWidget">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>30</y>
+          <width>431</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Ignore file:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineIgnoreFile">
+           <property name="toolTip">
+            <string>Path to the file listing which data structures should be ignored.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QPushButton" name="pushIgnoreLocate">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Backup location:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLineEdit" name="lineBackupLoc">
+           <property name="toolTip">
+            <string>Directory in which the backup will be written.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QPushButton" name="pushDirLocate">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_3">
+       <property name="geometry">
+        <rect>
+         <x>810</x>
+         <y>30</y>
+         <width>171</width>
+         <height>131</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Run</string>
+       </property>
+       <widget class="QPushButton" name="pushBackup">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Backup</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushCancelBackup">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>70</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_2">
+     <attribute name="title">
+      <string>Compare</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>10</y>
+        <width>1001</width>
+        <height>171</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Power PMAC Compare Configuration</string>
+      </property>
+      <widget class="QGroupBox" name="groupBox_6">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>341</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Compare sources</string>
+       </property>
+       <widget class="QWidget" name="">
+        <property name="geometry">
+         <rect>
+          <x>11</x>
+          <y>28</y>
+          <width>314</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <item row="0" column="0">
+          <widget class="QLabel" name="textLabel1_2">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Source 1</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineSource1">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Source to compare can be:&lt;/p&gt;&lt;p&gt;  - path to a back-up directory&lt;/p&gt;&lt;p&gt;  - a network interface &amp;lt;ip.address&amp;gt;:&amp;lt;port&amp;gt; &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="pushDirLocate_4">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="textLabel1_3">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Source 2</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="lineSource2">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Source to compare can be:&lt;/p&gt;&lt;p&gt;  - path to a back-up directory&lt;/p&gt;&lt;p&gt;  - a network interface &amp;lt;ip.address&amp;gt;:&amp;lt;port&amp;gt; &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QPushButton" name="pushDirLocate_3">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_7">
+       <property name="geometry">
+        <rect>
+         <x>370</x>
+         <y>30</y>
+         <width>451</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Compare Options</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget_3">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>431</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_4">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Ignore file:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineIgnoreFile2">
+           <property name="toolTip">
+            <string>Path to the file listing which data structures should be ignored.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QPushButton" name="pushIgnoreLocate_2">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>Compare location:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLineEdit" name="lineBackupLoc2">
+           <property name="toolTip">
+            <string>Directory in which the compare will be written.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QPushButton" name="pushDirLocate_2">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_8">
+       <property name="geometry">
+        <rect>
+         <x>830</x>
+         <y>30</y>
+         <width>121</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Run</string>
+       </property>
+       <widget class="QPushButton" name="pushCompare">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Compare</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushCancelCompare">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>70</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushBackup</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>runBackup()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>919</x>
+     <y>167</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>863</x>
+     <y>343</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>backupLocationBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>791</x>
+     <y>210</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>733</x>
+     <y>300</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushIgnoreLocate</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>ignoreFileBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>743</x>
+     <y>167</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>560</x>
+     <y>316</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushCompare</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>runCompare()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>931</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>881</x>
+     <y>439</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tabWidget</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>ControlForm</receiver>
+   <slot>setMode(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>662</x>
+     <y>45</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>587</x>
+     <y>510</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate_4</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>source1LocationBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>310</x>
+     <y>159</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>205</x>
+     <y>456</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate_3</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>source2LocationBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>347</x>
+     <y>201</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>367</x>
+     <y>491</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushIgnoreLocate_2</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>ignoreFileBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>776</x>
+     <y>163</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>711</x>
+     <y>455</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate_2</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>backupLocationBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>808</x>
+     <y>207</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>774</x>
+     <y>489</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushCancelBackup</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>cancelBackup()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>892</x>
+     <y>207</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>854</x>
+     <y>478</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushCancelCompare</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>cancelCompare()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>876</x>
+     <y>207</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>878</x>
+     <y>502</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>runBackup()</slot>
+  <slot>backupLocationBrowser()</slot>
+  <slot>ignoreFileBrowser()</slot>
+  <slot>runCompare()</slot>
+  <slot>setMode(int)</slot>
+  <slot>source1LocationBrowser()</slot>
+  <slot>source2LocationBrowser()</slot>
+  <slot>cancelBackup()</slot>
+  <slot>cancelCompare()</slot>
+ </slots>
+</ui>

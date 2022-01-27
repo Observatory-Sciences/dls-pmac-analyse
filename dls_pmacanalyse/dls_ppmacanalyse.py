@@ -2621,7 +2621,7 @@ def main():
     ppmacArgs = parseArgs()
     PPMACanalyse(ppmacArgs)
 
-    print(time.time() - start)
+    #print(time.time() - start)
 
 
 if __name__ == "__main__":
