@@ -2616,12 +2616,8 @@ sshClient = dls_pmacremote.PPmacSshInterface()
 
 def main():
     """Main entry point of the script."""
-    start = time.time()
-
     ppmacArgs = parseArgs()
     PPMACanalyse(ppmacArgs)
-
-    #print(time.time() - start)
 
 
 if __name__ == "__main__":

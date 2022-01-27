@@ -16,7 +16,7 @@ types-mock = "*"
 mock = "*"
 
 [packages]
-dls-pmaclib = "==3.0.0b1"
+dls-pmaclib = ">=3.0.0b2"
 numpy = "*"
 scp = "*"
 
