@@ -8,13 +8,14 @@ import time
 import numpy as np
 from dls_pmaclib import dls_pmacremote
 from scp import SCPClient
+import dls_pmacanalyse.ppmacanalyse_control
 
 
 def timer(func):
     def measureExecutionTime(*args, **kwargs):
         startTime = time.time()
         result = func(*args, **kwargs)
-        print(
+        logging.info(
             "Processing time of %s(): %.2f seconds."
             % (func.__qualname__, time.time() - startTime)
         )
@@ -111,6 +112,14 @@ def parseArgs():
         help=(
             "Directory in which to place output of analysis.\n"
             "--resultsdir <results dir>"
+        ),
+    )
+    parser.add_argument(
+        "-g",
+        "--gui",
+        action="store_true",
+        help=(
+            "Launch Power PMAC analyse GUI."
         ),
     )
     parser.add_argument("-n", "--name", metavar="", nargs=1, help="Name of Power PMAC.")
@@ -1401,10 +1410,10 @@ class PPMACHardwareWriteRead(object):
         :return: swtbl_DSs: list of symbols, where each 'symbol' is represented by
         the contents of one row of the symbols table file.
         """
+        symbols = []
         try:
             file = open(file=pp_swtbl_file, mode="r", encoding="ISO-8859-1")
             multi_line = ""
-            symbols = []
             for line in file:
                 multi_line_ = multi_line
                 if line[-2:] == "\\\n":
@@ -2443,7 +2452,9 @@ class PPMACanalyse:
         if isValidNetworkInterface(self.compareSourceA):
             sshClient.hostname = self.compareSourceA.strip().split(":")[0]
             sshClient.port = self.compareSourceA.strip().split(":")[1]
-            sshClient.connect()
+            # Check that we can connect
+            self.checkConnection(False)
+            #sshClient.connect()
             hardwareWriteRead = PPMACHardwareWriteRead(
                 ppmacA, f"{self.compareDir}/tmp/databaseA"
             )
@@ -2471,6 +2482,8 @@ class PPMACanalyse:
                 "repository", f"{self.compareSourceA}/project/active"
             )
         if isValidNetworkInterface(self.compareSourceB):
+            # Check that we can connect
+            self.checkConnection(False)
             sshClient.hostname = self.compareSourceB.strip().split(":")[0]
             sshClient.port = self.compareSourceB.strip().split(":")[1]
             sshClient.connect()
@@ -2535,12 +2548,13 @@ class PPMACanalyse:
     @connectDisconnect
     def backup(self, type="all"):
         ppmacA = PowerPMAC(self.name)
+        # Check that we can connect
+        self.checkConnection(False)
         if type == "all" or type == "active":
             # read current state of ppmac and store in ppmacA object
             hardwareWriteRead = PPMACHardwareWriteRead(ppmacA, f"{self.backupDir}/tmp")
             hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
             # write current state of ppmacA object to repository
-            print(self.backupDir)
             activeDir = self.backupDir
             repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, activeDir)
             repositoryWriteRead.writeActiveState()
@@ -2556,6 +2570,20 @@ class PPMACanalyse:
                 "/var/ftp/usrflash/*", activeProjectDir, recursive=True
             )
 
+    def checkConnection(self, disconnectAfter):
+        connect_status = sshClient.connect()
+        if connect_status is None:
+            #All OK
+            return
+        if "Cannot connect" in connect_status:
+            logging.error("Cannot establish connection to Power PMAC at "+
+                str(self.ipAddress)+":"+str(self.port)) 
+            raise IOError(f"ERROR: Cannot establish connection to Power PMAC at "
+            f" at {self.ipAddress}:{self.port}")
+        elif disconnectAfter:
+            sshClient.disconnect()
+
+
     def processRecoverOptions(self, ppmacArgs):
         # Specify directory containing backup
         if len(ppmacArgs.recover) < 1:
@@ -2564,8 +2592,11 @@ class PPMACanalyse:
         if not os.path.isdir(self.backupDir):
             raise IOError(f"Repository directory {self.backupDir} does not exist.")
 
+
     @connectDisconnect
     def recover(self):
+        # Check that we can connect
+        self.checkConnection(False)
         recoverScript = "recover.sh"
         with open(recoverScript, "w+") as writeFile:
             writeFile.write(recoveryCmds)
@@ -2595,8 +2626,11 @@ class PPMACanalyse:
         if not os.path.isdir(self.backupDir):
             raise IOError(f"Repository directory {self.backupDir} does not exist.")
 
+
     @connectDisconnect
     def download(self):
+        # Check that we can connect
+        #self.checkConnection(False)
         # Copy usrflash files into ppmac
         executeRemoteShellCommand("rm -rf /var/ftp/usrflash/Project/*")
         for file in os.listdir(self.backupDir):
@@ -2617,7 +2651,10 @@ sshClient = dls_pmacremote.PPmacSshInterface()
 def main():
     """Main entry point of the script."""
     ppmacArgs = parseArgs()
-    PPMACanalyse(ppmacArgs)
+    if ppmacArgs.gui:
+        dls_pmacanalyse.ppmacanalyse_control.main()
+    else:
+        PPMACanalyse(ppmacArgs)
 
 
 if __name__ == "__main__":

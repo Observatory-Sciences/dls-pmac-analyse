@@ -18,7 +18,7 @@ class Ui_ControlForm(object):
         self.centralwidget = QtWidgets.QWidget(ControlForm)
         self.centralwidget.setObjectName("centralwidget")
         self.textOutput = QtWidgets.QTextEdit(self.centralwidget)
-        self.textOutput.setGeometry(QtCore.QRect(20, 260, 991, 171))
+        self.textOutput.setGeometry(QtCore.QRect(20, 260, 991, 281))
         self.textOutput.setObjectName("textOutput")
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
         self.tabWidget.setGeometry(QtCore.QRect(20, 20, 991, 221))

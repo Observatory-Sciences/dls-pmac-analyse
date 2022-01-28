@@ -12,7 +12,7 @@ from dls_pmacanalyse.ui_formAnalyseControl import Ui_ControlForm
 
 
 class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
-    def __init__(self, options, parent=None):
+    def __init__(self, parent=None):
         # signal.signal(2, self.signalHandler)
         # setup signals
 
@@ -33,13 +33,15 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         # IP/Port 
         # 0 = backup
         # 2 = download/recover
-        self.lineServer0.setText(options.server)
-        self.linePort0.setText(options.port)
-        self.lineServer2.setText(options.server)
-        self.linePort2.setText(options.port)
+        server = "192.168.56.10"
+        port = "22"
+        self.lineServer0.setText(server)
+        self.linePort0.setText(port)
+        self.lineServer2.setText(server)
+        self.linePort2.setText(port)
 
         # Back-up options
-        self.backupOption = options.backupOpt
+        self.backupOption = "all"
         if self.backupOption == "all":
             self.rdbAll.setChecked(True)
         elif self.backupOption == "project":
@@ -48,22 +50,26 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             self.rdbActive.setChecked(True)
 
         # Sources for compare
-        self.lineSource1.setText(options.source1)
-        self.lineSource2.setText(options.source2)
+        source1 = "192.168.56.10:22"
+        source2 = "./"
+        self.lineSource1.setText(source1)
+        self.lineSource2.setText(source2)
 
         # Ignore file location 
         # 0 = backup
         # 1 = compare
-        self.lineIgnoreFile0.setText(options.ignoreFile)
-        self.lineIgnoreFile1.setText(options.ignoreFile)
+        ignoreFile = "/dls_sw/work/motion/PPMAC_TEST/ignore"
+        self.lineIgnoreFile0.setText(ignoreFile)
+        self.lineIgnoreFile1.setText(ignoreFile)
         
         # Results file location
         # 0 = backup
         # 1 = compare
         # 2 = download/recover
-        self.lineOutputDir0.setText(options.outputLocation)
-        self.lineOutputDir1.setText(options.outputLocation)
-        self.lineOutputDir2.setText(options.outputLocation)
+        outputLocation = "./ppmacAnalyse"
+        self.lineOutputDir0.setText(outputLocation)
+        self.lineOutputDir1.setText(outputLocation)
+        self.lineOutputDir2.setText(outputLocation)
 
         # Backup file location for download/recover
         self.lineBackupDir.setText("./")
@@ -126,19 +132,20 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
 
         self.pushCancel0.setEnabled(False)
         success = True
-        stdoutStr = ""
-        for line in process.stdout:
+        stderrStr = ""
+        for line in process.stderr:
             unicode_text = str(line, "utf-8")
             if unicode_text != "":
                 success = False
-                stdoutStr += unicode_text
+                # Just save the last line with the root error
+                stderrStr = unicode_text
 
         # stdout, stderr = process.communicate()
         if self.cancelBackup:
             self.addTextLog("Backup cancelled...")
             self.cancelBackup = False
         elif not success:
-            self.addTextError("\nBackup failed with errors: \n" + stdoutStr)
+            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
         else:
             self.addTextLog(
                 "\nBackup completed in: " + str(time.time() - start) + " secs"
@@ -187,19 +194,20 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         self.pushCancel1.setEnabled(False)
 
         success = True
-        stdoutStr = ""
-        for line in process.stdout:
+        stderrStr = ""
+        for line in process.stderr:
             unicode_text = str(line, "utf-8")
             if unicode_text != "":
                 success = False
-                stdoutStr += unicode_text
+                # Just save the last line with the root error
+                stderrStr = unicode_text
 
         # stdout, stderr = process.communicate()
         if self.cancelCompare:
             self.addTextLog("Compare cancelled...")
             self.cancelCompare = False
         elif not success:
-            self.addTextError("\nCompare failed with errors: \n" + stdoutStr)
+            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
         else:
             self.addTextLog(
                 "\nCompare completed in: " + str(time.time() - start) + " secs"
@@ -254,19 +262,20 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
 
         self.pushCancel2.setEnabled(False)
         success = True
-        stdoutStr = ""
-        for line in process.stdout:
+        stderrStr = ""
+        for line in process.stderr:
             unicode_text = str(line, "utf-8")
             if unicode_text != "":
                 success = False
-                stdoutStr += unicode_text
+                # Just save the last line with the root error
+                stderrStr = unicode_text
 
         # stdout, stderr = process.communicate()
         if self.cancelDR:
             self.addTextLog(commandStr + " cancelled...")
             self.cancelDR = False
         elif not success:
-            self.addTextError("\n" + commandStr+" failed with errors: \n" + stdoutStr)
+            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
         else:
             self.addTextLog(
                 "\n" + commandStr + " completed in: " + str(time.time() - start) + " secs"
@@ -345,67 +354,10 @@ def main():
     usage = """usage: %prog [options] %prog is a graphical frontend to the
     Deltatau motorcontroller known as PMAC."""
     parser = OptionParser(usage)
-    parser.add_option(
-        "-s",
-        "--server",
-        action="store",
-        dest="server",
-        default="192.168.56.10",
-        help="Set server name (default: 192.168.56.10)",
-    )
-    parser.add_option(
-        "-p",
-        "--port",
-        action="store",
-        dest="port",
-        default="22",
-        help="Set IP port number to connect to (default: 22)",
-    )
-    parser.add_option(
-        "-b",
-        "--backup",
-        action="store",
-        dest="backupOpt",
-        default="all",
-        help="Set backup option (default: all)",
-    )
-    parser.add_option(
-        "-i",
-        "--ignoreFile",
-        action="store",
-        dest="ignoreFile",
-        default="/dls_sw/work/motion/PPMAC_TEST/ignore",
-        help="Specify ignore file location"
-        + " (default: /dls_sw/work/motion/PPMAC_TEST/ignore)",
-    )
-    parser.add_option(
-        "-o",
-        "--outputLocation",
-        action="store",
-        dest="outputLocation",
-        default="./ppmacAnalyse",
-        help="Specify the location to create backup (default: ./ppmacAnalyse)",
-    )
-    parser.add_option(
-        "",
-        "--source1",
-        action="store",
-        dest="source1",
-        default="192.168.56.10:22",
-        help="Specify the first source to comparre (default: 192.168.56.10:22)",
-    )
-    parser.add_option(
-        "",
-        "--source2",
-        action="store",
-        dest="source2",
-        default="./",
-        help="Specify the second source to comparre (default: ./)",
-    )
-    (options, args) = parser.parse_args()
+
     app = QApplication(sys.argv)
     app.lastWindowClosed.connect(app.quit)
-    win = Controlform(options)
+    win = Controlform()
     win.show()
     # catch CTRL-C
     signal.signal(signal.SIGINT, signal.SIG_DFL)
