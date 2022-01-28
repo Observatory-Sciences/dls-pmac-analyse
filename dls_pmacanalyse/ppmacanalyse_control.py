@@ -19,19 +19,26 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
 
-        # Mode
-        self.mode = 0  # backup
+        # Mode - set by the tab index of the GUI
+        # 0 = backup
+        # 1 = compare
+        # 2 = download/recover
+        self.mode = 0 
 
-        # Colors
+        # Text colors
         self.blackColor = QColor(0, 0, 0)
         self.blueColor = QColor(0, 0, 255)
         self.redColor = QColor(255, 0, 0)
 
-        # Connection
-        self.lineServer.setText(options.server)
-        self.linePort.setText(options.port)
+        # IP/Port 
+        # 0 = backup
+        # 2 = download/recover
+        self.lineServer0.setText(options.server)
+        self.linePort0.setText(options.port)
+        self.lineServer2.setText(options.server)
+        self.linePort2.setText(options.port)
 
-        # Back up options
+        # Back-up options
         self.backupOption = options.backupOpt
         if self.backupOption == "all":
             self.rdbAll.setChecked(True)
@@ -40,27 +47,44 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         elif self.backupOption == "active":
             self.rdbActive.setChecked(True)
 
-        # Compare sources
+        # Sources for compare
         self.lineSource1.setText(options.source1)
         self.lineSource2.setText(options.source2)
 
-        # Ignore file location
-        self.lineIgnoreFile.setText(options.ignoreFile)
-        self.lineBackupLoc.setText(options.backupLocation)
-        self.lineIgnoreFile2.setText(options.ignoreFile)
-        self.lineBackupLoc2.setText(options.backupLocation)
+        # Ignore file location 
+        # 0 = backup
+        # 1 = compare
+        self.lineIgnoreFile0.setText(options.ignoreFile)
+        self.lineIgnoreFile1.setText(options.ignoreFile)
+        
+        # Results file location
+        # 0 = backup
+        # 1 = compare
+        # 2 = download/recover
+        self.lineOutputDir0.setText(options.outputLocation)
+        self.lineOutputDir1.setText(options.outputLocation)
+        self.lineOutputDir2.setText(options.outputLocation)
+
+        # Backup file location for download/recover
+        self.lineBackupDir.setText("./")
 
         # Cancel buttons
-        self.pushCancelBackup.setEnabled(False)
-        self.pushCancelCompare.setEnabled(False)
+        # 0 = backup
+        # 1 = compare
+        # 2 = download/recover
+        self.pushCancel0.setEnabled(False)
+        self.pushCancel1.setEnabled(False)
+        self.pushCancel2.setEnabled(False)
         self.cancelBackup = False
         self.cancelCompare = False
+        self.cancelDR = False
 
     def runBackup(self):
-        server_name = self.lineServer.text()
-        server_port = self.linePort.text()
-        ignore_file = self.lineIgnoreFile.text()
-        backup_dir = self.lineBackupLoc.text()
+        # Tab index 0
+        server_name = self.lineServer0.text()
+        server_port = self.linePort0.text()
+        ignore_file = self.lineIgnoreFile0.text()
+        output_dir = self.lineOutputDir0.text()
         backup_option = "all"
         if self.rdbProject.isChecked():
             backup_option = "project"
@@ -68,17 +92,17 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             backup_option = "active"
 
         self.cancelBackup = False
-        self.pushCancelBackup.setEnabled(True)
+        self.pushCancel0.setEnabled(True)
 
         cmd = [
-            "dls-ppmac-analyse.py",
+            "dls-ppmac-analyse-cli.py",
             "--interface",
             str(server_name) + ":" + str(server_port),
             "--backup",
             backup_option,
             str(ignore_file),
             "--resultsdir",
-            str(backup_dir),
+            str(output_dir),
         ]
 
         self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
@@ -100,7 +124,7 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
                 process.kill()
             time.sleep(0.1)
 
-        self.pushCancelBackup.setEnabled(False)
+        self.pushCancel0.setEnabled(False)
         success = True
         stdoutStr = ""
         for line in process.stdout:
@@ -121,22 +145,23 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             )
 
     def runCompare(self):
+        # Tab index 1
         source1 = self.lineSource1.text()
         source2 = self.lineSource2.text()
-        ignore_file = self.lineIgnoreFile2.text()
-        backup_dir = self.lineBackupLoc2.text()
+        ignore_file = self.lineIgnoreFile1.text()
+        output_dir = self.lineOutputDir1.text()
 
         self.cancelCompare = False
-        self.pushCancelCompare.setEnabled(True)
+        self.pushCancel1.setEnabled(True)
 
         cmd = [
-            "dls-ppmac-analyse.py",
+            "dls-ppmac-analyse-cli.py",
             "--compare",
             source1,
             source2,
             str(ignore_file),
             "--resultsdir",
-            str(backup_dir),
+            str(output_dir),
         ]
 
         self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
@@ -159,7 +184,7 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
                 process.kill()
             time.sleep(0.1)
 
-        self.pushCancelCompare.setEnabled(False)
+        self.pushCancel1.setEnabled(False)
 
         success = True
         stdoutStr = ""
@@ -180,11 +205,87 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
                 "\nCompare completed in: " + str(time.time() - start) + " secs"
             )
 
+    def runDownloadRecover(self, commandStr):
+        # Tab index 2
+        server_name = self.lineServer2.text()
+        server_port = self.linePort2.text()
+        backup_dir = self.lineBackupDir.text()
+        output_dir = self.lineOutputDir2.text()
+
+        if commandStr == "download":
+            backup_dir += "/project/active"
+        elif commandStr == "recover":
+            backup_dir += "/project/saved"
+        else:
+            self.addTextLog("Not a valid ppmac-analyse option")
+            return
+
+        self.cancelDR = False
+        self.pushCancel2.setEnabled(True)
+
+        cmd = [
+            "dls-ppmac-analyse-cli.py",
+            "--interface",
+            str(server_name) + ":" + str(server_port),
+            "--"+commandStr,
+            str(backup_dir),
+            "--resultsdir",
+            str(output_dir),
+        ]
+
+        self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
+        start = time.time()
+
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.addTextProgress("Working.")
+
+        logInterval = time.time()
+
+        while process.poll() is None:
+            # Only log every second
+            if time.time() - logInterval > 1:
+                self.addTextProgress(".")
+                logInterval = time.time()
+            QApplication.processEvents()
+            if self.cancelDR:
+                self.addTextError("\nCancelling")
+                process.kill()
+            time.sleep(0.1)
+
+        self.pushCancel2.setEnabled(False)
+        success = True
+        stdoutStr = ""
+        for line in process.stdout:
+            unicode_text = str(line, "utf-8")
+            if unicode_text != "":
+                success = False
+                stdoutStr += unicode_text
+
+        # stdout, stderr = process.communicate()
+        if self.cancelDR:
+            self.addTextLog(commandStr + " cancelled...")
+            self.cancelDR = False
+        elif not success:
+            self.addTextError("\n" + commandStr+" failed with errors: \n" + stdoutStr)
+        else:
+            self.addTextLog(
+                "\n" + commandStr + " completed in: " + str(time.time() - start) + " secs"
+            )
+
+    def runDownload(self):
+        self.runDownloadRecover("download")   
+
+    def runRecover(self):
+        self.runDownloadRecover("recover")           
+
     def cancelBackup(self):
         self.cancelBackup = True
 
     def cancelCompare(self):
         self.cancelCompare = True
+
+    def cancelDR(self):
+        self.cancelDR = True
 
     def ignoreFileBrowser(self):
         filename, _filter = QFileDialog.getOpenFileName()
@@ -194,13 +295,20 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             elif self.mode == 1:
                 self.lineIgnoreFile2.setText(filename)
 
-    def backupLocationBrowser(self):
+    def outputDirBrowser(self):
         directory = QFileDialog.getExistingDirectory()
         if directory != "":
             if self.mode == 0:
-                self.lineBackupLoc.setText(directory)
+                self.lineOutputDir0.setText(directory)
             elif self.mode == 1:
-                self.lineBackupLoc2.setText(directory)
+                self.lineOutputDir1.setText(directory)
+            elif self.mode == 2:
+                self.lineOutputDir2.setText(directory)    
+
+    def backupDirBrowser(self):
+        directory = QFileDialog.getExistingDirectory()
+        if directory != "":
+            self.lineBackupDir.setText(directory)
 
     def source1LocationBrowser(self):
         directory = QFileDialog.getExistingDirectory()
@@ -271,12 +379,12 @@ def main():
         + " (default: /dls_sw/work/motion/PPMAC_TEST/ignore)",
     )
     parser.add_option(
-        "-f",
-        "--backupLocation",
+        "-o",
+        "--outputLocation",
         action="store",
-        dest="backupLocation",
-        default="./",
-        help="Specify the location to create backup (default: ./)",
+        dest="outputLocation",
+        default="./ppmacAnalyse",
+        help="Specify the location to create backup (default: ./ppmacAnalyse)",
     )
     parser.add_option(
         "",

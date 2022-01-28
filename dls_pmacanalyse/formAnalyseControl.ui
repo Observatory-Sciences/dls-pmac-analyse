@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1033</width>
+    <width>1038</width>
     <height>600</height>
    </rect>
   </property>
@@ -43,9 +43,9 @@
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>10</x>
         <y>10</y>
-        <width>991</width>
+        <width>951</width>
         <height>171</height>
        </rect>
       </property>
@@ -97,7 +97,7 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="lineServer">
+          <widget class="QLineEdit" name="lineServer0">
            <property name="toolTip">
             <string>Specify the IP address of the Power PMAC to backup</string>
            </property>
@@ -126,7 +126,7 @@
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="linePort">
+          <widget class="QLineEdit" name="linePort0">
            <property name="toolTip">
             <string>Specify the port number of which to connect.</string>
            </property>
@@ -141,7 +141,7 @@
          <x>260</x>
          <y>30</y>
          <width>541</width>
-         <height>141</height>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">
@@ -207,7 +207,7 @@
           </widget>
          </item>
          <item row="0" column="1" colspan="2">
-          <widget class="QLineEdit" name="lineIgnoreFile">
+          <widget class="QLineEdit" name="lineIgnoreFile0">
            <property name="toolTip">
             <string>Path to the file listing which data structures should be ignored.</string>
            </property>
@@ -223,14 +223,14 @@
          <item row="1" column="0" colspan="2">
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>Backup location:</string>
+            <string>Output directory:</string>
            </property>
           </widget>
          </item>
          <item row="1" column="2">
-          <widget class="QLineEdit" name="lineBackupLoc">
+          <widget class="QLineEdit" name="lineOutputDir0">
            <property name="toolTip">
-            <string>Directory in which the backup will be written.</string>
+            <string>Directory in which the Backup and log will be written.</string>
            </property>
           </widget>
          </item>
@@ -249,7 +249,7 @@
         <rect>
          <x>810</x>
          <y>30</y>
-         <width>171</width>
+         <width>111</width>
          <height>131</height>
         </rect>
        </property>
@@ -265,11 +265,14 @@
           <height>36</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Backup the Power PMAC to a local file.</string>
+        </property>
         <property name="text">
          <string>Backup</string>
         </property>
        </widget>
-       <widget class="QPushButton" name="pushCancelBackup">
+       <widget class="QPushButton" name="pushCancel0">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -277,6 +280,9 @@
           <width>92</width>
           <height>36</height>
          </rect>
+        </property>
+        <property name="toolTip">
+         <string>Cancel the current action.</string>
         </property>
         <property name="text">
          <string>Cancel</string>
@@ -292,9 +298,9 @@
      <widget class="QGroupBox" name="groupBox_5">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>10</x>
         <y>10</y>
-        <width>1001</width>
+        <width>951</width>
         <height>171</height>
        </rect>
       </property>
@@ -401,7 +407,7 @@
       <widget class="QGroupBox" name="groupBox_7">
        <property name="geometry">
         <rect>
-         <x>370</x>
+         <x>360</x>
          <y>30</y>
          <width>451</width>
          <height>121</height>
@@ -428,7 +434,7 @@
           </widget>
          </item>
          <item row="0" column="1" colspan="2">
-          <widget class="QLineEdit" name="lineIgnoreFile2">
+          <widget class="QLineEdit" name="lineIgnoreFile1">
            <property name="toolTip">
             <string>Path to the file listing which data structures should be ignored.</string>
            </property>
@@ -444,14 +450,14 @@
          <item row="1" column="0" colspan="2">
           <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>Compare location:</string>
+            <string>Output directory:</string>
            </property>
           </widget>
          </item>
          <item row="1" column="2">
-          <widget class="QLineEdit" name="lineBackupLoc2">
+          <widget class="QLineEdit" name="lineOutputDir1">
            <property name="toolTip">
-            <string>Directory in which the compare will be written.</string>
+            <string>Directory in which the Compare information and log will be written.</string>
            </property>
           </widget>
          </item>
@@ -468,9 +474,9 @@
       <widget class="QGroupBox" name="groupBox_8">
        <property name="geometry">
         <rect>
-         <x>830</x>
+         <x>820</x>
          <y>30</y>
-         <width>121</width>
+         <width>111</width>
          <height>121</height>
         </rect>
        </property>
@@ -486,11 +492,14 @@
           <height>36</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Compare two sources and save the output.</string>
+        </property>
         <property name="text">
          <string>Compare</string>
         </property>
        </widget>
-       <widget class="QPushButton" name="pushCancelCompare">
+       <widget class="QPushButton" name="pushCancel1">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -499,8 +508,240 @@
           <height>36</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>Cancel the current action.</string>
+        </property>
         <property name="text">
          <string>Cancel</string>
+        </property>
+       </widget>
+      </widget>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Download/Recover</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_9">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>971</width>
+        <height>161</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Power PMAC Download/Recover Configuration</string>
+      </property>
+      <widget class="QGroupBox" name="groupBox_10">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>241</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Connection to Power PMAC</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>220</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0">
+          <widget class="QLabel" name="textLabel1_4">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Server:</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineServer2">
+           <property name="toolTip">
+            <string>Specify the IP address of the Power PMAC to download to.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="textLabel2_2">
+           <property name="minimumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>75</width>
+             <height>27</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Port:</string>
+           </property>
+           <property name="wordWrap">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="linePort2">
+           <property name="toolTip">
+            <string>Specify the port number of which to connect.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="geometry">
+        <rect>
+         <x>260</x>
+         <y>30</y>
+         <width>481</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Download/Recover Options</string>
+       </property>
+       <widget class="QWidget" name="layoutWidget_5">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>461</width>
+          <height>80</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_6">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Backup location:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineBackupDir">
+           <property name="toolTip">
+            <string>Location of the backup (output directory from running a Backup).</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QPushButton" name="pushBackupDir">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>Output directory:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLineEdit" name="lineOutputDir2">
+           <property name="toolTip">
+            <string>Output directory for the log file.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QPushButton" name="pushOutputDir">
+           <property name="text">
+            <string>Browse</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_12">
+       <property name="geometry">
+        <rect>
+         <x>750</x>
+         <y>30</y>
+         <width>211</width>
+         <height>121</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Run</string>
+       </property>
+       <widget class="QPushButton" name="pushDownload">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>30</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copied the specified built projects into the active project site of the Power PMAC (/var/ftp/usrflash/Project) and then loads it into active memory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Download</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushCancel2">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>70</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Cancel the current action.</string>
+        </property>
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushRecover">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>30</y>
+          <width>92</width>
+          <height>36</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Restore a previous saved configuration. Project, Database and Temp directories which have been copied from the /opt/ppmac/usrflash site on the Power PMAC are copied back into that site and the Project will become active upon power cycling the Power PMAC.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>Recover</string>
         </property>
        </widget>
       </widget>
@@ -519,28 +760,12 @@
    <slot>runBackup()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>919</x>
-     <y>167</y>
+     <x>923</x>
+     <y>166</y>
     </hint>
     <hint type="destinationlabel">
      <x>863</x>
      <y>343</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushDirLocate</sender>
-   <signal>clicked()</signal>
-   <receiver>ControlForm</receiver>
-   <slot>backupLocationBrowser()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>791</x>
-     <y>210</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>733</x>
-     <y>300</y>
     </hint>
    </hints>
   </connection>
@@ -551,7 +776,7 @@
    <slot>ignoreFileBrowser()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>743</x>
+     <x>833</x>
      <y>167</y>
     </hint>
     <hint type="destinationlabel">
@@ -567,8 +792,8 @@
    <slot>runCompare()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>931</x>
-     <y>170</y>
+     <x>935</x>
+     <y>166</y>
     </hint>
     <hint type="destinationlabel">
      <x>881</x>
@@ -641,30 +866,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushDirLocate_2</sender>
-   <signal>clicked()</signal>
-   <receiver>ControlForm</receiver>
-   <slot>backupLocationBrowser()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>808</x>
-     <y>207</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>774</x>
-     <y>489</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>pushCancelBackup</sender>
+   <sender>pushCancel0</sender>
    <signal>clicked()</signal>
    <receiver>ControlForm</receiver>
    <slot>cancelBackup()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>892</x>
-     <y>207</y>
+     <x>896</x>
+     <y>206</y>
     </hint>
     <hint type="destinationlabel">
      <x>854</x>
@@ -673,14 +882,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>pushCancelCompare</sender>
+   <sender>pushCancel1</sender>
    <signal>clicked()</signal>
    <receiver>ControlForm</receiver>
    <slot>cancelCompare()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>876</x>
-     <y>207</y>
+     <x>884</x>
+     <y>206</y>
     </hint>
     <hint type="destinationlabel">
      <x>878</x>
@@ -688,10 +897,121 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>pushDownload</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>runDownload()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>810</x>
+     <y>158</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>734</x>
+     <y>504</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushRecover</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>runRecover()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>951</x>
+     <y>149</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>898</x>
+     <y>493</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushCancel2</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>cancelDR()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>894</x>
+     <y>202</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>901</x>
+     <y>458</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>outputDirBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>793</x>
+     <y>190</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>689</x>
+     <y>469</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushDirLocate_2</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>outputDirBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>793</x>
+     <y>203</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>683</x>
+     <y>560</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushBackupDir</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>backupDirBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>706</x>
+     <y>155</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>413</x>
+     <y>472</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushOutputDir</sender>
+   <signal>clicked()</signal>
+   <receiver>ControlForm</receiver>
+   <slot>outputDirBrowser()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>729</x>
+     <y>197</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>448</x>
+     <y>535</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>runBackup()</slot>
-  <slot>backupLocationBrowser()</slot>
   <slot>ignoreFileBrowser()</slot>
   <slot>runCompare()</slot>
   <slot>setMode(int)</slot>
@@ -699,5 +1019,10 @@
   <slot>source2LocationBrowser()</slot>
   <slot>cancelBackup()</slot>
   <slot>cancelCompare()</slot>
+  <slot>runDownload()</slot>
+  <slot>runRecover()</slot>
+  <slot>cancelDR()</slot>
+  <slot>outputDirBrowser()</slot>
+  <slot>backupDirBrowser()</slot>
  </slots>
 </ui>
