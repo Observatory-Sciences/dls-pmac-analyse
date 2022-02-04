@@ -2652,7 +2652,7 @@ class PPMACanalyse:
         scpFromLocalToPowerPMAC(recoverScript, "/tmp/")
         os.system("rm recover.sh")
         executeRemoteShellCommand(f"chmod 777 /tmp/{recoverScript}")
-        executeRemoteShellCommand("mkdir /tmp/recover")
+        executeRemoteShellCommand("mkdir -p /tmp/recover")
         scpFromLocalToPowerPMAC(
             f"{self.backupDir}/Project", "/tmp/recover/", recursive=True
         )
@@ -2679,12 +2679,12 @@ class PPMACanalyse:
     @connectDisconnect
     def download(self):
         # Check that we can connect
-        #self.checkConnection(False)
+        self.checkConnection(False)
         # Copy usrflash files into ppmac
         executeRemoteShellCommand("rm -rf /var/ftp/usrflash/Project/*")
-        for file in os.listdir(self.backupDir):
+        for file in os.listdir(f"{self.backupDir}/Project"):
             scpFromLocalToPowerPMAC(
-                f"{self.backupDir}/{file}", "/var/ftp/usrflash/Project", recursive=True
+                f"{self.backupDir}/Project/{file}", "/var/ftp/usrflash/Project", recursive=True
             )
         # Make directory that projpp will log to
         executeRemoteShellCommand("mkdir -p /var/ftp/usrflash/Project/Log")
