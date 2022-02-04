@@ -3,6 +3,7 @@ import difflib
 import logging
 import os
 import re
+import sys
 import time
 
 import numpy as np
@@ -120,6 +121,24 @@ def parseArgs():
         action="store_true",
         help=(
             "Launch Power PMAC analyse GUI."
+        ),
+    )
+    parser.add_argument(
+        "-u",
+        "--username",
+        metavar="",
+        nargs=1,
+        help=(
+            "Power PMAC username"
+        ),
+    )
+    parser.add_argument(
+        "-p",
+        "--password",
+        metavar="",
+        nargs=1,
+        help=(
+            "Power Pmac password"
         ),
     )
     parser.add_argument("-n", "--name", metavar="", nargs=1, help="Name of Power PMAC.")
@@ -2388,6 +2407,8 @@ class PPMACanalyse:
         self.operationType = "all"
         self.operationTypes = ["all", "active", "project"]
         self.backupDir = None
+        self.username = None
+        self.password = None
         if ppmacArgs.interface is not None:
             if not isValidNetworkInterface(ppmacArgs.interface[0]):
                 raise IOError(
@@ -2402,13 +2423,17 @@ class PPMACanalyse:
         os.makedirs(self.resultsDir, exist_ok=True)
         logfile = self.resultsDir + "/" + "ppmacanalyse.log"
         logging.basicConfig(filename=logfile, level=logging.INFO)
+        if ppmacArgs.username is not None:
+            self.username = ppmacArgs.username
+        if ppmacArgs.password is not None:
+            self.password = ppmacArgs.password
         # Perform the backup, compare, recover or download
         if ppmacArgs.backup is not None:
             self.processBackupOptions(ppmacArgs)
             self.backup(self.operationType)
         if ppmacArgs.compare is not None:
             self.processCompareOptions(ppmacArgs)
-            self.compare()
+            self.compare(self.operationType)
         if ppmacArgs.recover is not None:
             self.processRecoverOptions(ppmacArgs)
             self.recover()
@@ -2417,13 +2442,19 @@ class PPMACanalyse:
             self.download()
 
     def processCompareOptions(self, ppmacArgs):
-        if len(ppmacArgs.compare) < 2:
+        if len(ppmacArgs.compare) < 3:
             raise IOError(
-                "Insufficient number of arguments, please specify TWO sources for"
-                " comparison."
+                "Insufficient number of arguments, please specify compare option and"
+                " TWO sources for comparison."
             )
-        self.compareSourceA = ppmacArgs.compare[0]
-        self.compareSourceB = ppmacArgs.compare[1]
+        if ppmacArgs.compare[0] not in self.operationTypes:
+            raise IOError(
+                f"Unrecognised backup option {ppmacArgs.compare[0]}, "
+                'should be "all","active" or "project".'
+            )
+        self.operationType = ppmacArgs.compare[0]
+        self.compareSourceA = ppmacArgs.compare[1]
+        self.compareSourceB = ppmacArgs.compare[2]
         if not isValidNetworkInterface(self.compareSourceA) and not os.path.isdir(
             self.compareSourceA
         ):
@@ -2441,12 +2472,12 @@ class PPMACanalyse:
         self.compareDir = self.resultsDir
         os.makedirs(self.compareDir, exist_ok=True)
         self.ignoreFile = "ignore/ignore"
-        if len(ppmacArgs.compare) > 2:
-            self.ignoreFile = ppmacArgs.compare[2]
+        if len(ppmacArgs.compare) > 3:
+            self.ignoreFile = ppmacArgs.compare[3]
         if not fileExists(self.ignoreFile):
             raise IOError(f"Ignore file {self.ignoreFile} not found.")
 
-    def compare(self):
+    def compare(self, type="all"):
         ppmacA = PowerPMAC()
         ppmacB = PowerPMAC()
         if isValidNetworkInterface(self.compareSourceA):
@@ -2455,76 +2486,87 @@ class PPMACanalyse:
             # Check that we can connect
             self.checkConnection(False)
             #sshClient.connect()
-            hardwareWriteRead = PPMACHardwareWriteRead(
-                ppmacA, f"{self.compareDir}/tmp/databaseA"
-            )
-            hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
-            projectASaved = PPMACProject(
-                "hardware",
-                "/opt/ppmac/usrflash/*",
-                f"{self.compareDir}/tmp/projectA/saved",
-            )
-            projectAActive = PPMACProject(
-                "hardware",
-                "/var/ftp/usrflash/*",
-                f"{self.compareDir}/tmp/projectA/active",
-            )
+            if type == "all" or type == "active":
+                hardwareWriteRead = PPMACHardwareWriteRead(
+                    ppmacA, f"{self.compareDir}/tmp/databaseA"
+                )
+                hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
+            if type == "all" or type == "project":
+                projectASaved = PPMACProject(
+                    "hardware",
+                    "/opt/ppmac/usrflash/*",
+                    f"{self.compareDir}/tmp/projectA/saved",
+                )
+                projectAActive = PPMACProject(
+                    "hardware",
+                    "/var/ftp/usrflash/*",
+                    f"{self.compareDir}/tmp/projectA/active",
+                )
             sshClient.disconnect()
         else:
-            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, self.compareSourceA)
-            repositoryWriteRead.readAndStoreActiveElements()
-            repositoryWriteRead.readAndStoreBufferedPrograms()
-            repositoryWriteRead.readAndStoreCSAxesDefinitions()
-            projectASaved = PPMACProject(
-                "repository", f"{self.compareSourceA}/project/saved"
-            )
-            projectAActive = PPMACProject(
-                "repository", f"{self.compareSourceA}/project/active"
-            )
+            if type == "all" or type == "active":
+                repositoryWriteRead = PPMACRepositoryWriteRead(ppmacA, self.compareSourceA)
+                repositoryWriteRead.readAndStoreActiveElements()
+                repositoryWriteRead.readAndStoreBufferedPrograms()
+                repositoryWriteRead.readAndStoreCSAxesDefinitions()
+            if type == "all" or type == "project":
+                projectASaved = PPMACProject(
+                    "repository", f"{self.compareSourceA}/project/saved"
+                )
+                projectAActive = PPMACProject(
+                    "repository", f"{self.compareSourceA}/project/active"
+                )
         if isValidNetworkInterface(self.compareSourceB):
-            # Check that we can connect
-            self.checkConnection(False)
             sshClient.hostname = self.compareSourceB.strip().split(":")[0]
             sshClient.port = self.compareSourceB.strip().split(":")[1]
-            sshClient.connect()
-            hardwareWriteRead = PPMACHardwareWriteRead(
-                ppmacB, f"{self.compareDir}/tmp/databaseB"
-            )
-            hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
-            projectBSaved = PPMACProject(
-                "hardware",
-                "/opt/ppmac/usrflash/*",
-                f"{self.compareDir}/tmp/projectB/saved",
-            )
-            projectBActive = PPMACProject(
-                "hardware",
-                "/var/ftp/usrflash/*",
-                f"{self.compareDir}/tmp/projectB/active",
-            )
+            # Check that we can connect
+            self.checkConnection(False)
+            #sshClient.connect()
+            if type == "all" or type == "active":
+                hardwareWriteRead = PPMACHardwareWriteRead(
+                    ppmacB, f"{self.compareDir}/tmp/databaseB"
+                )
+                hardwareWriteRead.readAndStoreActiveState(self.ignoreFile)
+            if type == "all" or type == "project":
+                projectBSaved = PPMACProject(
+                    "hardware",
+                    "/opt/ppmac/usrflash/*",
+                    f"{self.compareDir}/tmp/projectB/saved",
+                )
+                projectBActive = PPMACProject(
+                    "hardware",
+                    "/var/ftp/usrflash/*",
+                    f"{self.compareDir}/tmp/projectB/active",
+                )
             sshClient.disconnect()
         else:
-            repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB, self.compareSourceB)
-            repositoryWriteRead.readAndStoreActiveElements()
-            repositoryWriteRead.readAndStoreBufferedPrograms()
-            repositoryWriteRead.readAndStoreCSAxesDefinitions()
-            projectBSaved = PPMACProject(
-                "repository", f"{self.compareSourceB}/project/saved"
-            )
-            projectBActive = PPMACProject(
-                "repository", f"{self.compareSourceB}/project/active"
-            )
+            if type == "all" or type == "active":
+                repositoryWriteRead = PPMACRepositoryWriteRead(ppmacB, self.compareSourceB)
+                repositoryWriteRead.readAndStoreActiveElements()
+                repositoryWriteRead.readAndStoreBufferedPrograms()
+                repositoryWriteRead.readAndStoreCSAxesDefinitions()
+            if type == "all" or type == "project":    
+                projectBSaved = PPMACProject(
+                    "repository", f"{self.compareSourceB}/project/saved"
+                )
+                projectBActive = PPMACProject(
+                    "repository", f"{self.compareSourceB}/project/active"
+                )
+        # Run comparison        
         ppmacComparison = PPMACCompare(ppmacA, ppmacB, self.compareDir)
-        ppmacComparison.compareActiveElements()
-        ppmacComparison.comparePrograms()
-        ppmacComparison.compareCoordSystemAxesDefinitions()
-        savedProjComparison = ProjectCompare(projectASaved, projectBSaved)
-        savedProjDiffPath = f"{self.compareDir}/project/saved"
-        os.makedirs(savedProjDiffPath, exist_ok=True)
-        savedProjComparison.compareProjectFiles(savedProjDiffPath)
-        activeProjComparison = ProjectCompare(projectAActive, projectBActive)
-        activeProjDiffPath = f"{self.compareDir}/project/active"
-        os.makedirs(activeProjDiffPath, exist_ok=True)
-        activeProjComparison.compareProjectFiles(activeProjDiffPath)
+        if type == "all" or type == "active":
+            ppmacComparison.compareActiveElements()
+            ppmacComparison.comparePrograms()
+            ppmacComparison.compareCoordSystemAxesDefinitions()
+        if type == "all" or type == "project":    
+            savedProjComparison = ProjectCompare(projectASaved, projectBSaved)
+            savedProjDiffPath = f"{self.compareDir}/project/saved"
+            os.makedirs(savedProjDiffPath, exist_ok=True)
+            savedProjComparison.compareProjectFiles(savedProjDiffPath)
+            activeProjComparison = ProjectCompare(projectAActive, projectBActive)
+            activeProjDiffPath = f"{self.compareDir}/project/active"
+            os.makedirs(activeProjDiffPath, exist_ok=True)
+            activeProjComparison.compareProjectFiles(activeProjDiffPath)
 
     def processBackupOptions(self, ppmacArgs):
         self.name = "hardware"
@@ -2571,16 +2613,23 @@ class PPMACanalyse:
             )
 
     def checkConnection(self, disconnectAfter):
-        connect_status = sshClient.connect()
+        if self.username is not None and self.password is not None:
+            logging.info(self.username)
+            connect_status = sshClient.connect(username=self.username[0],
+                password=self.password[0])
+        else:
+            connect_status = sshClient.connect()
         if connect_status is None:
             #All OK
             return
+        if "Invalid username or password" in connect_status:
+            raise IOError(f"ERROR: Invalid username and/or password.")
         if "Cannot connect" in connect_status:
             logging.error("Cannot establish connection to Power PMAC at "+
                 str(self.ipAddress)+":"+str(self.port)) 
             raise IOError(f"ERROR: Cannot establish connection to Power PMAC at "
-            f" at {self.ipAddress}:{self.port}")
-        elif disconnectAfter:
+            f" {self.ipAddress}:{self.port}")
+        if disconnectAfter:
             sshClient.disconnect()
 
 
@@ -2650,6 +2699,10 @@ sshClient = dls_pmacremote.PPmacSshInterface()
 
 def main():
     """Main entry point of the script."""
+    if len(sys.argv) < 2:
+        print(" -> Run dls-ppmac-analyse.py --help for details on how to" 
+        + " use the Power-Pmac analyse tool")
+        return
     ppmacArgs = parseArgs()
     if ppmacArgs.gui:
         dls_pmacanalyse.ppmacanalyse_control.main()

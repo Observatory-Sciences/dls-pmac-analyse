@@ -9,6 +9,7 @@ from PyQt5.QtGui import QColor, QTextCursor
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMainWindow
 
 from dls_pmacanalyse.ui_formAnalyseControl import Ui_ControlForm
+from dls_pmacanalyse.login import Loginform
 
 
 class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
@@ -18,6 +19,7 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
 
         QMainWindow.__init__(self, parent)
         self.setupUi(self)
+        self.login = Loginform(self)
 
         # Mode - set by the tab index of the GUI
         # 0 = backup
@@ -41,13 +43,9 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         self.linePort2.setText(port)
 
         # Back-up options
-        self.backupOption = "all"
-        if self.backupOption == "all":
-            self.rdbAll.setChecked(True)
-        elif self.backupOption == "project":
-            self.rdbProject.setChecked(True)
-        elif self.backupOption == "active":
-            self.rdbActive.setChecked(True)
+        self.backupCompareOption = "all"
+        self.rdbAll0.setChecked(True)
+        self.rdbAll1.setChecked(True)
 
         # Sources for compare
         source1 = "192.168.56.10:22"
@@ -92,16 +90,13 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         ignore_file = self.lineIgnoreFile0.text()
         output_dir = self.lineOutputDir0.text()
         backup_option = "all"
-        if self.rdbProject.isChecked():
+        if self.rdbProject0.isChecked():
             backup_option = "project"
-        elif self.rdbActive.isChecked():
+        elif self.rdbActive0.isChecked():
             backup_option = "active"
 
-        self.cancelBackup = False
-        self.pushCancel0.setEnabled(True)
-
-        cmd = [
-            "dls-ppmac-analyse-cli.py",
+        cmd0 = [
+            "dls-ppmac-analyse.py",
             "--interface",
             str(server_name) + ":" + str(server_port),
             "--backup",
@@ -111,45 +106,7 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             str(output_dir),
         ]
 
-        self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
-        start = time.time()
-
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.addTextProgress("Working.")
-
-        logInterval = time.time()
-
-        while process.poll() is None:
-            # Only log every second
-            if time.time() - logInterval > 1:
-                self.addTextProgress(".")
-                logInterval = time.time()
-            QApplication.processEvents()
-            if self.cancelBackup:
-                self.addTextError("\nCancelling")
-                process.kill()
-            time.sleep(0.1)
-
-        self.pushCancel0.setEnabled(False)
-        success = True
-        stderrStr = ""
-        for line in process.stderr:
-            unicode_text = str(line, "utf-8")
-            if unicode_text != "":
-                success = False
-                # Just save the last line with the root error
-                stderrStr = unicode_text
-
-        # stdout, stderr = process.communicate()
-        if self.cancelBackup:
-            self.addTextLog("Backup cancelled...")
-            self.cancelBackup = False
-        elif not success:
-            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
-        else:
-            self.addTextLog(
-                "\nBackup completed in: " + str(time.time() - start) + " secs"
-            )
+        self.runPPmacAnalyseCmd(cmd0, 0, "Backup")
 
     def runCompare(self):
         # Tab index 1
@@ -157,13 +114,16 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
         source2 = self.lineSource2.text()
         ignore_file = self.lineIgnoreFile1.text()
         output_dir = self.lineOutputDir1.text()
+        compare_option = "all"
+        if self.rdbProject1.isChecked():
+            compare_option = "project"
+        elif self.rdbActive1.isChecked():
+            compare_option = "active"
 
-        self.cancelCompare = False
-        self.pushCancel1.setEnabled(True)
-
-        cmd = [
-            "dls-ppmac-analyse-cli.py",
+        cmd0 = [
+            "dls-ppmac-analyse.py",
             "--compare",
+            compare_option,
             source1,
             source2,
             str(ignore_file),
@@ -171,121 +131,141 @@ class Controlform(QtWidgets.QMainWindow, Ui_ControlForm):
             str(output_dir),
         ]
 
-        self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
+        self.runPPmacAnalyseCmd(cmd0, 1, "Compare")
 
-        start = time.time()
-
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.addTextProgress("Working.")
-
-        logInterval = time.time()
-
-        while process.poll() is None:
-            # Only log every second
-            if time.time() - logInterval > 1:
-                self.addTextProgress(".")
-                logInterval = time.time()
-            QApplication.processEvents()
-            if self.cancelCompare:
-                self.addTextError("\nCancelling")
-                process.kill()
-            time.sleep(0.1)
-
-        self.pushCancel1.setEnabled(False)
-
-        success = True
-        stderrStr = ""
-        for line in process.stderr:
-            unicode_text = str(line, "utf-8")
-            if unicode_text != "":
-                success = False
-                # Just save the last line with the root error
-                stderrStr = unicode_text
-
-        # stdout, stderr = process.communicate()
-        if self.cancelCompare:
-            self.addTextLog("Compare cancelled...")
-            self.cancelCompare = False
-        elif not success:
-            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
-        else:
-            self.addTextLog(
-                "\nCompare completed in: " + str(time.time() - start) + " secs"
-            )
-
-    def runDownloadRecover(self, commandStr):
+    def runDownload(self):
         # Tab index 2
         server_name = self.lineServer2.text()
         server_port = self.linePort2.text()
         backup_dir = self.lineBackupDir.text()
         output_dir = self.lineOutputDir2.text()
 
-        if commandStr == "download":
-            backup_dir += "/project/active"
-        elif commandStr == "recover":
-            backup_dir += "/project/saved"
-        else:
-            self.addTextLog("Not a valid ppmac-analyse option")
-            return
+        backup_dir += "/project/active"
 
-        self.cancelDR = False
-        self.pushCancel2.setEnabled(True)
-
-        cmd = [
-            "dls-ppmac-analyse-cli.py",
+        cmd0 = [
+            "dls-ppmac-analyse.py",
             "--interface",
             str(server_name) + ":" + str(server_port),
-            "--"+commandStr,
+            "--download",
             str(backup_dir),
             "--resultsdir",
             str(output_dir),
         ]
 
-        self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
-        start = time.time()
-
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        self.addTextProgress("Working.")
-
-        logInterval = time.time()
-
-        while process.poll() is None:
-            # Only log every second
-            if time.time() - logInterval > 1:
-                self.addTextProgress(".")
-                logInterval = time.time()
-            QApplication.processEvents()
-            if self.cancelDR:
-                self.addTextError("\nCancelling")
-                process.kill()
-            time.sleep(0.1)
-
-        self.pushCancel2.setEnabled(False)
-        success = True
-        stderrStr = ""
-        for line in process.stderr:
-            unicode_text = str(line, "utf-8")
-            if unicode_text != "":
-                success = False
-                # Just save the last line with the root error
-                stderrStr = unicode_text
-
-        # stdout, stderr = process.communicate()
-        if self.cancelDR:
-            self.addTextLog(commandStr + " cancelled...")
-            self.cancelDR = False
-        elif not success:
-            self.addTextError("\nBackup failed with errors: \n" + stderrStr)
-        else:
-            self.addTextLog(
-                "\n" + commandStr + " completed in: " + str(time.time() - start) + " secs"
-            )
-
-    def runDownload(self):
-        self.runDownloadRecover("download")   
+        self.runPPmacAnalyseCmd(cmd0, 2, "Download")
 
     def runRecover(self):
-        self.runDownloadRecover("recover")           
+        # Tab index 2
+        server_name = self.lineServer2.text()
+        server_port = self.linePort2.text()
+        backup_dir = self.lineBackupDir.text()
+        output_dir = self.lineOutputDir2.text()
+
+        backup_dir += "/project/saved"
+
+        cmd0 = [
+            "dls-ppmac-analyse.py",
+            "--interface",
+            str(server_name) + ":" + str(server_port),
+            "--recover",
+            str(backup_dir),
+            "--resultsdir",
+            str(output_dir),
+        ]
+
+        self.runPPmacAnalyseCmd(cmd0, 2, "Recover")
+
+    def runPPmacAnalyseCmd(self, cmd0, guiTab, optionStr):
+        self.setInternalCancelled(guiTab, False)
+
+        finished = False
+        count = 0
+        cmdRerun = cmd0
+        # Run until we signal that it should finish
+        while not finished:
+            if count == 0:
+                cmd = cmd0
+            else:
+                cmd = cmdRerun
+
+            self.enableCancelButton(guiTab, True)
+            self.addTextLog("Running cmd: '" + str(" ".join(cmd)) + "'")
+            start = time.time()
+
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.addTextProgress("Working .")
+
+            logInterval = time.time()
+
+            while process.poll() is None:
+                # Only log every second
+                if time.time() - logInterval > 5:
+                    self.addTextProgress(".")
+                    logInterval = time.time()
+                QApplication.processEvents()
+                if self.wasCancelled(guiTab):
+                    self.addTextError("\nCancelling")
+                    process.kill()
+                time.sleep(0.1)
+
+            self.enableCancelButton(guiTab, False)
+            success = True
+            stderrStr = ""
+            for line in process.stderr:
+                unicode_text = str(line, "utf-8")
+                if unicode_text != "":
+                    success = False
+                    # Just save the last line with the root error
+                    stderrStr = unicode_text
+
+            if "Invalid username" in stderrStr:
+                self.addTextError("\nBackup failed with errors: \n" + stderrStr)
+                is_clickedOK = self.login.exec()
+                if is_clickedOK:
+                    new_cmds = ["--username", str(self.login.username), 
+                        "--password", str(self.login.password)]
+                    cmdRerun = cmd0
+                    for new_cmd in new_cmds:
+                        cmdRerun.append(new_cmd)
+                else:
+                    finished = True
+            else:
+                finished = True
+
+        # stdout, stderr = process.communicate()
+        if self.wasCancelled(guiTab):
+            self.addTextLog(optionStr + " cancelled...")
+            self.setInternalCancelled(guiTab, False)
+        elif not success:
+            self.addTextError("\n" + optionStr + " failed with errors: \n" + stderrStr)
+        else:
+            self.addTextLog(
+                "\n" + optionStr + " completed in: " + str(time.time() - start) + " secs"
+            )      
+
+    def enableCancelButton(self, guiTab, value):
+        if guiTab == 0:
+            self.pushCancel0.setEnabled(value)
+        elif guiTab == 1:
+            self.pushCancel1.setEnabled(value)
+        elif guiTab == 2:
+            self.pushCancel2.setEnabled(value)       
+    
+    def wasCancelled(self, guiTab):
+        if guiTab == 0:
+            return self.cancelBackup
+        elif guiTab == 1:
+            return self.cancelCompare
+        elif guiTab == 2:
+            return self.cancelDR
+
+    def setInternalCancelled(self, guiTab, value):
+        if guiTab == 0:
+            self.cancelBackup = value
+        elif guiTab == 1:
+            self.cancelCompare = value
+        elif guiTab == 2:
+            self.cancelDR = value       
 
     def cancelBackup(self):
         self.cancelBackup = True

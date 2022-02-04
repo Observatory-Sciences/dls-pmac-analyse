@@ -23,6 +23,12 @@
       <height>281</height>
      </rect>
     </property>
+    <property name="focusPolicy">
+     <enum>Qt::StrongFocus</enum>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
    </widget>
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
@@ -158,7 +164,7 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QRadioButton" name="rdbActive">
+          <widget class="QRadioButton" name="rdbActive0">
            <property name="toolTip">
             <string>Only back up the active elements, buffered programs and coordinate system axes definitions.</string>
            </property>
@@ -168,7 +174,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="rdbProject">
+          <widget class="QRadioButton" name="rdbProject0">
            <property name="toolTip">
             <string>Only backup the saved and active Project files.</string>
            </property>
@@ -178,7 +184,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="rdbAll">
+          <widget class="QRadioButton" name="rdbAll0">
            <property name="toolTip">
             <string>Back up everything.</string>
            </property>
@@ -300,7 +306,7 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>951</width>
+        <width>971</width>
         <height>171</height>
        </rect>
       </property>
@@ -312,19 +318,19 @@
         <rect>
          <x>10</x>
          <y>30</y>
-         <width>341</width>
-         <height>121</height>
+         <width>351</width>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">
         <string>Compare sources</string>
        </property>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <property name="geometry">
          <rect>
           <x>11</x>
           <y>28</y>
-          <width>314</width>
+          <width>331</width>
           <height>80</height>
          </rect>
         </property>
@@ -344,7 +350,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Source 1</string>
+            <string>Source 1:</string>
            </property>
            <property name="wordWrap">
             <bool>false</bool>
@@ -380,7 +386,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Source 2</string>
+            <string>Source 2:</string>
            </property>
            <property name="wordWrap">
             <bool>false</bool>
@@ -407,10 +413,10 @@
       <widget class="QGroupBox" name="groupBox_7">
        <property name="geometry">
         <rect>
-         <x>360</x>
+         <x>370</x>
          <y>30</y>
-         <width>451</width>
-         <height>121</height>
+         <width>471</width>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">
@@ -419,9 +425,9 @@
        <widget class="QWidget" name="layoutWidget_3">
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>97</x>
           <y>30</y>
-          <width>431</width>
+          <width>361</width>
           <height>80</height>
          </rect>
         </property>
@@ -470,14 +476,56 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="">
+        <property name="geometry">
+         <rect>
+          <x>8</x>
+          <y>30</y>
+          <width>77</width>
+          <height>92</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <widget class="QRadioButton" name="rdbActive1">
+           <property name="toolTip">
+            <string>Only back up the active elements, buffered programs and coordinate system axes definitions.</string>
+           </property>
+           <property name="text">
+            <string>active</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rdbProject1">
+           <property name="toolTip">
+            <string>Only backup the saved and active Project files.</string>
+           </property>
+           <property name="text">
+            <string>project</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rdbAll1">
+           <property name="toolTip">
+            <string>Back up everything.</string>
+           </property>
+           <property name="text">
+            <string>all</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_8">
        <property name="geometry">
         <rect>
-         <x>820</x>
+         <x>851</x>
          <y>30</y>
          <width>111</width>
-         <height>121</height>
+         <height>131</height>
         </rect>
        </property>
        <property name="title">

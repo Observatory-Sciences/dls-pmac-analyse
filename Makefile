@@ -6,7 +6,7 @@ RESOURCE_DIR = dls_pmacanalyse
 COMPILED_DIR = dls_pmacanalyse
 
 #UI files to compile
-UI_FILES = formAnalyseControl.ui 
+UI_FILES = formAnalyseControl.ui formLogin.ui
 #Qt resource files to compile
 RESOURCES =
 
